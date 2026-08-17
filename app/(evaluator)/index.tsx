@@ -1,7 +1,7 @@
 import { useRouter } from 'expo-router';
 import { ArrowLeft, Building2, Plus, RotateCw } from 'lucide-react-native';
 import React from 'react';
-import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Pressable, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 
 import { AppShell, Button, Card, ClassificationBadge, OfflinePill } from '@/components/ui';
 import { useI18n } from '@/i18n/I18nProvider';
@@ -12,6 +12,8 @@ export default function EvaluatorHome() {
   const { t, language } = useI18n();
   const { evaluations, loading, create } = useEvaluations();
   const router = useRouter();
+  const { width } = useWindowDimensions();
+  const narrow = width < 600;
 
   const createNew = async () => {
     const evaluation = await create();
@@ -20,16 +22,18 @@ export default function EvaluatorHome() {
 
   return (
     <AppShell>
-      <View style={styles.topRow}>
+      <View style={[styles.topRow, narrow && styles.topRowNarrow]}>
         <Pressable onPress={() => router.back()} style={styles.back}>
           <ArrowLeft size={20} color={colors.primary} />
         </Pressable>
         <View style={styles.heading}>
           <Text style={styles.eyebrow}>{t.evaluator}</Text>
-          <Text style={styles.title}>{t.myEvaluations}</Text>
+          <Text style={[styles.title, narrow && styles.titleNarrow]}>{t.myEvaluations}</Text>
           <Text style={styles.event}>{t.currentEvent}</Text>
         </View>
-        <OfflinePill />
+        <View style={[styles.offlineWrap, narrow && styles.offlineWrapNarrow]}>
+          <OfflinePill />
+        </View>
       </View>
 
       <Button icon={<Plus size={19} color={colors.white} />} onPress={createNew} style={styles.newButton}>
@@ -94,11 +98,15 @@ export default function EvaluatorHome() {
 
 const styles = StyleSheet.create({
   topRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 14, marginTop: 10 },
+  topRowNarrow: { flexWrap: 'wrap' },
   back: { width: 44, height: 44, borderRadius: 12, borderWidth: 1, borderColor: colors.border, alignItems: 'center', justifyContent: 'center' },
-  heading: { flex: 1 },
+  heading: { flex: 1, minWidth: 0 },
   eyebrow: { color: colors.primary, fontWeight: '900', fontSize: 12, textTransform: 'uppercase' },
   title: { color: colors.text, fontWeight: '900', fontSize: 30, marginTop: 3 },
+  titleNarrow: { fontSize: 27, lineHeight: 33 },
   event: { color: colors.textMuted, marginTop: 5 },
+  offlineWrap: { alignItems: 'flex-end' },
+  offlineWrapNarrow: { width: '100%', alignItems: 'flex-start', paddingLeft: 58, marginTop: -4 },
   newButton: { alignSelf: 'flex-start', marginTop: 22 },
   loading: { marginTop: 60 },
   empty: { alignItems: 'center', marginTop: 22, paddingVertical: 55 },

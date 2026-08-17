@@ -55,12 +55,15 @@ export default function WelcomeScreen() {
         <View style={styles.heroCopy}>
           <OfflinePill />
           <Text style={styles.kicker}>{configured ? user?.email : t.demoMode}</Text>
-          <Text style={styles.title}>{t.tagline}</Text>
-          <Text style={styles.lead}>
+          <Text style={[styles.title, width < 780 && styles.titleNarrow]}>{t.tagline}</Text>
+          <Text style={[styles.lead, width < 780 && styles.leadNarrow]}>
             {t.demoDescription} {t.immutableNotice}
           </Text>
         </View>
-        <Image source={require('../icon_960.png')} style={styles.heroLogo} />
+        <Image
+          source={require('../icon_960.png')}
+          style={[styles.heroLogo, width < 780 && styles.heroLogoNarrow]}
+        />
       </View>
 
       <View style={[styles.roles, width < 780 && styles.rolesNarrow]}>
@@ -103,12 +106,15 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     overflow: 'hidden',
   },
-  heroNarrow: { padding: 25, minHeight: 340 },
-  heroCopy: { flex: 1, maxWidth: 720, zIndex: 1 },
+  heroNarrow: { padding: 24, minHeight: 500, flexDirection: 'column', alignItems: 'stretch' },
+  heroCopy: { flex: 1, minWidth: 0, maxWidth: 720, zIndex: 1 },
   kicker: { color: colors.mint, fontSize: 13, fontWeight: '900', textTransform: 'uppercase', marginTop: 22 },
   title: { color: colors.white, fontSize: 42, lineHeight: 48, fontWeight: '900', marginTop: 10, maxWidth: 680 },
+  titleNarrow: { fontSize: 34, lineHeight: 40, width: '100%' },
   lead: { color: '#DDEDDD', fontSize: 16, lineHeight: 24, marginTop: 16, maxWidth: 650 },
+  leadNarrow: { fontSize: 15, lineHeight: 22, paddingBottom: 80 },
   heroLogo: { width: 230, height: 230, opacity: 0.22, marginRight: -15 },
+  heroLogoNarrow: { position: 'absolute', width: 180, height: 180, right: -24, bottom: -20, marginRight: 0 },
   loading: { marginTop: 80 },
   loginCard: { width: '100%', maxWidth: 440, alignSelf: 'center', marginTop: 50, gap: 16 },
   loginLogo: { width: 92, height: 92, borderRadius: 46, alignSelf: 'center' },
