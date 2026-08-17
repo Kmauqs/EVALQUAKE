@@ -17,7 +17,8 @@
       "bundleIdentifier": "org.evalquake.app",
       "infoPlist": {
         "NSLocationWhenInUseUsageDescription": "EVALQUAKE uses your location to georeference inspected buildings.",
-        "NSCameraUsageDescription": "EVALQUAKE uses the camera to document earthquake damage."
+        "NSCameraUsageDescription": "EVALQUAKE uses the camera to document earthquake damage.",
+        "ITSAppUsesNonExemptEncryption": false
       }
     },
     "android": {
