@@ -1,0 +1,20 @@
+{
+  "compilerOptions": {
+    "module": "Node16",
+    "target": "es2022",
+    "lib": ["es2022", "dom"],
+    "outDir": "lib",
+    "rootDir": "..",
+    "strict": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "moduleResolution": "Node16",
+    "resolveJsonModule": true
+  },
+  "include": [
+    "src/**/*.ts",
+    "../src/domain/evaluation.ts",
+    "../src/i18n/translations.ts",
+    "../src/report/renderReportHtml.ts"
+  ]
+}

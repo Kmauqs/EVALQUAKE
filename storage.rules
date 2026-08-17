@@ -1,0 +1,43 @@
+rules_version = '2';
+
+service firebase.storage {
+  match /b/{bucket}/o {
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function canUpload() {
+      return signedIn()
+        && request.resource.size < 8 * 1024 * 1024
+        && request.resource.contentType.matches('image/.*|application/pdf')
+        && (
+          request.auth.token.role == 'admin'
+          || (
+            request.resource.metadata.jurisdictionId in request.auth.token.jurisdictionIds
+            && request.resource.metadata.createdByUserId == request.auth.uid
+          )
+        );
+    }
+
+    function canReadEvaluation(evaluationId) {
+      let evaluation = firestore.get(
+        /databases/(default)/documents/evaluations/$(evaluationId)
+      ).data;
+      return signedIn() && (
+        request.auth.token.role == 'admin'
+        || evaluation.jurisdictionId in request.auth.token.jurisdictionIds
+      );
+    }
+
+    match /evaluations/{evaluationId}/{allPaths=**} {
+      allow read: if canReadEvaluation(evaluationId);
+      allow create: if canUpload();
+      allow update, delete: if false;
+    }
+
+    match /exports/{allPaths=**} {
+      allow read: if signedIn() && request.auth.token.role in ['coordinator', 'admin'];
+      allow write: if false;
+    }
+  }
+}

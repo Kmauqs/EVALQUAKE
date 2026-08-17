@@ -1,0 +1,50 @@
+{
+  "name": "evalquake",
+  "version": "0.1.0",
+  "private": true,
+  "main": "expo-router/entry",
+  "scripts": {
+    "start": "expo start",
+    "android": "expo start --android",
+    "ios": "expo start --ios",
+    "web": "expo start --web",
+    "export:web": "expo export --platform web",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "lint": "eslint app src functions/src"
+  },
+  "dependencies": {
+    "@react-native-async-storage/async-storage": "2.2.0",
+    "eslint-config-expo": "~57.0.1",
+    "expo": "latest",
+    "expo-crypto": "~57.0.1",
+    "expo-file-system": "~57.0.4",
+    "expo-image-manipulator": "~57.0.10",
+    "expo-image-picker": "~57.0.10",
+    "expo-location": "~57.0.10",
+    "expo-network": "~57.0.1",
+    "expo-print": "~57.0.1",
+    "expo-router": "~57.0.13",
+    "expo-sharing": "~57.0.12",
+    "expo-sqlite": "~57.0.1",
+    "expo-status-bar": "~57.0.1",
+    "firebase": "^12.17.1",
+    "html2canvas": "^1.4.1",
+    "jspdf": "^4.2.1",
+    "lucide-react-native": "^1.31.0",
+    "react": "19.2.3",
+    "react-dom": "19.2.3",
+    "react-native": "0.86.2",
+    "react-native-safe-area-context": "~5.7.0",
+    "react-native-screens": "~4.26.0",
+    "react-native-svg": "15.15.4",
+    "react-native-web": "^0.21.2",
+    "zod": "^4.4.3"
+  },
+  "devDependencies": {
+    "@types/react": "^19.2.18",
+    "eslint": "^9.39.5",
+    "typescript": "^5.9.3",
+    "vitest": "^4.1.10"
+  }
+}

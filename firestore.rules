@@ -1,0 +1,78 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function role() {
+      return request.auth.token.role;
+    }
+
+    function jurisdictions() {
+      return request.auth.token.jurisdictionIds;
+    }
+
+    function canAccessJurisdiction(jurisdictionId) {
+      return signedIn() &&
+        (role() == 'admin' || jurisdictionId in jurisdictions());
+    }
+
+    match /users/{userId} {
+      allow read: if signedIn() && (request.auth.uid == userId || role() in ['coordinator', 'admin']);
+      allow write: if signedIn() && role() == 'admin';
+    }
+
+    match /jurisdictions/{jurisdictionId} {
+      allow read: if canAccessJurisdiction(jurisdictionId);
+      allow write: if signedIn() && role() == 'admin';
+    }
+
+    match /events/{eventId} {
+      allow read: if signedIn();
+      allow write: if signedIn() && role() == 'admin';
+    }
+
+    match /evaluations/{evaluationId} {
+      allow read: if canAccessJurisdiction(resource.data.jurisdictionId)
+        && (
+          request.auth.uid == resource.data.createdByUserId
+          || role() in ['coordinator', 'admin']
+        );
+      allow create: if canAccessJurisdiction(request.resource.data.jurisdictionId)
+        && request.resource.data.createdByUserId == request.auth.uid
+        && request.resource.data.officialNumber == null;
+      allow update: if canAccessJurisdiction(resource.data.jurisdictionId)
+        && resource.data.status == 'draft'
+        && (
+          request.auth.uid == resource.data.createdByUserId
+          || role() in ['coordinator', 'admin']
+        )
+        && request.resource.data.id == resource.data.id
+        && request.resource.data.createdByUserId == resource.data.createdByUserId
+        && request.resource.data.jurisdictionId == resource.data.jurisdictionId
+        && request.resource.data.officialNumber == resource.data.officialNumber
+        && request.resource.data.status in ['draft', 'submitted'];
+      allow delete: if false;
+
+      match /auditLog/{entryId} {
+        allow read: if canAccessJurisdiction(
+          get(/databases/$(database)/documents/evaluations/$(evaluationId)).data.jurisdictionId
+        );
+        allow create: if signedIn()
+          && role() in ['coordinator', 'admin']
+          && canAccessJurisdiction(
+            get(/databases/$(database)/documents/evaluations/$(evaluationId)).data.jurisdictionId
+          )
+          && request.resource.data.evaluationId == evaluationId
+          && request.resource.data.changedBy == request.auth.uid;
+        allow update, delete: if false;
+      }
+    }
+
+    match /counters/{counterId} {
+      allow read, write: if false;
+    }
+  }
+}

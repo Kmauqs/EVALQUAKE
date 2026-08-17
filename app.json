@@ -1,0 +1,71 @@
+{
+  "expo": {
+    "name": "EVALQUAKE",
+    "slug": "evalquake",
+    "version": "0.1.0",
+    "orientation": "default",
+    "scheme": "evalquake",
+    "userInterfaceStyle": "light",
+    "icon": "./icon_960.png",
+    "splash": {
+      "image": "./icon_960.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#F5F8F3"
+    },
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "org.evalquake.app",
+      "infoPlist": {
+        "NSLocationWhenInUseUsageDescription": "EVALQUAKE uses your location to georeference inspected buildings.",
+        "NSCameraUsageDescription": "EVALQUAKE uses the camera to document earthquake damage."
+      }
+    },
+    "android": {
+      "package": "org.evalquake.app",
+      "adaptiveIcon": {
+        "foregroundImage": "./icon_960.png",
+        "backgroundColor": "#F5F8F3"
+      },
+      "permissions": [
+        "android.permission.ACCESS_FINE_LOCATION",
+        "android.permission.CAMERA",
+        "android.permission.ACCESS_COARSE_LOCATION",
+        "android.permission.RECORD_AUDIO"
+      ]
+    },
+    "web": {
+      "bundler": "metro",
+      "output": "static",
+      "favicon": "./icon_960.png"
+    },
+    "plugins": [
+      "expo-router",
+      "expo-sqlite",
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "Allow EVALQUAKE to georeference inspected buildings."
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Allow EVALQUAKE to attach damage photos.",
+          "cameraPermission": "Allow EVALQUAKE to photograph earthquake damage."
+        }
+      ],
+      "expo-status-bar",
+      "expo-sharing"
+    ],
+    "experiments": {
+      "typedRoutes": true
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "6f5b99c0-95da-42de-90cd-6f7a16de8b7d"
+      }
+    },
+    "owner": "nexus-creatio"
+  }
+}
