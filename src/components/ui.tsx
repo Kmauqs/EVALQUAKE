@@ -1,4 +1,5 @@
 import { Check, ChevronLeft, ChevronRight, Globe2, WifiOff } from 'lucide-react-native';
+import { useRouter } from 'expo-router';
 import React from 'react';
 import {
   ActivityIndicator,
@@ -33,15 +34,21 @@ export function AppShell({ children, scroll = true }: React.PropsWithChildren<{ 
 export function AppHeader() {
   const { t, language, setLanguage } = useI18n();
   const { width } = useWindowDimensions();
+  const router = useRouter();
   return (
     <View style={styles.header}>
-      <View style={styles.brand}>
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel={t.appName}
+        onPress={() => router.replace('/')}
+        style={styles.brand}
+      >
         <Image source={require('../../icon_960.png')} style={styles.logo} />
         <View style={styles.brandCopy}>
           <Text style={styles.brandTitle}>{t.appName}</Text>
           {width > 560 && <Text style={styles.brandSubtitle}>{t.tagline}</Text>}
         </View>
-      </View>
+      </Pressable>
       <View style={styles.headerActions}>
         <View accessibilityLabel={`EVALQUAKE ${APP_VERSION}`} style={styles.versionBadge}>
           <Text style={styles.versionText}>v{APP_VERSION}</Text>
