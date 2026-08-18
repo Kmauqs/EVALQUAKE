@@ -18,6 +18,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import type { Habitability } from '@/domain/evaluation';
 import { useI18n } from '@/i18n/I18nProvider';
 import { colors, layout, shadows } from '@/theme';
+import { APP_VERSION } from '@/version';
 
 export function AppShell({ children, scroll = true }: React.PropsWithChildren<{ scroll?: boolean }>) {
   const content = <View style={styles.shellContent}>{children}</View>;
@@ -37,7 +38,10 @@ export function AppHeader() {
       <View style={styles.brand}>
         <Image source={require('../../icon_960.png')} style={styles.logo} />
         <View>
-          <Text style={styles.brandTitle}>{t.appName}</Text>
+          <View style={styles.brandTitleRow}>
+            <Text style={styles.brandTitle}>{t.appName}</Text>
+            <Text style={styles.version}>v{APP_VERSION}</Text>
+          </View>
           {width > 560 && <Text style={styles.brandSubtitle}>{t.tagline}</Text>}
         </View>
       </View>
@@ -249,7 +253,9 @@ const styles = StyleSheet.create({
   },
   brand: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   logo: { width: 44, height: 44, borderRadius: 22 },
+  brandTitleRow: { flexDirection: 'row', alignItems: 'baseline', gap: 8 },
   brandTitle: { color: colors.primaryDark, fontWeight: '900', fontSize: 18, letterSpacing: 0.5 },
+  version: { color: colors.textMuted, fontSize: 11, fontWeight: '700' },
   brandSubtitle: { color: colors.textMuted, fontSize: 11, marginTop: 2 },
   languageButton: {
     flexDirection: 'row',

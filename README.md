@@ -1,55 +1,58 @@
 # EVALQUAKE
 
-Bilingual (Spanish/English), offline-first building damage assessment for Android, iOS, and web. The implementation follows `ARCHITECTURE.md` and uses the supplied `icon_960.png` as its app icon, favicon, splash image, and visual-system source.
+**Versión actual: [0.2.0](CHANGELOG.md)**
 
-## Included in this MVP
+Evaluación rápida de daños en edificaciones, bilingüe (español/inglés) y offline-first para Android, iOS y web. Sigue `ARCHITECTURE.md` y usa `icon_960.png` como icono, favicon, splash y base visual.
 
-- One Expo Router + TypeScript application for Android, iOS, and responsive web.
-- A resumable 17-section rapid/detailed assessment based on the architecture's 2B/ATC-20 model.
-- Device-local drafts and an outbox: SQLite on Android/iOS and browser persistence on web.
-- GPS, camera/gallery images, on-device image compression, sketch, and signature capture.
-- Immediate local bilingual report generation using one shared HTML renderer.
-- Immutable submission semantics and provisional UUIDs while offline.
-- Coordinator dashboard with filters, classification summaries, map, detail, raw JSON, and CSV/JSON exports.
-- Firebase Auth/Firestore/Storage adapters, emulator configuration, security rules, indexes, and Cloud Functions.
-- Atomic official numbering and canonical PDF generation when a submitted assessment reaches Firebase.
+Sitio de producción: [https://evalquake.web.app](https://evalquake.web.app)
 
-The app starts in demo mode when Firebase variables are absent. Demo records are intentionally fictional.
+## Versionado
 
-## Run locally
+A partir de **0.2.0** cada entrega se registra en [`CHANGELOG.md`](CHANGELOG.md) con Semantic Versioning (`MAJOR.MINOR.PATCH`).
 
-Requirements: Node.js 22+, npm, and the Expo Go app or a configured Android/iOS simulator.
+La misma versión debe coincidir en:
+
+| Archivo | Campo |
+|---|---|
+| `src/version.ts` | `APP_VERSION` (se muestra en la cabecera de la app) |
+| `package.json` | `version` |
+| `app.json` | `expo.version` |
+| `functions/package.json` | `version` |
+
+Al cerrar un conjunto de cambios: subir el número, anotar la bitácora y desplegar.
+
+## Qué incluye 0.2.0
+
+- Una app Expo Router + TypeScript para Android, iOS y web responsive.
+- Flujo resumible de 17 secciones (modelo 2B/ATC-20).
+- Borradores locales y cola de salida: SQLite en móvil, persistencia del navegador en web.
+- GPS, cámara/galería (varias fotos), compresión, croquis por imagen y firma en modal fijo.
+- PDF bilingüe local inmediato y PDF canónico en Firebase (consecutivo oficial).
+- Envío inmutable: una evaluación enviada no se sobrescribe.
+- Panel de coordinación: filtros, mapa con gestos/ubicación, detalle y exportaciones CSV/JSON.
+- Autenticación por correo: el usuario crea su cuenta y un **admin** la aprueba, asigna rol y jurisdicción.
+- Roles `evaluator`, `coordinator` y `admin`.
+
+Sin variables Firebase el cliente arranca en **modo demostración** (datos ficticios, solo en el dispositivo).
+
+## Ejecutar en local
+
+Requisitos: Node.js 22+, npm, y Expo Go o un simulador Android/iOS.
 
 ```bash
 npm install
 npm start
 ```
 
-Then press:
+Luego `a` (Android), `i` (iOS, macOS/Xcode) o `w` (web). El control `EN` / `ES` del encabezado cambia el idioma y se guarda en el dispositivo.
 
-- `a` for Android
-- `i` for iOS (macOS/Xcode required)
-- `w` for web
+## Firebase (desarrollo)
 
-Direct commands:
-
-```bash
-npm run android
-npm run ios
-npm run web
-```
-
-Use the `EN` / `ES` control in the header to switch languages. The selection is persisted on the device.
-
-## Firebase emulators
-
-No Firebase credentials are committed. Copy `.env.example` to `.env.local`, use values from a non-production Firebase project, and keep:
+No se suben credenciales. Copie `.env.example` a `.env` o `.env.local` con los valores del proyecto (hoy `evalquake`) y, solo en local:
 
 ```dotenv
 EXPO_PUBLIC_USE_FIREBASE_EMULATORS=true
 ```
-
-Install the Firebase CLI, replace the placeholder project in `.firebaserc`, and run:
 
 ```bash
 npm --prefix functions install
@@ -57,26 +60,22 @@ npm --prefix functions run build
 npx firebase emulators:start
 ```
 
-The configured local ports are:
+Puertos: UI `4000`, Hosting `5000`, Functions `5001`, Firestore `8080`, Auth `9099`, Storage `9199`. Android usa `10.0.2.2`; iOS y web, `127.0.0.1`.
 
-- Emulator UI: `4000`
-- Hosting: `5000`
-- Functions: `5001`
-- Firestore: `8080`
-- Auth: `9099`
-- Storage: `9199`
+## Usuarios y roles
 
-Android emulators automatically connect through `10.0.2.2`; iOS and web use `127.0.0.1`.
+1. El usuario crea la cuenta en la pantalla de inicio.
+2. Queda **pendiente** hasta que un administrador asigne `role` y `jurisdictionIds`.
+3. Tras aprobar, el usuario pulsa **Comprobar acceso** o vuelve a iniciar sesión.
 
-## Firebase users and claims
+El primer administrador no puede autoaprobarse. Desde `functions/`:
 
-Users can create their own email/password account from the sign-in screen. New accounts stay **pending** until an administrator assigns `role` and `jurisdictionIds`. Custom claims are written only by Cloud Functions (`setUserRole`, `setUserDisabled`) or the trusted script:
-
-```bash
-node scripts/set-user-role.mjs user@domain.com evaluator jurisdiction-demo
+```powershell
+$env:GOOGLE_APPLICATION_CREDENTIALS="RUTA\al-adminsdk.json"
+node scripts/set-user-role.mjs user@domain.com admin jurisdiction-demo
 ```
 
-Claims shape:
+Claims:
 
 ```json
 {
@@ -85,35 +84,52 @@ Claims shape:
 }
 ```
 
-Supported roles are `evaluator`, `coordinator`, and `admin`. The admin module lists Firestore `users/{uid}` profiles and can approve, change role/jurisdiction, or disable accounts. Firestore rules scope evaluation reads/writes to the user's jurisdictions. Once an evaluation changes from `draft` to `submitted`, client updates and deletes are denied. Corrections must be appended to `evaluations/{id}/auditLog`.
+Roles: `evaluator`, `coordinator`, `admin`. Las reglas de Firestore limitan lecturas/escrituras a las jurisdicciones del token. Una evaluación `submitted` ya no se edita ni borra desde el cliente.
 
-When Firebase is configured, the app displays sign-in/sign-up and only exposes the evaluator, coordinator, or admin routes allowed by those claims. After approval, the user should tap **Check access** or sign in again to refresh the token. New local evaluations are stamped with the authenticated Firebase UID; demo identity is used only when Firebase is not configured.
+## Despliegue de producción
 
-The production Hosting build must include the `EXPO_PUBLIC_FIREBASE_*` values (never `EXPO_PUBLIC_USE_FIREBASE_EMULATORS=true`). GitHub Actions reads them from repository secrets with those same names; without them, https://evalquake.web.app stays in demonstration mode and the create-account screen does not appear.
+**Backend**
 
-## Offline and synchronization model
+```bash
+firebase deploy --only firestore,storage,functions
+```
 
-The Expo-managed Firebase JavaScript SDK does not provide native Firestore disk persistence on React Native. For that reason, mobile uses SQLite as the durable source of truth and an explicit outbox; Firebase is the eventual remote replica. Web uses browser persistence plus the same repository contract.
+**Web** (con Firebase, nunca con emuladores):
 
-The synchronization cycle runs at app startup and every 30 seconds:
+```powershell
+$env:EXPO_PUBLIC_USE_FIREBASE_EMULATORS="false"
+npm run export:web
+firebase deploy --only hosting
+```
 
-1. Save every edit locally.
-2. Queue the evaluation ID in the outbox.
-3. When connected and Firebase is configured, compress/upload pending photos.
-4. Write the evaluation to Firestore.
-5. Remove the outbox item only after the remote write succeeds.
+O push a `main`: GitHub Actions exporta y publica Hosting. El workflow necesita estos secrets:
 
-## Reports
+- `EXPO_PUBLIC_FIREBASE_API_KEY`
+- `EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN`
+- `EXPO_PUBLIC_FIREBASE_PROJECT_ID`
+- `EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET`
+- `EXPO_PUBLIC_FIREBASE_APP_ID`
+- `FIREBASE_SERVICE_ACCOUNT_EVALQUAKE`
 
-`src/report/renderReportHtml.ts` renders all 17 sections in either language.
+Si faltan las variables públicas, el sitio queda en modo demostración y no muestra el registro.
 
-- Android/iOS: `expo-print` creates a PDF without network access.
-- Web: jsPDF renders the shared HTML into a downloadable/openable PDF in the browser.
-- Firebase: `finalizeEvaluation` assigns a collision-free jurisdiction counter, renders the same HTML with Puppeteer, and stores the canonical PDF in Cloud Storage.
+**Móvil:** builds firmados con EAS (`eas.json`, proyecto `evalquake`). Las mismas `EXPO_PUBLIC_*` van en secretos de EAS. No commitear `.env`, cuentas de servicio ni claves de firma.
 
-The offline report shows the UUID and “official number pending.” The canonical server report includes the official number.
+## Sincronización offline
 
-## Verification
+En React Native el SDK JS de Firebase no persiste Firestore en disco. Móvil usa SQLite + outbox; web usa persistencia del navegador. Ciclo al arrancar y cada 30 s: guardar en local → encolar → subir fotos → escribir Firestore → quitar de la cola solo si el remoto confirma.
+
+## Reportes
+
+`src/report/renderReportHtml.ts` genera las 17 secciones en el idioma activo.
+
+- Android/iOS: `expo-print` (sin red).
+- Web: jsPDF.
+- Servidor: `finalizeEvaluation` asigna consecutivo y guarda el PDF canónico en Storage.
+
+El reporte local muestra el UUID y “consecutivo pendiente”.
+
+## Verificación
 
 ```bash
 npm run typecheck
@@ -122,5 +138,3 @@ npm run lint
 npm run export:web
 npm --prefix functions run build
 ```
-
-Before production deployment, supply real Firebase app files/environment values, provision Auth users and custom claims, deploy rules/indexes/functions, configure monitoring alerts, and create signed EAS Android/iOS builds. Never commit `.env`, service-account files, signing keys, or platform credentials.
