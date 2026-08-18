@@ -14,7 +14,7 @@ function demo(
     status: 'synced',
     syncState: 'synced',
     officialNumber: Number(id.replace(/\D/g, '')),
-    currentSection: 16,
+    currentSection: 15,
     identification: {
       ...evaluation.identification,
       department: 'Cundinamarca',
@@ -22,6 +22,7 @@ function demo(
       neighborhood,
       coordinates,
     },
+    inspection: { ...evaluation.inspection, type: 'complete' },
     building: {
       ...evaluation.building,
       address,
@@ -30,15 +31,21 @@ function demo(
       predominantUse: 'Residencial',
       estimatedOccupants: '12',
       units: '4',
+      nsrGroup: 'group_i',
     },
     structure: {
-      structuralSystem: 'Pórticos de concreto reforzado',
-      floorSystem: 'Losa de concreto',
+      ...evaluation.structure,
+      structuralSystem: 's11',
+      floorType: 'concrete',
+      floorSubtype: 'solid_slab',
+      roofGeometry: 'flat',
+      roofStructure: 'concrete_slab',
       constructionYear: '1998',
+      constructionPeriod: '1998_2010',
     },
     habitability,
     globalDamagePercentage:
-      habitability === 'habitable' ? '8' : habitability === 'restricted' ? '28' : '62',
+      habitability === 'habitable' ? '0-10' : habitability === 'restricted' ? '11-30' : '61-100',
     inspectors: [
       {
         name: inspector,

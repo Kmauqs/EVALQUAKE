@@ -4,19 +4,25 @@ import {
   canSaveEvaluation,
   classificationColor,
   createEvaluation,
+  lastSectionIndex,
+  normalizeEvaluation,
+  sectionCountFor,
   validateForSubmission,
 } from './evaluation';
+import { deriveHabitability, needsEquipmentReview } from './catalog';
 
 describe('evaluation domain', () => {
-  it('creates a deterministic complete draft shape', () => {
+  it('creates a complete draft with the expanded ATC-20 element lists', () => {
     const evaluation = createEvaluation('test-id', 'firebase-user-1', 'device-1');
     expect(evaluation.id).toBe('test-id');
     expect(evaluation.status).toBe('draft');
     expect(evaluation.currentSection).toBe(0);
-    expect(evaluation.fieldCriteria).toHaveLength(4);
-    expect(evaluation.structuralDamage.elements).toHaveLength(4);
+    expect(evaluation.structuralDamage.elements).toHaveLength(8);
+    expect(evaluation.nonStructuralDamage.elements).toHaveLength(11);
+    expect(evaluation.globalStability.conditions).toHaveLength(6);
     expect(evaluation.createdByUserId).toBe('firebase-user-1');
     expect(evaluation.deviceId).toBe('device-1');
+    expect(sectionCountFor(evaluation)).toBe(16);
   });
 
   it('requires safety-critical fields before submission', () => {
@@ -35,6 +41,53 @@ describe('evaluation domain', () => {
     expect(classificationColor('restricted')).toBe('yellow');
     expect(classificationColor('unsafe')).toBe('red');
     expect(classificationColor('collapsed')).toBe('black');
+  });
+
+  it('derives occupancy class from the four risk ratings', () => {
+    expect(deriveHabitability(['low', 'low', 'low', 'low'])).toBe('habitable');
+    expect(deriveHabitability(['low', 'moderate', 'low', 'low'])).toBe('restricted');
+    expect(deriveHabitability(['high', 'low', 'low', 'low'])).toBe('unsafe');
+    expect(deriveHabitability(['high', 'high', 'low', 'low'])).toBe('collapsed');
+    expect(deriveHabitability(['severe', 'low', 'low', 'low'])).toBe('collapsed');
+    expect(deriveHabitability(['none', 'low', 'low', 'low'])).toBeNull();
+  });
+
+  it('adds the equipment checklist only for complete inspections of groups II-IV', () => {
+    expect(needsEquipmentReview('complete', 'group_iii')).toBe(true);
+    expect(needsEquipmentReview('complete', 'group_i')).toBe(false);
+    expect(needsEquipmentReview('exterior_only', 'group_iii')).toBe(false);
+    const evaluation = createEvaluation('eq-equip');
+    evaluation.inspection.type = 'complete';
+    evaluation.building.nsrGroup = 'group_ii';
+    expect(sectionCountFor(evaluation)).toBe(17);
+    expect(lastSectionIndex(evaluation)).toBe(16);
+  });
+
+  it('migrates legacy rapid inspections and wall damage into the new shape', () => {
+    const legacy = createEvaluation('legacy');
+    const migrated = normalizeEvaluation({
+      ...legacy,
+      inspection: { ...legacy.inspection, type: 'rapid' as never },
+      structuralDamage: {
+        ...legacy.structuralDamage,
+        elements: [{ type: 'walls', severity: 'high', affectedPercentage: '40' }],
+      },
+      geotechnicalDamage: {
+        ...legacy.geotechnicalDamage,
+        settlement: true as never,
+        slopeFailure: false as never,
+      },
+      fieldCriteria: [{ category: 'collapse', item: 'partialCollapse', checked: true }],
+    });
+    expect(migrated.inspection.type).toBe('exterior_only');
+    expect(migrated.structuralDamage.elements.find((item) => item.type === 'structural_walls')?.severity).toBe(
+      'high',
+    );
+    expect(migrated.geotechnicalDamage.settlement).toBe('punctual');
+    expect(migrated.geotechnicalDamage.slopeFailure).toBe('none');
+    expect(
+      migrated.globalStability.conditions.find((item) => item.item === 'total_or_partial_collapse')?.checked,
+    ).toBe(true);
   });
 
   it('allows submission but rejects every subsequent overwrite', () => {

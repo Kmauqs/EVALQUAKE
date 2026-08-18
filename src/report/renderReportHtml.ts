@@ -1,152 +1,182 @@
 import type { Evaluation, Language } from '../domain/evaluation';
-import { en, es } from '../i18n/translations';
+import { sectionKeysFor } from '../domain/evaluation';
+import type { EvaluationSectionKey } from '../domain/catalog';
+import { en, es, type Dictionary } from '../i18n/translations';
+import { escapeHtml, wrapPrintableHtml } from './htmlChrome';
 
-const escape = (value: unknown) =>
-  String(value ?? '')
-    .replaceAll('&', '&amp;')
-    .replaceAll('<', '&lt;')
-    .replaceAll('>', '&gt;')
-    .replaceAll('"', '&quot;');
+const escape = escapeHtml;
+
+function catalogLabel(record: object | undefined, value: string) {
+  if (!value) return '—';
+  return (record as Record<string, string>)[value] || value;
+}
 
 export function renderReportHtml(evaluation: Evaluation, language: Language) {
   const t = language === 'es' ? es : en;
   const row = (label: string, value: unknown) =>
     `<div class="row"><span>${escape(label)}</span><strong>${escape(value || '—')}</strong></div>`;
-  const section = (index: number, content: string) =>
-    `<section><h2>${index + 1}. ${escape(t.sections[index])}</h2>${content}</section>`;
+  const section = (key: EvaluationSectionKey, index: number, content: string) =>
+    `<section><h2>${index + 1}. ${escape(t.sections[key])}</h2>${content}</section>`;
   const risk = (value: string) => escape((t as Record<string, unknown>)[value] ?? value);
+  const damageRow = (item: Evaluation['structuralDamage']['elements'][number]) =>
+    row(
+      t.damage[item.type as keyof typeof t.damage] ?? item.type,
+      `${risk(item.severity)}${item.affectedPercentage ? ` · ${item.affectedPercentage}%` : ''}${
+        item.notes ? ` — ${item.notes}` : ''
+      }`,
+    );
 
-  const content = [
-    section(
-      0,
+  const blocks: Record<EvaluationSectionKey, string> = {
+    cadastral:
       row(t.fields.department, evaluation.identification.department) +
-        row(t.fields.municipality, evaluation.identification.municipality) +
-        row(t.fields.commune, evaluation.identification.commune) +
-        row(t.fields.neighborhood, evaluation.identification.neighborhood) +
-        row(t.fields.sector, evaluation.identification.sector) +
-        row(t.fields.cadastralCode, evaluation.identification.cadastralCode) +
-        row(t.fields.propertyRegistration, evaluation.identification.propertyRegistration) +
-        row(
-          'GPS',
-          evaluation.identification.coordinates
-            ? `${evaluation.identification.coordinates.latitude.toFixed(6)}, ${evaluation.identification.coordinates.longitude.toFixed(6)}`
-            : '',
-        ),
-    ),
-    section(
-      1,
-      row(t.fields.inspectionType, t[evaluation.inspection.type]) +
-        row(t.fields.notInspectedReason, evaluation.inspection.notInspectedReason) +
-        row(
-          t.fields.preliminaryClassification,
-          evaluation.inspection.preliminaryClassification
-            ? t[evaluation.inspection.preliminaryClassification]
-            : '',
-        ),
-    ),
-    section(
-      2,
+      row(t.fields.municipality, evaluation.identification.municipality) +
+      row(t.fields.commune, evaluation.identification.commune) +
+      row(t.fields.neighborhood, evaluation.identification.neighborhood) +
+      row(t.fields.sector, evaluation.identification.sector) +
+      row(t.fields.cadastralCode, evaluation.identification.cadastralCode) +
+      row(t.fields.propertyRegistration, evaluation.identification.propertyRegistration) +
+      row(
+        'GPS',
+        evaluation.identification.coordinates
+          ? `${evaluation.identification.coordinates.latitude.toFixed(6)}, ${evaluation.identification.coordinates.longitude.toFixed(6)}`
+          : '',
+      ),
+    inspection:
+      row(
+        t.fields.inspectionType,
+        catalogLabel(t.catalogs.inspectionTypes, evaluation.inspection.type),
+      ) +
+      row(t.fields.notInspectedReason, evaluation.inspection.notInspectedReason) +
+      row(
+        t.fields.preliminaryClassification,
+        evaluation.inspection.preliminaryClassification
+          ? t[evaluation.inspection.preliminaryClassification]
+          : '',
+      ),
+    building:
       row(t.address, evaluation.building.address) +
-        row(t.fields.buildingName, evaluation.building.name) +
-        row(t.fields.floors, evaluation.building.floors) +
-        row(t.fields.predominantUse, evaluation.building.predominantUse) +
-        row(t.fields.dimensions, evaluation.building.dimensions) +
-        row(t.fields.footprintArea, evaluation.building.footprintArea) +
-        row(t.fields.estimatedOccupants, evaluation.building.estimatedOccupants) +
-        row(t.fields.units, evaluation.building.units),
-    ),
-    section(
-      3,
-      row(t.fields.structuralSystem, evaluation.structure.structuralSystem) +
-        row(t.fields.floorSystem, evaluation.structure.floorSystem) +
-        row(t.fields.constructionYear, evaluation.structure.constructionYear),
-    ),
-    section(
-      4,
+      row(t.fields.buildingName, evaluation.building.name) +
+      row(t.fields.nsrGroup, catalogLabel(t.catalogs.nsrGroups, evaluation.building.nsrGroup)) +
+      row(t.fields.floors, evaluation.building.floors) +
+      row(t.fields.predominantUse, evaluation.building.predominantUse) +
+      row(t.fields.dimensions, evaluation.building.dimensions) +
+      row(t.fields.footprintArea, evaluation.building.footprintArea) +
+      row(t.fields.estimatedOccupants, evaluation.building.estimatedOccupants) +
+      row(t.fields.units, evaluation.building.units),
+    structure:
+      row(
+        t.fields.structuralSystem,
+        catalogLabel(t.catalogs.structuralSystems, evaluation.structure.structuralSystem),
+      ) +
+      row(t.fields.floorType, catalogLabel(t.catalogs.floorTypes, evaluation.structure.floorType)) +
+      row(
+        t.fields.floorSubtype,
+        catalogLabel(t.catalogs.floorSubtypes, evaluation.structure.floorSubtype),
+      ) +
+      row(
+        t.fields.roofGeometry,
+        catalogLabel(t.catalogs.roofGeometries, evaluation.structure.roofGeometry),
+      ) +
+      row(
+        t.fields.roofStructure,
+        catalogLabel(t.catalogs.roofStructures, evaluation.structure.roofStructure),
+      ) +
+      row(t.fields.constructionYear, evaluation.structure.constructionYear) +
+      row(
+        t.fields.constructionPeriod,
+        catalogLabel(t.catalogs.constructionPeriods, evaluation.structure.constructionPeriod),
+      ),
+    globalStability:
       row(t.fields.risk, risk(evaluation.globalStability.risk)) +
-        row(t.fields.observedConditions, evaluation.globalStability.observedConditions.join(', ')) +
-        row(t.fields.notes, evaluation.globalStability.notes),
-    ),
-    section(
-      5,
-      row(t.fields.morphology, evaluation.geotechnicalDamage.morphology) +
-        row(t.fields.settlement, evaluation.geotechnicalDamage.settlement ? t.yes : t.no) +
-        row(t.fields.slopeFailure, evaluation.geotechnicalDamage.slopeFailure ? t.yes : t.no) +
-        row(t.fields.origin, evaluation.geotechnicalDamage.origin) +
-        row(t.fields.risk, risk(evaluation.geotechnicalDamage.risk)),
-    ),
-    section(
-      6,
-      evaluation.structuralDamage.elements
-        .map((item) => row(t.damage[item.type as keyof typeof t.damage] ?? item.type, risk(item.severity)))
-        .join('') +
-        row(t.fields.worstFloor, evaluation.structuralDamage.worstFloor) +
-        row(t.fields.risk, risk(evaluation.structuralDamage.risk)),
-    ),
-    section(
-      7,
-      evaluation.nonStructuralDamage.elements
-        .map((item) => row(t.damage[item.type as keyof typeof t.damage] ?? item.type, risk(item.severity)))
-        .join('') + row(t.fields.risk, risk(evaluation.nonStructuralDamage.risk)),
-    ),
-    section(
-      8,
-      evaluation.fieldCriteria
-        .map((item) => row(t.damage[item.item as keyof typeof t.damage] ?? item.item, item.checked ? t.yes : t.no))
-        .join(''),
-    ),
-    section(
-      9,
-      row(t.fields.globalDamage, `${evaluation.globalDamagePercentage}%`) +
-        `<div class="classification ${evaluation.habitability}">${escape(t[evaluation.habitability])}</div>`,
-    ),
-    section(
-      10,
-      row(t.fields.preExisting, evaluation.preExistingConditions.present ? t.yes : t.no) +
-        row(t.fields.description, evaluation.preExistingConditions.description) +
-        row(t.fields.priorInterventions, evaluation.preExistingConditions.priorInterventions),
-    ),
-    section(
-      11,
-      row(t.fields.safetyMeasures, evaluation.recommendations.safetyMeasures.join(', ')) +
-        row(t.fields.specialistVisits, evaluation.recommendations.specialistVisits.join(', ')) +
-        row(t.fields.barriers, evaluation.recommendations.barriers) +
-        row(t.fields.others, evaluation.recommendations.others),
-    ),
-    section(
-      12,
-      row(t.fields.injured, evaluation.occupantImpact.injured) +
-        row(t.fields.deceased, evaluation.occupantImpact.deceased),
-    ),
-    section(
-      13,
-      row(t.fields.inhabited, evaluation.occupancy.inhabited ? t.yes : t.no) +
-        row(t.fields.existingUnits, evaluation.occupancy.existingUnits) +
-        row(t.fields.uninhabitableUnits, evaluation.occupancy.uninhabitableUnits),
-    ),
-    section(
-      14,
-      row(t.fields.contactName, evaluation.contact.name) +
-        row(t.fields.identification, evaluation.contact.identification) +
-        row(t.fields.phone, evaluation.contact.phone) +
-        row(t.fields.contactAddress, evaluation.contact.address) +
-        row(t.fields.comments, evaluation.comments),
-    ),
-    section(
-      15,
-      evaluation.inspectors
-        .map(
-          (inspector) =>
-            `<div class="inspector">${row(t.fields.inspectorName, inspector.name)}${row(
-              t.fields.profession,
-              inspector.profession,
-            )}${row(t.fields.license, inspector.license)}${row(t.fields.entity, inspector.entity)}</div>`,
+      evaluation.globalStability.conditions
+        .map((item) =>
+          row(
+            t.catalogs.globalConditions[item.item as keyof typeof t.catalogs.globalConditions] ??
+              item.item,
+            `${item.checked ? t.yes : t.no}${item.notes ? ` — ${item.notes}` : ''}`,
+          ),
         )
-        .join(''),
-    ),
-    section(
-      16,
-      `<div class="evidence">
+        .join('') +
+      row(t.fields.notes, evaluation.globalStability.notes),
+    geotechnical:
+      row(
+        t.fields.morphology,
+        catalogLabel(t.catalogs.morphologies, evaluation.geotechnicalDamage.morphology),
+      ) +
+      row(
+        t.fields.settlement,
+        catalogLabel(t.catalogs.settlementLevels, evaluation.geotechnicalDamage.settlement),
+      ) +
+      row(
+        t.fields.slopeFailure,
+        catalogLabel(t.catalogs.slopeFailureLevels, evaluation.geotechnicalDamage.slopeFailure),
+      ) +
+      row(t.fields.origin, catalogLabel(t.catalogs.origins, evaluation.geotechnicalDamage.origin)) +
+      row(t.fields.risk, risk(evaluation.geotechnicalDamage.risk)),
+    structuralDamage:
+      evaluation.structuralDamage.elements.map(damageRow).join('') +
+      row(t.fields.worstFloor, evaluation.structuralDamage.worstFloor) +
+      row(t.fields.risk, risk(evaluation.structuralDamage.risk)),
+    nonStructural:
+      evaluation.nonStructuralDamage.elements.map(damageRow).join('') +
+      row(t.fields.risk, risk(evaluation.nonStructuralDamage.risk)),
+    equipment:
+      evaluation.equipmentReview.items
+        .filter((item) => item.damage || item.name || item.comments)
+        .map((item) =>
+          row(
+            item.custom
+              ? item.name || t.otherEquipment
+              : (t.catalogs.equipment[item.type as keyof typeof t.catalogs.equipment] ?? item.type),
+            `${catalogLabel(t.catalogs.equipmentDamage, item.damage)}${
+              item.comments ? ` — ${item.comments}` : ''
+            }`,
+          ),
+        )
+        .join('') + row(t.fields.equipmentRecommendations, evaluation.equipmentReview.recommendations),
+    habitability:
+      row(
+        t.fields.globalDamage,
+        catalogLabel(t.catalogs.damageRanges, evaluation.globalDamagePercentage) ||
+          evaluation.globalDamagePercentage,
+      ) +
+      `<div class="classification ${evaluation.habitability}">${escape(t[evaluation.habitability])}</div>` +
+      `<p class="hint">${escape(t.habitabilityHints[evaluation.habitability])}</p>` +
+      row(t.fields.placardComments, evaluation.placard.comments) +
+      row(t.fields.placardRestrictions, evaluation.placard.restrictions) +
+      row(t.fields.placardActions, evaluation.placard.furtherActions),
+    preExisting:
+      row(t.fields.preExisting, evaluation.preExistingConditions.present ? t.yes : t.no) +
+      row(t.fields.description, evaluation.preExistingConditions.description) +
+      row(t.fields.priorInterventions, evaluation.preExistingConditions.priorInterventions),
+    recommendations:
+      row(t.fields.safetyMeasures, evaluation.recommendations.safetyMeasures.join(', ')) +
+      row(t.fields.specialistVisits, evaluation.recommendations.specialistVisits.join(', ')) +
+      row(t.fields.barriers, evaluation.recommendations.barriers) +
+      row(t.fields.others, evaluation.recommendations.others),
+    occupants:
+      row(t.fields.injured, evaluation.occupantImpact.injured) +
+      row(t.fields.deceased, evaluation.occupantImpact.deceased),
+    occupancy:
+      row(t.fields.inhabited, evaluation.occupancy.inhabited ? t.yes : t.no) +
+      row(t.fields.existingUnits, evaluation.occupancy.existingUnits) +
+      row(t.fields.uninhabitableUnits, evaluation.occupancy.uninhabitableUnits),
+    contact:
+      row(t.fields.contactName, evaluation.contact.name) +
+      row(t.fields.identification, evaluation.contact.identification) +
+      row(t.fields.phone, evaluation.contact.phone) +
+      row(t.fields.contactAddress, evaluation.contact.address) +
+      row(t.fields.comments, evaluation.comments),
+    inspectors: evaluation.inspectors
+      .map(
+        (inspector) =>
+          `<div class="inspector">${row(t.fields.inspectorName, inspector.name)}${row(
+            t.fields.profession,
+            inspector.profession,
+          )}${row(t.fields.license, inspector.license)}${row(t.fields.entity, inspector.entity)}</div>`,
+      )
+      .join(''),
+    media: `<div class="evidence">
         <div class="drawing"><strong>${escape(t.sketch)}</strong>${
           evaluation.sketchUri
             ? `<img src="${escape(evaluation.sketchUri)}" alt="${escape(t.sketch)}">`
@@ -170,19 +200,25 @@ export function renderReportHtml(evaluation: Evaluation, language: Language) {
             }</figcaption></figure>`,
         )
         .join('')}</div>`,
-    ),
-  ].join('');
+  };
 
-  return `<!doctype html>
-<html lang="${language}"><head><meta charset="utf-8"><style>
-@page{size:A4;margin:15mm}*{box-sizing:border-box}body{font-family:Arial,sans-serif;color:#17251c;margin:0;font-size:11px}
-header{display:flex;align-items:center;border-bottom:4px solid #176235;padding-bottom:14px;margin-bottom:18px}
+  const content = sectionKeysFor(evaluation)
+    .map((key, index) => section(key, index, blocks[key]))
+    .join('');
+
+  const documentHtml = `<!doctype html>
+<html lang="${language}"><head><meta charset="utf-8"><title>EVALQUAKE — ${escape(
+    evaluation.building.address || evaluation.id,
+  )}</title><style>
+@page{size:A4;margin:15mm}*{box-sizing:border-box}body{font-family:Arial,sans-serif;color:#17251c;margin:0;font-size:11px;background:#f5f8f3;padding:18px}
+header{display:flex;align-items:center;border-bottom:4px solid #176235;padding-bottom:14px;margin-bottom:18px;background:#fff;padding:14px;border-radius:8px}
 .mark{width:54px;height:54px;border-radius:50%;background:#176235;color:#fff;display:flex;align-items:center;justify-content:center;font-size:24px;font-weight:bold;margin-right:14px}
 h1{color:#176235;font-size:24px;margin:0}.subtitle{color:#637068;margin-top:4px}.meta{margin-left:auto;text-align:right}
-section{break-inside:avoid;border:1px solid #d9e2d8;border-radius:8px;margin:0 0 11px;overflow:hidden}
+section{break-inside:avoid;border:1px solid #d9e2d8;border-radius:8px;margin:0 0 11px;overflow:hidden;background:#fff}
 h2{background:#eef3ec;color:#0e4525;font-size:13px;margin:0;padding:9px 12px}.row{display:flex;border-top:1px solid #edf1ec;padding:6px 12px;gap:12px}
 .row span{color:#637068;width:42%}.row strong{flex:1}.classification{padding:12px;color:#fff;font-weight:bold;text-transform:uppercase}
 .habitable{background:#2d7a45}.restricted{background:#d69e00}.unsafe{background:#c43d32}.collapsed{background:#242824}
+.hint{margin:0;padding:8px 12px;color:#637068;font-size:11px}
 .inspector{margin:8px;border:1px solid #edf1ec;border-radius:5px}.evidence{display:flex;gap:12px;padding:12px}
 .drawing{flex:1;min-height:120px;border:1px solid #d9e2d8;padding:8px}.drawing strong{display:block;color:#637068;margin-bottom:8px}.drawing img{width:100%;height:100px;object-fit:contain}
 .photos{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;padding:12px}.photos figure{margin:0;border:1px solid #d9e2d8;padding:6px;break-inside:avoid}.photos img{width:100%;height:180px;object-fit:contain}.photos figcaption{font-size:9px;color:#637068;margin-top:5px}
@@ -194,4 +230,10 @@ footer{text-align:center;color:#637068;margin-top:15px}
   }</strong><br>${escape(new Date(evaluation.inspectedAt).toLocaleString(language))}<br>${escape(
     evaluation.id,
   )}</div></header>${content}<footer>${escape(t.immutableNotice)}</footer></body></html>`;
+
+  return wrapPrintableHtml(documentHtml, printLabel(t));
+}
+
+function printLabel(t: Dictionary) {
+  return t.printPdf;
 }

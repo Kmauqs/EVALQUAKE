@@ -1,6 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-import type { Evaluation } from '@/domain/evaluation';
+import { normalizeEvaluation, type Evaluation } from '@/domain/evaluation';
 
 const EVALUATIONS_KEY = 'evalquake.evaluations';
 const OUTBOX_KEY = 'evalquake.outbox';
@@ -18,7 +18,7 @@ function serialize<T>(operation: () => Promise<T>): Promise<T> {
 export async function listLocalEvaluations(): Promise<Evaluation[]> {
   const value = await AsyncStorage.getItem(EVALUATIONS_KEY);
   const records = value ? (JSON.parse(value) as Evaluation[]) : [];
-  return records.sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
+  return records.map(normalizeEvaluation).sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
 }
 
 export async function getLocalEvaluation(id: string): Promise<Evaluation | null> {

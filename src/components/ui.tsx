@@ -131,8 +131,8 @@ export function SelectRow<T extends string>({
   onChange,
 }: {
   label: string;
-  value: T;
-  options: ReadonlyArray<{ value: T; label: string }>;
+  value: T | '';
+  options: readonly { value: T; label: string }[];
   onChange: (value: T) => void;
 }) {
   return (
