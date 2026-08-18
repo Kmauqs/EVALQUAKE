@@ -1,5 +1,5 @@
 import { useLocalSearchParams } from 'expo-router';
-import { ArrowLeft, Braces, FileText, MapPin } from 'lucide-react-native';
+import { ArrowLeft, Braces, FileText, MapPin, Tag } from 'lucide-react-native';
 import React, { useEffect, useState } from 'react';
 import { Pressable, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 
@@ -10,8 +10,9 @@ import { demoEvaluations } from '@/domain/fixtures';
 import { pullEvaluation } from '@/firebase/repository';
 import { useI18n } from '@/i18n/I18nProvider';
 import { useSafeBack } from '@/navigation/useSafeBack';
+import { renderPlacardHtml } from '@/report/renderPlacardHtml';
 import { renderReportHtml } from '@/report/renderReportHtml';
-import { createPdf, sharePdf } from '@/services/pdf';
+import { openHtmlDocument } from '@/services/htmlDocument';
 import { useEvaluations } from '@/state/EvaluationProvider';
 import { colors, layout } from '@/theme';
 
@@ -42,8 +43,14 @@ export default function EvaluationDetail() {
   }
 
   const openReport = async () => {
-    const uri = evaluation.localPdfUri ?? (await createPdf(renderReportHtml(evaluation, language)));
-    await sharePdf(uri);
+    await openHtmlDocument(renderReportHtml(evaluation, language), `evalquake-${evaluation.id}.html`);
+  };
+
+  const openPlacard = async () => {
+    await openHtmlDocument(
+      renderPlacardHtml(evaluation, language),
+      `evalquake-placard-${evaluation.id}.html`,
+    );
   };
 
   const rows = [
@@ -92,7 +99,15 @@ export default function EvaluationDetail() {
           onPress={() => void openReport()}
           style={narrow ? styles.actionButtonNarrow : undefined}
         >
-          {t.report}
+          {t.viewReport}
+        </Button>
+        <Button
+          variant="secondary"
+          icon={<Tag size={18} color={colors.primary} />}
+          onPress={() => void openPlacard()}
+          style={narrow ? styles.actionButtonNarrow : undefined}
+        >
+          {t.generatePlacard}
         </Button>
         <Button
           variant="ghost"

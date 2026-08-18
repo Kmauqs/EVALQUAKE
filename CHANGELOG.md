@@ -22,7 +22,28 @@ La versión visible en la cabecera de la app sale de `src/version.ts`.
 
 ## [Unreleased]
 
-Cambios posteriores a 0.2.1 se listan aquí hasta el siguiente corte.
+Cambios posteriores a 0.3.0 se listan aquí hasta el siguiente corte.
+
+## [0.3.0] — 2026-08-18
+
+### Added
+
+- Sesión persistente en el dispositivo, con cierre automático a los 30 días.
+- Categoría NSR-10, sistema estructural, entrepiso, cubierta y periodo de construcción.
+- Listas ATC-20 de estabilidad global, daño estructural/no estructural y revisión de equipos.
+- Pancarta HTML ATC-20 (inspeccionado, uso restringido, inseguro / peligro de colapso).
+- Informe HTML completo con botón **Imprimir en PDF**.
+
+### Changed
+
+- El flujo final abre el informe HTML en lugar de generar un PDF automáticamente.
+- «Área de huella» pasa a «Área en planta».
+- La clasificación de habitabilidad se deriva de los cuatro niveles de riesgo y colorea el recuadro.
+- Los criterios ATC-20 de campo se integran en Estabilidad global.
+
+### Removed
+
+- La sección independiente «Criterios ATC-20 en campo».
 
 ## [0.2.1] — 2026-08-17
 

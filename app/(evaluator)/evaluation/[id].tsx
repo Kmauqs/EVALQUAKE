@@ -1,7 +1,7 @@
 import { useLocalSearchParams } from 'expo-router';
-import { ArrowLeft, CheckCircle2, FileText } from 'lucide-react-native';
+import { ArrowLeft, CheckCircle2, FileText, Tag } from 'lucide-react-native';
 import React, { useEffect, useState } from 'react';
-import { Alert, Linking, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { EvaluationSection } from '@/components/EvaluationSection';
 import { AppShell, Button, Card, ClassificationBadge, SectionProgress } from '@/components/ui';
@@ -12,12 +12,12 @@ import {
   sectionKeysFor,
   validateForSubmission,
 } from '@/domain/evaluation';
-import { resolveAttachmentUrl } from '@/firebase/repository';
 import { useI18n } from '@/i18n/I18nProvider';
 import { useSafeBack } from '@/navigation/useSafeBack';
+import { renderPlacardHtml } from '@/report/renderPlacardHtml';
 import { renderReportHtml } from '@/report/renderReportHtml';
 import { captureCoordinates, pickDamagePhoto, pickDamagePhotos } from '@/services/device';
-import { createPdf, sharePdf } from '@/services/pdf';
+import { openHtmlDocument } from '@/services/htmlDocument';
 import { useEvaluations } from '@/state/EvaluationProvider';
 import { colors, layout } from '@/theme';
 
@@ -62,14 +62,15 @@ export default function EvaluationWizard() {
   const current = Math.min(section, last);
   const sectionKey = keys[current] ?? 'cadastral';
 
-  const openExistingReport = async () => {
-    let uri = Platform.OS === 'web' ? undefined : evaluation.localPdfUri;
-    if (!uri && evaluation.canonicalPdfStoragePath) {
-      uri = (await resolveAttachmentUrl(evaluation.canonicalPdfStoragePath)) ?? undefined;
-    }
-    uri ??= await createPdf(renderReportHtml(evaluation, evaluation.reportLanguage ?? language));
-    if (uri.startsWith('http')) await Linking.openURL(uri);
-    else await sharePdf(uri);
+  const openReport = async () => {
+    await openHtmlDocument(renderReportHtml(evaluation, language), `evalquake-${evaluation.id}.html`);
+  };
+
+  const openPlacard = async () => {
+    await openHtmlDocument(
+      renderPlacardHtml(evaluation, language),
+      `evalquake-placard-${evaluation.id}.html`,
+    );
   };
 
   if (evaluation.status !== 'draft') {
@@ -91,10 +92,14 @@ export default function EvaluationWizard() {
               {t.back}
             </Button>
             <Button
-              icon={<FileText size={18} color={colors.white} />}
-              onPress={() => void openExistingReport()}
+              variant="secondary"
+              icon={<Tag size={18} color={colors.primary} />}
+              onPress={() => void openPlacard()}
             >
-              {t.generatePdf}
+              {t.generatePlacard}
+            </Button>
+            <Button icon={<FileText size={18} color={colors.white} />} onPress={() => void openReport()}>
+              {t.viewReport}
             </Button>
           </View>
         </Card>
@@ -148,19 +153,6 @@ export default function EvaluationWizard() {
     }
   };
 
-  const generate = async () => {
-    setBusy(true);
-    try {
-      const uri = await createPdf(renderReportHtml(evaluation, language));
-      const updated = { ...evaluation, localPdfUri: uri, reportLanguage: language };
-      setEvaluation(updated);
-      await save(updated);
-      await sharePdf(uri);
-    } finally {
-      setBusy(false);
-    }
-  };
-
   const submit = async () => {
     const validation = validateForSubmission(evaluation);
     if (!validation.success) {
@@ -169,10 +161,8 @@ export default function EvaluationWizard() {
     }
     setBusy(true);
     try {
-      const uri = evaluation.localPdfUri ?? (await createPdf(renderReportHtml(evaluation, language)));
       const submitted: Evaluation = {
         ...evaluation,
-        localPdfUri: uri,
         status: 'submitted',
         syncState: 'pending',
         reportLanguage: language,
@@ -235,14 +225,24 @@ export default function EvaluationWizard() {
           )}
           <View style={styles.actionsRight}>
             {current === last && (
-              <Button
-                variant="secondary"
-                icon={<FileText size={18} color={colors.primary} />}
-                loading={busy}
-                onPress={() => void generate()}
-              >
-                {t.generatePdf}
-              </Button>
+              <>
+                <Button
+                  variant="ghost"
+                  icon={<Tag size={18} color={colors.primary} />}
+                  loading={busy}
+                  onPress={() => void openPlacard()}
+                >
+                  {t.generatePlacard}
+                </Button>
+                <Button
+                  variant="secondary"
+                  icon={<FileText size={18} color={colors.primary} />}
+                  loading={busy}
+                  onPress={() => void openReport()}
+                >
+                  {t.viewReport}
+                </Button>
+              </>
             )}
             {current < last ? (
               <Button onPress={() => void go(current + 1)}>{t.next}</Button>

@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import { createEvaluation } from '../domain/evaluation';
 import { en, es } from '../i18n/translations';
+import { renderPlacardHtml } from './renderPlacardHtml';
 import { renderReportHtml } from './renderReportHtml';
 
 describe('bilingual report renderer', () => {
@@ -60,5 +61,18 @@ describe('bilingual report renderer', () => {
     const html = renderReportHtml(evaluation, 'es');
     expect(html).toContain('Lista de revisión de equipos');
     expect(html).toContain('Calefactores principales');
+  });
+
+  it('renders ATC-20 occupancy placards with print-to-PDF', () => {
+    const evaluation = createEvaluation('EQ-PLACARD');
+    evaluation.habitability = 'restricted';
+    evaluation.building.address = 'Calle 10 # 20-30';
+    evaluation.placard.restrictions = 'No usar la chimenea';
+    const html = renderPlacardHtml(evaluation, 'es');
+    expect(html).toContain('USO RESTRINGIDO');
+    expect(html).toContain('Calle 10 # 20-30');
+    expect(html).toContain('No usar la chimenea');
+    expect(html).toContain('Imprimir en PDF');
+    expect(html).toContain('@media print');
   });
 });
