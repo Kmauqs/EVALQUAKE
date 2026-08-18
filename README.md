@@ -19,7 +19,7 @@ La misma versión debe coincidir en:
 | `app.json` | `expo.version` |
 | `functions/package.json` | `version` |
 
-Al cerrar un conjunto de cambios: subir el número, anotar la bitácora y desplegar.
+Al cerrar un conjunto de cambios: subir el número, anotar la bitácora y seguir [`DEPLOY.md`](DEPLOY.md).
 
 ## Qué incluye 0.2.0
 
@@ -88,32 +88,13 @@ Roles: `evaluator`, `coordinator`, `admin`. Las reglas de Firestore limitan lect
 
 ## Despliegue de producción
 
-**Backend**
+La guía paso a paso, cada vez que hay un cambio, está en [`DEPLOY.md`](DEPLOY.md).
 
-```bash
-firebase deploy --only firestore,storage,functions
-```
+Resumen: subir versión y changelog → verificar → `git push origin main` (Hosting) → si cambió backend, `firebase deploy --only functions,firestore,storage` → confirmar `vX.Y.Z` en [evalquake.web.app](https://evalquake.web.app).
 
-**Web** (con Firebase, nunca con emuladores):
+GitHub Actions publica **solo** Hosting y necesita estos secrets: `EXPO_PUBLIC_FIREBASE_API_KEY`, `EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN`, `EXPO_PUBLIC_FIREBASE_PROJECT_ID`, `EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET`, `EXPO_PUBLIC_FIREBASE_APP_ID`, `FIREBASE_SERVICE_ACCOUNT_EVALQUAKE`. Si faltan, el sitio queda en modo demostración.
 
-```powershell
-$env:EXPO_PUBLIC_USE_FIREBASE_EMULATORS="false"
-npm run export:web
-firebase deploy --only hosting
-```
-
-O push a `main`: GitHub Actions exporta y publica Hosting. El workflow necesita estos secrets:
-
-- `EXPO_PUBLIC_FIREBASE_API_KEY`
-- `EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN`
-- `EXPO_PUBLIC_FIREBASE_PROJECT_ID`
-- `EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET`
-- `EXPO_PUBLIC_FIREBASE_APP_ID`
-- `FIREBASE_SERVICE_ACCOUNT_EVALQUAKE`
-
-Si faltan las variables públicas, el sitio queda en modo demostración y no muestra el registro.
-
-**Móvil:** builds firmados con EAS (`eas.json`, proyecto `evalquake`). Las mismas `EXPO_PUBLIC_*` van en secretos de EAS. No commitear `.env`, cuentas de servicio ni claves de firma.
+**Móvil:** EAS (`eas.json`). Mismas variables en secretos de EAS. No commitear `.env`, cuentas de servicio ni claves de firma.
 
 ## Sincronización offline
 

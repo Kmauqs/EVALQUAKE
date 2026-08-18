@@ -16,6 +16,8 @@ Al publicar un cambio, actualizar juntos:
 4. `functions/package.json`
 5. esta bitácora
 
+Luego seguir [`DEPLOY.md`](DEPLOY.md).
+
 La versión visible en la cabecera de la app sale de `src/version.ts`.
 
 ## [Unreleased]
