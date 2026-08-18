@@ -89,6 +89,8 @@ Supported roles are `evaluator`, `coordinator`, and `admin`. The admin module li
 
 When Firebase is configured, the app displays sign-in/sign-up and only exposes the evaluator, coordinator, or admin routes allowed by those claims. After approval, the user should tap **Check access** or sign in again to refresh the token. New local evaluations are stamped with the authenticated Firebase UID; demo identity is used only when Firebase is not configured.
 
+The production Hosting build must include the `EXPO_PUBLIC_FIREBASE_*` values (never `EXPO_PUBLIC_USE_FIREBASE_EMULATORS=true`). GitHub Actions reads them from repository secrets with those same names; without them, https://evalquake.web.app stays in demonstration mode and the create-account screen does not appear.
+
 ## Offline and synchronization model
 
 The Expo-managed Firebase JavaScript SDK does not provide native Firestore disk persistence on React Native. For that reason, mobile uses SQLite as the durable source of truth and an explicit outbox; Firebase is the eventual remote replica. Web uses browser persistence plus the same repository contract.
