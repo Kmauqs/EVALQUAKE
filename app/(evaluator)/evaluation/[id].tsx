@@ -11,7 +11,7 @@ import { useI18n } from '@/i18n/I18nProvider';
 import { useSafeBack } from '@/navigation/useSafeBack';
 import { renderReportHtml } from '@/report/renderReportHtml';
 import { resolveAttachmentUrl } from '@/firebase/repository';
-import { captureCoordinates, pickDamagePhoto } from '@/services/device';
+import { captureCoordinates, pickDamagePhoto, pickDamagePhotos } from '@/services/device';
 import { createPdf, sharePdf } from '@/services/pdf';
 import { useEvaluations } from '@/state/EvaluationProvider';
 import { colors, layout } from '@/theme';
@@ -113,8 +113,10 @@ export default function EvaluationWizard() {
 
   const addPhoto = async (source: 'camera' | 'library') => {
     try {
-      const photo = await pickDamagePhoto(source, evaluation.identification.coordinates);
-      if (photo) setEvaluation({ ...evaluation, photos: [...evaluation.photos, photo] });
+      const photos = await pickDamagePhotos(source, evaluation.identification.coordinates);
+      if (photos.length) {
+        setEvaluation({ ...evaluation, photos: [...evaluation.photos, ...photos] });
+      }
     } catch {
       Alert.alert(t.addPhoto, t.offline);
     }

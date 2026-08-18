@@ -22,6 +22,15 @@ export async function pickDamagePhoto(
   source: 'camera' | 'library',
   coordinates?: Coordinates,
 ): Promise<Attachment | null> {
+  const photos = await pickDamagePhotos(source, coordinates, false);
+  return photos[0] ?? null;
+}
+
+export async function pickDamagePhotos(
+  source: 'camera' | 'library',
+  coordinates?: Coordinates,
+  allowMultiple = source === 'library',
+): Promise<Attachment[]> {
   const permission =
     source === 'camera'
       ? await ImagePicker.requestCameraPermissionsAsync()
@@ -31,22 +40,31 @@ export async function pickDamagePhoto(
   const result =
     source === 'camera'
       ? await ImagePicker.launchCameraAsync({ mediaTypes: ['images'], quality: 0.9 })
-      : await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], quality: 0.9 });
-  if (result.canceled || !result.assets[0]) return null;
+      : await ImagePicker.launchImageLibraryAsync({
+          mediaTypes: ['images'],
+          quality: 0.9,
+          allowsMultipleSelection: allowMultiple,
+          selectionLimit: allowMultiple ? 0 : 1,
+        });
+  if (result.canceled || !result.assets.length) return [];
 
-  const context = ImageManipulator.ImageManipulator.manipulate(result.assets[0].uri);
-  context.resize({ width: 1600, height: null });
-  const rendered = await context.renderAsync();
-  const compressed = await rendered.saveAsync({
-    compress: 0.72,
-    format: ImageManipulator.SaveFormat.JPEG,
-  });
+  const photos: Attachment[] = [];
+  for (const asset of result.assets) {
+    const context = ImageManipulator.ImageManipulator.manipulate(asset.uri);
+    context.resize({ width: 1600, height: null });
+    const rendered = await context.renderAsync();
+    const compressed = await rendered.saveAsync({
+      compress: 0.72,
+      format: ImageManipulator.SaveFormat.JPEG,
+    });
 
-  return {
-    id: cryptoRandomId(),
-    localUri: compressed.uri,
-    sectionRef: 'photos',
-    coordinates,
-    syncState: 'pending',
-  };
+    photos.push({
+      id: cryptoRandomId(),
+      localUri: compressed.uri,
+      sectionRef: 'photos',
+      coordinates,
+      syncState: 'pending',
+    });
+  }
+  return photos;
 }

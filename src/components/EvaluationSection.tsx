@@ -1,4 +1,4 @@
-import { Camera, ImagePlus, LocateFixed } from 'lucide-react-native';
+import { Camera, ImagePlus, LocateFixed, X } from 'lucide-react-native';
 import React from 'react';
 import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
 
@@ -617,26 +617,77 @@ export function EvaluationSection({
               onChange={(signatureUri) => update('signatureUri', signatureUri)}
             />
           </View>
-          <View style={styles.photoButtons}>
-            <Button
-              variant="secondary"
-              icon={<Camera size={18} color={colors.primary} />}
-              onPress={() => onPhoto('camera')}
-            >
-              {t.takePhoto}
-            </Button>
-            <Button
-              variant="ghost"
-              icon={<ImagePlus size={18} color={colors.primary} />}
-              onPress={() => onPhoto('library')}
-            >
-              {t.choosePhoto}
-            </Button>
-          </View>
-          <View style={styles.photos}>
-            {evaluation.photos.map((photo) => (
-              <Image key={photo.id} source={{ uri: photo.localUri }} style={styles.photo} />
-            ))}
+          <View style={styles.photoRegistry}>
+            <View style={styles.photoRegistryHeader}>
+              <View style={styles.photoRegistryTitle}>
+                <Text style={styles.mediaLabel}>{t.photoRecord}</Text>
+                <Text style={styles.photoCount}>
+                  {evaluation.photos.length} {t.photosSaved}
+                </Text>
+              </View>
+              <View style={styles.photoButtons}>
+                <Button
+                  variant="secondary"
+                  icon={<Camera size={18} color={colors.primary} />}
+                  onPress={() => onPhoto('camera')}
+                >
+                  {t.takePhoto}
+                </Button>
+                <Button
+                  variant="ghost"
+                  icon={<ImagePlus size={18} color={colors.primary} />}
+                  onPress={() => onPhoto('library')}
+                >
+                  {t.choosePhotos}
+                </Button>
+              </View>
+            </View>
+            {evaluation.photos.length ? (
+              <View style={styles.photos}>
+                {evaluation.photos.map((photo) => (
+                  <View key={photo.id} style={styles.photoCard}>
+                    <View style={styles.photoPreview}>
+                      <Image
+                        source={{ uri: photo.localUri }}
+                        resizeMode="cover"
+                        style={styles.photo}
+                      />
+                      <Pressable
+                        accessibilityLabel={t.removePhoto}
+                        onPress={() =>
+                          update(
+                            'photos',
+                            evaluation.photos.filter((item) => item.id !== photo.id),
+                          )
+                        }
+                        style={styles.removePhoto}
+                      >
+                        <X size={16} color={colors.white} />
+                      </Pressable>
+                    </View>
+                    <Field
+                      label={t.photoCaption}
+                      value={photo.caption ?? ''}
+                      onChangeText={(caption) =>
+                        update(
+                          'photos',
+                          evaluation.photos.map((item) =>
+                            item.id === photo.id ? { ...item, caption } : item,
+                          ),
+                        )
+                      }
+                      placeholder={t.photoCaptionPlaceholder}
+                      style={styles.photoCaptionField}
+                    />
+                  </View>
+                ))}
+              </View>
+            ) : (
+              <View style={styles.emptyPhotos}>
+                <ImagePlus size={30} color={colors.textMuted} />
+                <Text style={styles.sketchPlaceholder}>{t.noPhotos}</Text>
+              </View>
+            )}
           </View>
         </View>
       );
@@ -707,7 +758,61 @@ const styles = StyleSheet.create({
   sketchImage: { width: '100%', height: '100%' },
   sketchPlaceholder: { color: colors.textMuted, fontSize: 13, textAlign: 'center' },
   sketchButtons: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  photoRegistry: {
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 14,
+    backgroundColor: colors.surfaceMuted,
+    padding: 14,
+    gap: 14,
+  },
+  photoRegistryHeader: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 12,
+  },
+  photoRegistryTitle: { gap: 3 },
+  photoCount: { color: colors.textMuted, fontSize: 12 },
   photoButtons: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
   photos: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
-  photo: { width: 126, height: 94, borderRadius: 10, backgroundColor: colors.surfaceMuted },
+  photoCard: {
+    flexGrow: 1,
+    flexBasis: 240,
+    maxWidth: 360,
+    minWidth: 220,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 12,
+    backgroundColor: colors.white,
+    padding: 9,
+    gap: 9,
+  },
+  photoPreview: { height: 170, borderRadius: 9, overflow: 'hidden', position: 'relative' },
+  photo: { width: '100%', height: '100%', backgroundColor: colors.surfaceMuted },
+  removePhoto: {
+    position: 'absolute',
+    top: 8,
+    right: 8,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: '#14271ECC',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  photoCaptionField: { minWidth: 0 },
+  emptyPhotos: {
+    minHeight: 150,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderStyle: 'dashed',
+    borderRadius: 12,
+    backgroundColor: colors.white,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    padding: 18,
+  },
 });
