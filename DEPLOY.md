@@ -27,7 +27,7 @@ GitHub Actions, al hacer push a `main`, **solo publica Hosting**. Functions, reg
    - `functions/package.json`
 3. En `CHANGELOG.md`: pasar lo de **Unreleased** a una sección `## [X.Y.Z] — AAAA-MM-DD` y dejar **Unreleased** vacía.
 
-Sin este paso, producción puede seguir mostrando `v0.2.0` aunque el código haya cambiado.
+Sin este paso, producción puede seguir mostrando la versión anterior aunque el código haya cambiado.
 
 ## 3. Verificar en local
 

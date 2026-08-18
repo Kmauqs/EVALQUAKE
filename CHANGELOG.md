@@ -22,7 +22,19 @@ La versión visible en la cabecera de la app sale de `src/version.ts`.
 
 ## [Unreleased]
 
-Cambios posteriores a 0.2.0 se listan aquí hasta el siguiente corte.
+Cambios posteriores a 0.2.1 se listan aquí hasta el siguiente corte.
+
+## [0.2.1] — 2026-08-17
+
+### Added
+
+- Pastilla de versión `vX.Y.Z` en la cabecera, junto al selector de idioma.
+- El logo y el nombre EVALQUAKE llevan al menú de inicio.
+- Guía de despliegue en `DEPLOY.md`.
+
+### Changed
+
+- La cabecera de versión es visible en web y móvil para confirmar el build publicado.
 
 ## [0.2.0] — 2026-08-17
 
