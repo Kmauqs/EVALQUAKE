@@ -20,6 +20,7 @@ export default function CoordinatorDashboard() {
   const { evaluations: local } = useEvaluations();
   const router = useRouter();
   const { width } = useWindowDimensions();
+  const narrow = width < 700;
   const [query, setQuery] = useState('');
   const [filter, setFilter] = useState<Habitability | 'all'>('all');
   const [remote, setRemote] = useState<Evaluation[]>([]);
@@ -54,20 +55,21 @@ export default function CoordinatorDashboard() {
 
   return (
     <AppShell>
-      <View style={styles.titleRow}>
+      <View style={[styles.titleRow, narrow && styles.titleRowNarrow]}>
         <Pressable onPress={() => router.back()} style={styles.back}>
           <ArrowLeft size={20} color={colors.primary} />
         </Pressable>
         <View style={styles.heading}>
           <Text style={styles.eyebrow}>{t.coordinator}</Text>
-          <Text style={styles.title}>{t.dashboard}</Text>
+          <Text style={[styles.title, narrow && styles.titleNarrow]}>{t.dashboard}</Text>
           <Text style={styles.subtitle}>{t.currentEvent}</Text>
         </View>
-        <View style={styles.exports}>
+        <View style={[styles.exports, narrow && styles.exportsNarrow]}>
           <Button
             variant="ghost"
             icon={<Download size={17} color={colors.primary} />}
             onPress={() => void exportCsv(filtered)}
+            style={narrow ? styles.exportButtonNarrow : undefined}
           >
             {t.exportCsv}
           </Button>
@@ -75,6 +77,7 @@ export default function CoordinatorDashboard() {
             variant="secondary"
             icon={<FileJson size={17} color={colors.primary} />}
             onPress={() => void exportJson(filtered)}
+            style={narrow ? styles.exportButtonNarrow : undefined}
           >
             {t.exportJson}
           </Button>
@@ -166,12 +169,16 @@ export default function CoordinatorDashboard() {
 
 const styles = StyleSheet.create({
   titleRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 13, marginTop: 8 },
+  titleRowNarrow: { flexWrap: 'wrap' },
   back: { width: 44, height: 44, borderRadius: 12, borderWidth: 1, borderColor: colors.border, alignItems: 'center', justifyContent: 'center' },
-  heading: { flex: 1 },
+  heading: { flex: 1, minWidth: 0 },
   eyebrow: { color: colors.primary, fontWeight: '900', fontSize: 12, textTransform: 'uppercase' },
   title: { color: colors.text, fontSize: 30, fontWeight: '900', marginTop: 3 },
+  titleNarrow: { fontSize: 27, lineHeight: 33 },
   subtitle: { color: colors.textMuted, marginTop: 4 },
   exports: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, justifyContent: 'flex-end' },
+  exportsNarrow: { width: '100%', flexDirection: 'column', paddingLeft: 57, alignItems: 'stretch' },
+  exportButtonNarrow: { width: '100%' },
   stats: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginTop: 22 },
   statPressable: { minWidth: 150, flex: 1 },
   statCard: { minWidth: 140, flex: 1, minHeight: 100, justifyContent: 'center', gap: 8 },

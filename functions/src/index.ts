@@ -61,7 +61,14 @@ async function generateCanonicalPdf(reference: DocumentReference) {
       return { ...photo, localUri };
     }),
   );
-  const canonical: Evaluation = { ...evaluation, photos };
+  let sketchUri = evaluation.sketchUri;
+  if (evaluation.sketchStoragePath) {
+    [sketchUri] = await bucket.file(evaluation.sketchStoragePath).getSignedUrl({
+      action: 'read',
+      expires: Date.now() + 15 * 60_000,
+    });
+  }
+  const canonical: Evaluation = { ...evaluation, photos, sketchUri };
   const html = renderReportHtml(canonical, evaluation.reportLanguage ?? 'es');
   const { default: puppeteer } = await import('puppeteer');
   const browser = await puppeteer.launch({

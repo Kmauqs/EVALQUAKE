@@ -131,6 +131,7 @@ export interface Evaluation {
   inspectedAt: string;
   photos: Attachment[];
   sketchUri?: string;
+  sketchStoragePath?: string;
   signatureUri?: string;
   localPdfUri?: string;
   canonicalPdfStoragePath?: string;

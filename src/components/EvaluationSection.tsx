@@ -1,11 +1,11 @@
 import { Camera, ImagePlus, LocateFixed } from 'lucide-react-native';
 import React from 'react';
-import { Image, StyleSheet, Text, View } from 'react-native';
+import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import type { Evaluation, Habitability, RiskLevel } from '@/domain/evaluation';
 import { useI18n } from '@/i18n/I18nProvider';
 import { colors } from '@/theme';
-import { DrawPad } from './DrawPad';
+import { SignatureCapture } from './SignatureCapture';
 import { Button, Field, SelectRow, ToggleRow } from './ui';
 
 interface Props {
@@ -14,6 +14,7 @@ interface Props {
   onChange: (evaluation: Evaluation) => void;
   onLocation: () => void;
   onPhoto: (source: 'camera' | 'library') => void;
+  onSketch: (source: 'camera' | 'library') => void;
 }
 
 export function EvaluationSection({
@@ -22,6 +23,7 @@ export function EvaluationSection({
   onChange,
   onLocation,
   onPhoto,
+  onSketch,
 }: Props) {
   const { t } = useI18n();
   const update = <K extends keyof Evaluation>(key: K, value: Evaluation[K]) =>
@@ -565,13 +567,52 @@ export function EvaluationSection({
       return (
         <View style={styles.stack}>
           <View style={styles.drawGrid}>
-            <DrawPad
-              label={t.sketch}
-              value={evaluation.sketchUri}
-              onChange={(sketchUri) => update('sketchUri', sketchUri)}
-            />
-            <DrawPad
-              label={t.signature}
+            <View style={styles.sketchPicker}>
+              <View style={styles.mediaHeader}>
+                <Text style={styles.mediaLabel}>{t.sketch}</Text>
+                {evaluation.sketchUri && (
+                  <Pressable
+                    onPress={() =>
+                      onChange({
+                        ...evaluation,
+                        sketchUri: undefined,
+                        sketchStoragePath: undefined,
+                      })
+                    }
+                  >
+                    <Text style={styles.clear}>{t.clear}</Text>
+                  </Pressable>
+                )}
+              </View>
+              <View style={styles.sketchPreview}>
+                {evaluation.sketchUri ? (
+                  <Image
+                    source={{ uri: evaluation.sketchUri }}
+                    resizeMode="contain"
+                    style={styles.sketchImage}
+                  />
+                ) : (
+                  <Text style={styles.sketchPlaceholder}>{t.sketchImagePlaceholder}</Text>
+                )}
+              </View>
+              <View style={styles.sketchButtons}>
+                <Button
+                  variant="secondary"
+                  icon={<Camera size={17} color={colors.primary} />}
+                  onPress={() => onSketch('camera')}
+                >
+                  {t.takePhoto}
+                </Button>
+                <Button
+                  variant="ghost"
+                  icon={<ImagePlus size={17} color={colors.primary} />}
+                  onPress={() => onSketch('library')}
+                >
+                  {t.choosePhoto}
+                </Button>
+              </View>
+            </View>
+            <SignatureCapture
               value={evaluation.signatureUri}
               onChange={(signatureUri) => update('signatureUri', signatureUri)}
             />
@@ -647,6 +688,25 @@ const styles = StyleSheet.create({
   location: { flex: 1, minWidth: 240, gap: 8, justifyContent: 'flex-end' },
   coordinate: { color: colors.textMuted, fontSize: 12, textAlign: 'center' },
   drawGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 16 },
+  sketchPicker: { flex: 1, minWidth: 280, gap: 8 },
+  mediaHeader: { flexDirection: 'row', justifyContent: 'space-between' },
+  mediaLabel: { color: colors.text, fontSize: 13, fontWeight: '700' },
+  clear: { color: colors.primary, fontWeight: '800', fontSize: 13 },
+  sketchPreview: {
+    height: 180,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderStyle: 'dashed',
+    borderRadius: 12,
+    backgroundColor: colors.white,
+    alignItems: 'center',
+    justifyContent: 'center',
+    overflow: 'hidden',
+    padding: 8,
+  },
+  sketchImage: { width: '100%', height: '100%' },
+  sketchPlaceholder: { color: colors.textMuted, fontSize: 13, textAlign: 'center' },
+  sketchButtons: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   photoButtons: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
   photos: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
   photo: { width: 126, height: 94, borderRadius: 10, backgroundColor: colors.surfaceMuted },

@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 
 import { useI18n } from '@/i18n/I18nProvider';
@@ -22,8 +22,8 @@ export function DrawPad({
 }) {
   const { t } = useI18n();
   const onChangeRef = useRef(onChange);
+  const drawingRef = useRef(false);
   const [points, setPoints] = useState<Point[]>([]);
-  const [drawing, setDrawing] = useState(false);
 
   const path = useMemo(
     () => points.map((point) => `${point.move ? 'M' : 'L'}${point.x.toFixed(1)} ${point.y.toFixed(1)}`).join(' '),
@@ -57,27 +57,36 @@ export function DrawPad({
         accessibilityLabel={label}
         onStartShouldSetResponder={() => true}
         onMoveShouldSetResponder={() => true}
+        onMoveShouldSetResponderCapture={() => true}
+        onResponderTerminationRequest={() => false}
         onResponderGrant={(event) => {
-          setDrawing(true);
+          drawingRef.current = true;
           setPoints((current) => [
             ...current,
             { x: event.nativeEvent.locationX, y: event.nativeEvent.locationY, move: true },
           ]);
         }}
         onResponderMove={(event) => {
-          if (!drawing) return;
+          if (!drawingRef.current) return;
           setPoints((current) => [
             ...current,
             { x: event.nativeEvent.locationX, y: event.nativeEvent.locationY },
           ]);
         }}
-        onResponderRelease={() => setDrawing(false)}
+        onResponderRelease={() => {
+          drawingRef.current = false;
+        }}
+        onResponderTerminate={() => {
+          drawingRef.current = false;
+        }}
         style={styles.pad}
       >
-        {path || value ? (
+        {path ? (
           <Svg width="100%" height="100%" viewBox="0 0 640 240" preserveAspectRatio="none">
             <Path d={path} fill="none" stroke={colors.primary} strokeWidth={4} strokeLinecap="round" />
           </Svg>
+        ) : value ? (
+          <Image source={{ uri: value }} resizeMode="contain" style={styles.savedDrawing} />
         ) : (
           <Text style={styles.placeholder}>{t.drawHere}</Text>
         )}
@@ -101,6 +110,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     overflow: 'hidden',
+    touchAction: 'none',
   },
+  savedDrawing: { width: '100%', height: '100%' },
   placeholder: { color: colors.textMuted, fontSize: 13 },
 });

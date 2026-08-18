@@ -119,6 +119,21 @@ export default function EvaluationWizard() {
     }
   };
 
+  const addSketch = async (source: 'camera' | 'library') => {
+    try {
+      const image = await pickDamagePhoto(source, evaluation.identification.coordinates);
+      if (image) {
+        setEvaluation({
+          ...evaluation,
+          sketchUri: image.localUri,
+          sketchStoragePath: undefined,
+        });
+      }
+    } catch {
+      Alert.alert(t.sketch, t.offline);
+    }
+  };
+
   const generate = async () => {
     setBusy(true);
     try {
@@ -194,6 +209,7 @@ export default function EvaluationWizard() {
           }}
           onLocation={() => void locate()}
           onPhoto={(source) => void addPhoto(source)}
+          onSketch={(source) => void addSketch(source)}
         />
         <View style={styles.divider} />
         <View style={styles.actions}>

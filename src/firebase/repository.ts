@@ -39,9 +39,36 @@ export async function pushEvaluation(evaluation: Evaluation): Promise<Evaluation
     }),
   );
 
+  let sketchUri = evaluation.sketchUri;
+  let sketchStoragePath = evaluation.sketchStoragePath;
+  if (
+    sketchUri &&
+    !sketchStoragePath &&
+    !sketchUri.startsWith('data:') &&
+    !sketchUri.startsWith('http://') &&
+    !sketchUri.startsWith('https://')
+  ) {
+    const response = await fetch(sketchUri);
+    const blob = await response.blob();
+    sketchStoragePath = `evaluations/${evaluation.id}/sketch/sketch-${Date.now()}.jpg`;
+    const sketchReference = ref(services.storage, sketchStoragePath);
+    await uploadBytes(sketchReference, blob, {
+      contentType: 'image/jpeg',
+      customMetadata: {
+        evaluationId: evaluation.id,
+        jurisdictionId: evaluation.jurisdictionId,
+        createdByUserId: evaluation.createdByUserId,
+        sectionRef: 'sketch',
+      },
+    });
+    sketchUri = await getDownloadURL(sketchReference);
+  }
+
   const next = {
     ...evaluation,
     photos,
+    sketchUri,
+    sketchStoragePath,
     syncState: 'synced' as const,
     syncedAt: new Date().toISOString(),
   };
