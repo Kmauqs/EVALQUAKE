@@ -20,6 +20,7 @@ describe('evaluation domain', () => {
     expect(evaluation.structuralDamage.elements).toHaveLength(8);
     expect(evaluation.nonStructuralDamage.elements).toHaveLength(11);
     expect(evaluation.globalStability.conditions).toHaveLength(6);
+    expect(evaluation.structure.irregularities).toHaveLength(5);
     expect(evaluation.createdByUserId).toBe('firebase-user-1');
     expect(evaluation.deviceId).toBe('device-1');
     expect(sectionCountFor(evaluation)).toBe(16);
@@ -88,6 +89,33 @@ describe('evaluation domain', () => {
     expect(
       migrated.globalStability.conditions.find((item) => item.item === 'total_or_partial_collapse')?.checked,
     ).toBe(true);
+  });
+
+  it('fills ATC-20-1 fields missing from legacy drafts', () => {
+    const legacy = createEvaluation('legacy-atc');
+    const migrated = normalizeEvaluation({
+      ...legacy,
+      inspection: { type: 'complete', notInspectedReason: '', preliminaryClassification: '' },
+      building: { ...legacy.building, storiesBelowGrade: undefined },
+      structure: { ...legacy.structure, irregularities: undefined },
+      recommendations: {
+        safetyMeasures: [],
+        specialistVisits: [],
+        barriers: '',
+        others: '',
+      },
+    } as never);
+    expect(migrated.inspection.occupantsNotified).toBe(false);
+    expect(migrated.building.storiesBelowGrade).toBe('');
+    expect(migrated.structure.irregularities).toHaveLength(5);
+    expect(migrated.recommendations.typicalRestrictions).toEqual([]);
+    expect(migrated.recommendations.furtherActions).toEqual([]);
+    expect(migrated.recommendations.utilitiesIsolated).toEqual({
+      gas: false,
+      electric: false,
+      water: false,
+    });
+    expect(migrated.recommendations.adjacentFallingHazard).toBe(false);
   });
 
   it('allows submission but rejects every subsequent overwrite', () => {

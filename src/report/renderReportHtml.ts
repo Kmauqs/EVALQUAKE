@@ -52,12 +52,14 @@ export function renderReportHtml(evaluation: Evaluation, language: Language) {
         evaluation.inspection.preliminaryClassification
           ? t[evaluation.inspection.preliminaryClassification]
           : '',
-      ),
+      ) +
+      row(t.fields.occupantsNotified, evaluation.inspection.occupantsNotified ? t.yes : t.no),
     building:
       row(t.address, evaluation.building.address) +
       row(t.fields.buildingName, evaluation.building.name) +
       row(t.fields.nsrGroup, catalogLabel(t.catalogs.nsrGroups, evaluation.building.nsrGroup)) +
       row(t.fields.floors, evaluation.building.floors) +
+      row(t.fields.storiesBelowGrade, evaluation.building.storiesBelowGrade) +
       row(t.fields.predominantUse, evaluation.building.predominantUse) +
       row(t.fields.dimensions, evaluation.building.dimensions) +
       row(t.fields.footprintArea, evaluation.building.footprintArea) +
@@ -85,7 +87,15 @@ export function renderReportHtml(evaluation: Evaluation, language: Language) {
       row(
         t.fields.constructionPeriod,
         catalogLabel(t.catalogs.constructionPeriods, evaluation.structure.constructionPeriod),
-      ),
+      ) +
+      evaluation.structure.irregularities
+        .map((item) =>
+          row(
+            t.catalogs.irregularities[item.item as keyof typeof t.catalogs.irregularities] ?? item.item,
+            `${item.checked ? t.yes : t.no}${item.notes ? ` — ${item.notes}` : ''}`,
+          ),
+        )
+        .join(''),
     globalStability:
       row(t.fields.risk, risk(evaluation.globalStability.risk)) +
       evaluation.globalStability.conditions
@@ -150,6 +160,37 @@ export function renderReportHtml(evaluation: Evaluation, language: Language) {
       row(t.fields.description, evaluation.preExistingConditions.description) +
       row(t.fields.priorInterventions, evaluation.preExistingConditions.priorInterventions),
     recommendations:
+      evaluation.recommendations.typicalRestrictions
+        .map((item) =>
+          row(
+            t.catalogs.typicalRestrictions[item as keyof typeof t.catalogs.typicalRestrictions] ?? item,
+            t.yes,
+          ),
+        )
+        .join('') +
+      evaluation.recommendations.furtherActions
+        .map((item) =>
+          row(t.catalogs.furtherActions[item as keyof typeof t.catalogs.furtherActions] ?? item, t.yes),
+        )
+        .join('') +
+      row(
+        t.catalogs.utilities.gas,
+        evaluation.recommendations.utilitiesIsolated.gas ? t.yes : t.no,
+      ) +
+      row(
+        t.catalogs.utilities.electric,
+        evaluation.recommendations.utilitiesIsolated.electric ? t.yes : t.no,
+      ) +
+      row(
+        t.catalogs.utilities.water,
+        evaluation.recommendations.utilitiesIsolated.water ? t.yes : t.no,
+      ) +
+      row(
+        t.fields.adjacentFallingHazard,
+        `${evaluation.recommendations.adjacentFallingHazard ? t.yes : t.no}${
+          evaluation.recommendations.adjacentNotes ? ` — ${evaluation.recommendations.adjacentNotes}` : ''
+        }`,
+      ) +
       row(t.fields.safetyMeasures, evaluation.recommendations.safetyMeasures.join(', ')) +
       row(t.fields.specialistVisits, evaluation.recommendations.specialistVisits.join(', ')) +
       row(t.fields.barriers, evaluation.recommendations.barriers) +

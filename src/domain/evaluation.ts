@@ -6,6 +6,7 @@ import {
   HOSPITAL_EQUIPMENT_ITEMS,
   NON_STRUCTURAL_ELEMENTS,
   STRUCTURAL_ELEMENTS,
+  STRUCTURAL_IRREGULARITIES,
   deriveHabitability,
   evaluationSectionKeys,
   migrateInspectionType,
@@ -92,11 +93,13 @@ export interface Evaluation {
     type: InspectionType | '';
     notInspectedReason: string;
     preliminaryClassification: Habitability | '';
+    occupantsNotified: boolean;
   };
   building: {
     address: string;
     name: string;
     floors: string;
+    storiesBelowGrade: string;
     predominantUse: string;
     dimensions: string;
     footprintArea: string;
@@ -113,6 +116,7 @@ export interface Evaluation {
     roofStructure: string;
     constructionYear: string;
     constructionPeriod: ConstructionPeriod | '';
+    irregularities: ObservedCondition[];
   };
   globalStability: {
     conditions: ObservedCondition[];
@@ -163,6 +167,11 @@ export interface Evaluation {
     specialistVisits: string[];
     barriers: string;
     others: string;
+    typicalRestrictions: string[];
+    furtherActions: string[];
+    utilitiesIsolated: { gas: boolean; electric: boolean; water: boolean };
+    adjacentFallingHazard: boolean;
+    adjacentNotes: string;
   };
   occupantImpact: {
     injured: string;
@@ -222,6 +231,10 @@ function defaultDamage(types: readonly string[]): DamageElement[] {
 
 function defaultConditions(): ObservedCondition[] {
   return GLOBAL_CONDITIONS.map((item) => ({ item, checked: false, notes: '' }));
+}
+
+function defaultIrregularities(): ObservedCondition[] {
+  return STRUCTURAL_IRREGULARITIES.map((item) => ({ item, checked: false, notes: '' }));
 }
 
 function defaultEquipment(): EquipmentRow[] {
@@ -284,11 +297,12 @@ export function createEvaluation(
       cadastralCode: '',
       propertyRegistration: '',
     },
-    inspection: { type: '', notInspectedReason: '', preliminaryClassification: '' },
+    inspection: { type: '', notInspectedReason: '', preliminaryClassification: '', occupantsNotified: false },
     building: {
       address: '',
       name: '',
       floors: '',
+      storiesBelowGrade: '',
       predominantUse: '',
       dimensions: '',
       footprintArea: '',
@@ -305,6 +319,7 @@ export function createEvaluation(
       roofStructure: '',
       constructionYear: '',
       constructionPeriod: '',
+      irregularities: defaultIrregularities(),
     },
     globalStability: { conditions: defaultConditions(), observedConditions: [], risk: 'none', notes: '' },
     geotechnicalDamage: {
@@ -338,7 +353,17 @@ export function createEvaluation(
       inspectorLine: '',
     },
     preExistingConditions: { present: false, description: '', priorInterventions: '' },
-    recommendations: { safetyMeasures: [], specialistVisits: [], barriers: '', others: '' },
+    recommendations: {
+      safetyMeasures: [],
+      specialistVisits: [],
+      barriers: '',
+      others: '',
+      typicalRestrictions: [],
+      furtherActions: [],
+      utilitiesIsolated: { gas: false, electric: false, water: false },
+      adjacentFallingHazard: false,
+      adjacentNotes: '',
+    },
     occupantImpact: { injured: '0', deceased: '0' },
     occupancy: { inhabited: true, existingUnits: '', uninhabitableUnits: '0' },
     contact: { name: '', identification: '', phone: '', address: '' },
@@ -377,6 +402,13 @@ function mergeDamage(defaults: DamageElement[], existing?: DamageElement[]) {
     affectedPercentage: item.affectedPercentage ?? '',
     notes: item.notes,
   }));
+}
+
+function mergeObserved(defaults: ObservedCondition[], existing?: ObservedCondition[]) {
+  return defaults.map((item) => {
+    const previous = existing?.find((entry) => entry.item === item.item);
+    return previous ? { ...item, checked: previous.checked, notes: previous.notes ?? '' } : item;
+  });
 }
 
 function migrateSettlement(value: unknown) {
@@ -420,11 +452,13 @@ export function normalizeEvaluation(raw: Evaluation): Evaluation {
       ...base.inspection,
       ...raw.inspection,
       type: inspectionType,
+      occupantsNotified: Boolean(raw.inspection?.occupantsNotified),
     },
     building: {
       ...base.building,
       ...raw.building,
       nsrGroup: raw.building?.nsrGroup ?? '',
+      storiesBelowGrade: raw.building?.storiesBelowGrade ?? '',
     },
     structure: {
       ...base.structure,
@@ -435,6 +469,7 @@ export function normalizeEvaluation(raw: Evaluation): Evaluation {
       roofGeometry: raw.structure?.roofGeometry ?? '',
       roofStructure: raw.structure?.roofStructure ?? '',
       constructionPeriod: raw.structure?.constructionPeriod ?? '',
+      irregularities: mergeObserved(base.structure.irregularities, raw.structure?.irregularities),
     },
     globalStability: {
       ...base.globalStability,
@@ -466,6 +501,18 @@ export function normalizeEvaluation(raw: Evaluation): Evaluation {
     placard: {
       ...base.placard,
       ...raw.placard,
+    },
+    recommendations: {
+      ...base.recommendations,
+      ...raw.recommendations,
+      typicalRestrictions: raw.recommendations?.typicalRestrictions ?? [],
+      furtherActions: raw.recommendations?.furtherActions ?? [],
+      utilitiesIsolated: {
+        ...base.recommendations.utilitiesIsolated,
+        ...raw.recommendations?.utilitiesIsolated,
+      },
+      adjacentFallingHazard: Boolean(raw.recommendations?.adjacentFallingHazard),
+      adjacentNotes: raw.recommendations?.adjacentNotes ?? '',
     },
     inspectors: raw.inspectors?.length ? raw.inspectors : base.inspectors,
     photos: raw.photos ?? [],

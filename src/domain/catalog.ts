@@ -69,6 +69,53 @@ export const GLOBAL_CONDITIONS = [
 ] as const;
 export type GlobalConditionId = (typeof GLOBAL_CONDITIONS)[number];
 
+export const STRUCTURAL_IRREGULARITIES = [
+  'soft_story',
+  'plan_irregular',
+  'short_column',
+  'setback',
+  'discontinuous_wall',
+] as const;
+
+export const TYPICAL_RESTRICTIONS = [
+  'short_entry_belongings',
+  'repair_only',
+  'no_public',
+  'no_specified_areas',
+  'no_specified_exits',
+  'no_chimney',
+] as const;
+
+export const FURTHER_ACTIONS = [
+  'barricade',
+  'shore',
+  'detailed_eval',
+  'engineering_eval',
+  'geotech_visit',
+  'hazmat',
+] as const;
+
+export const UTILITY_CUTOFFS = ['gas', 'electric', 'water'] as const;
+
+export const INSPECTION_POINT_GROUPS: Record<string, string> = {
+  s11: 'concrete_frames',
+  s12: 'concrete_walls',
+  s13: 'concrete_frames',
+  s14: 'precast',
+  s21: 'masonry_confined',
+  s22: 'masonry_reinforced',
+  s23: 'masonry_unreinforced',
+  s31: 'steel',
+  s32: 'steel',
+  s33: 'steel',
+  s41: 'wood',
+  s42: 'wood',
+  s51: 'vernacular',
+  s52: 'vernacular',
+  s60: 'mixed',
+};
+
+
 export const SITE_MORPHOLOGIES = [
   'divide',
   'crest',

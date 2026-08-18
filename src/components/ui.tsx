@@ -1,5 +1,5 @@
-import { Check, ChevronLeft, ChevronRight, Globe2, WifiOff } from 'lucide-react-native';
-import { useRouter } from 'expo-router';
+import { BookOpen, Check, ChevronLeft, ChevronRight, Globe2, WifiOff } from 'lucide-react-native';
+import { type Href, usePathname, useRouter } from 'expo-router';
 import React from 'react';
 import {
   ActivityIndicator,
@@ -35,6 +35,7 @@ export function AppHeader() {
   const { t, language, setLanguage } = useI18n();
   const { width } = useWindowDimensions();
   const router = useRouter();
+  const pathname = usePathname();
   return (
     <View style={styles.header}>
       <Pressable
@@ -50,6 +51,17 @@ export function AppHeader() {
         </View>
       </Pressable>
       <View style={styles.headerActions}>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={t.guide}
+          onPress={() => {
+            if (pathname !== '/guide') router.push('/guide' as Href);
+          }}
+          style={styles.guideButton}
+        >
+          <BookOpen size={17} color={colors.primary} />
+          {width > 560 && <Text style={styles.languageText}>{t.guide}</Text>}
+        </Pressable>
         <View accessibilityLabel={`EVALQUAKE ${APP_VERSION}`} style={styles.versionBadge}>
           <Text style={styles.versionText}>v{APP_VERSION}</Text>
         </View>
@@ -286,6 +298,16 @@ const styles = StyleSheet.create({
     borderRadius: 999,
   },
   languageText: { color: colors.primary, fontWeight: '800' },
+  guideButton: {
+    flexDirection: 'row',
+    gap: 7,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: colors.border,
+    paddingHorizontal: 12,
+    paddingVertical: 9,
+    borderRadius: 999,
+  },
   card: {
     backgroundColor: colors.surface,
     borderRadius: layout.radius,

@@ -22,7 +22,18 @@ La versión visible en la cabecera de la app sale de `src/version.ts`.
 
 ## [Unreleased]
 
-Cambios posteriores a 0.3.0 se listan aquí hasta el siguiente corte.
+Cambios posteriores a 0.4.0 se listan aquí hasta el siguiente corte.
+
+## [0.4.0] — 2026-08-18
+
+### Added
+
+- Guía HTML de inspección postsismo, accesible desde el encabezado en todas las pantallas.
+- Puntos de inspección según el sistema estructural, irregularidades, servicios cortados, restricciones ATC-20 y acciones posteriores.
+
+### Changed
+
+- El cuestionario incorpora sótanos, aviso a ocupantes y amenaza de caída hacia predios vecinos, según el manual ATC-20-1.
 
 ## [0.3.0] — 2026-08-18
 

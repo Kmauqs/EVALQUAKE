@@ -11,6 +11,12 @@ describe('bilingual report renderer', () => {
     expect(Object.keys(es.fields)).toEqual(Object.keys(en.fields));
     expect(Object.keys(es.damage)).toEqual(Object.keys(en.damage));
     expect(Object.keys(es.catalogs)).toEqual(Object.keys(en.catalogs));
+    expect(Object.keys(es.hints)).toEqual(Object.keys(en.hints));
+    expect(Object.keys(es.catalogs.irregularities)).toEqual(Object.keys(en.catalogs.irregularities));
+    expect(Object.keys(es.catalogs.typicalRestrictions)).toEqual(
+      Object.keys(en.catalogs.typicalRestrictions),
+    );
+    expect(Object.keys(es.catalogs.furtherActions)).toEqual(Object.keys(en.catalogs.furtherActions));
     expect(es.sections).not.toHaveProperty('8');
   });
 
@@ -23,6 +29,8 @@ describe('bilingual report renderer', () => {
     expect(spanish).toContain('Identificación catastral');
     expect(english).toContain('Cadastral identification');
     expect(spanish).toContain('Área en planta');
+    expect(spanish).toContain('Pisos bajo rasante');
+    expect(spanish).toContain('Se informó a ocupantes');
     expect(spanish).toContain('Imprimir en PDF');
     expect(english).toContain('Print to PDF');
     expect(spanish).toContain('window.print()');

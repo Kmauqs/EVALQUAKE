@@ -1,4 +1,5 @@
 import { Camera, ImagePlus, LocateFixed, X } from 'lucide-react-native';
+import { type Href, useRouter } from 'expo-router';
 import React from 'react';
 import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
 
@@ -7,8 +8,10 @@ import {
   EQUIPMENT_DAMAGE_LEVELS,
   FLOOR_SUBTYPES,
   FLOOR_TYPES,
+  FURTHER_ACTIONS,
   GLOBAL_CONDITIONS,
   GLOBAL_DAMAGE_RANGES,
+  INSPECTION_POINT_GROUPS,
   INSPECTION_TYPES,
   NON_STRUCTURAL_ELEMENTS,
   NSR_GROUPS,
@@ -19,7 +22,10 @@ import {
   SITE_MORPHOLOGIES,
   SLOPE_FAILURE_LEVELS,
   STRUCTURAL_ELEMENTS,
+  STRUCTURAL_IRREGULARITIES,
   STRUCTURAL_SYSTEMS,
+  TYPICAL_RESTRICTIONS,
+  UTILITY_CUTOFFS,
   habitabilityPanelColor,
   type EvaluationSectionKey,
 } from '@/domain/catalog';
@@ -29,6 +35,7 @@ import {
   type Habitability,
   type RiskLevel,
 } from '@/domain/evaluation';
+import { inspectionPointHints } from '@/guide/content';
 import { useI18n } from '@/i18n/I18nProvider';
 import { colors } from '@/theme';
 import { SignatureCapture } from './SignatureCapture';
@@ -51,7 +58,8 @@ export function EvaluationSection({
   onPhoto,
   onSketch,
 }: Props) {
-  const { t } = useI18n();
+  const { t, language } = useI18n();
+  const router = useRouter();
   const update = <K extends keyof Evaluation>(key: K, value: Evaluation[K]) =>
     onChange({ ...evaluation, [key]: value });
   const updateRisk = (next: Evaluation) => onChange(applyDerivedHabitability(next));
@@ -163,6 +171,14 @@ export function EvaluationSection({
               update('inspection', { ...evaluation.inspection, preliminaryClassification })
             }
           />
+          <Hint>{t.hints.rapidProcess}</Hint>
+          <ToggleRow
+            label={t.fields.occupantsNotified}
+            value={evaluation.inspection.occupantsNotified}
+            onChange={(occupantsNotified) =>
+              update('inspection', { ...evaluation.inspection, occupantsNotified })
+            }
+          />
         </View>
       );
     case 'building':
@@ -192,6 +208,14 @@ export function EvaluationSection({
             keyboardType="numeric"
             value={evaluation.building.floors}
             onChangeText={(floors) => update('building', { ...evaluation.building, floors })}
+          />
+          <Field
+            label={t.fields.storiesBelowGrade}
+            keyboardType="numeric"
+            value={evaluation.building.storiesBelowGrade}
+            onChangeText={(storiesBelowGrade) =>
+              update('building', { ...evaluation.building, storiesBelowGrade })
+            }
           />
           <Field
             label={t.fields.predominantUse}
@@ -252,6 +276,58 @@ export function EvaluationSection({
             evaluation.structure.floorType === 'mixed') && (
             <Hint>{t.hints.specifyInComments}</Hint>
           )}
+          {evaluation.structure.structuralSystem ? (
+            <>
+              <Hint>
+                {
+                  inspectionPointHints[language][
+                    INSPECTION_POINT_GROUPS[evaluation.structure.structuralSystem] as keyof typeof inspectionPointHints.es
+                  ]
+                }
+              </Hint>
+              <Pressable onPress={() => router.push('/guide' as Href)} style={styles.guideLink}>
+                <Text style={styles.guideLinkText}>{t.hints.openGuide}</Text>
+              </Pressable>
+            </>
+          ) : null}
+          <Text style={styles.groupTitle}>{t.fields.irregularities}</Text>
+          {STRUCTURAL_IRREGULARITIES.map((item) => {
+            const current =
+              evaluation.structure.irregularities.find((entry) => entry.item === item) ?? {
+                item,
+                checked: false,
+                notes: '',
+              };
+            const patchIrregularity = (patch: { checked?: boolean; notes?: string }) =>
+              update('structure', {
+                ...evaluation.structure,
+                irregularities: STRUCTURAL_IRREGULARITIES.map((id) => {
+                  const entry = evaluation.structure.irregularities.find((row) => row.item === id) ?? {
+                    item: id,
+                    checked: false,
+                    notes: '',
+                  };
+                  return id === item ? { ...entry, ...patch } : entry;
+                }),
+              });
+            return (
+              <View key={item} style={styles.conditionCard}>
+                <ToggleRow
+                  label={t.catalogs.irregularities[item]}
+                  value={current.checked}
+                  onChange={(checked) => patchIrregularity({ checked })}
+                />
+                {current.checked && (
+                  <Field
+                    label={t.fields.notes}
+                    multiline
+                    value={current.notes}
+                    onChangeText={(notes) => patchIrregularity({ notes })}
+                  />
+                )}
+              </View>
+            );
+          })}
           <SelectRow
             label={t.fields.floorType}
             value={evaluation.structure.floorType}
@@ -611,46 +687,114 @@ export function EvaluationSection({
       );
     case 'recommendations':
       return (
-        <FormGrid>
-          <Field
-            label={t.fields.safetyMeasures}
-            multiline
-            value={evaluation.recommendations.safetyMeasures.join('\n')}
-            onChangeText={(text) =>
-              update('recommendations', {
-                ...evaluation.recommendations,
-                safetyMeasures: text.split('\n').filter(Boolean),
-              })
+        <View style={styles.stack}>
+          <Text style={styles.groupTitle}>{t.fields.typicalRestrictions}</Text>
+          {TYPICAL_RESTRICTIONS.map((item) => (
+            <ToggleRow
+              key={item}
+              label={t.catalogs.typicalRestrictions[item]}
+              value={evaluation.recommendations.typicalRestrictions.includes(item)}
+              onChange={(checked) =>
+                update('recommendations', {
+                  ...evaluation.recommendations,
+                  typicalRestrictions: checked
+                    ? [...evaluation.recommendations.typicalRestrictions, item]
+                    : evaluation.recommendations.typicalRestrictions.filter((value) => value !== item),
+                })
+              }
+            />
+          ))}
+          <Text style={styles.groupTitle}>{t.fields.furtherActions}</Text>
+          {FURTHER_ACTIONS.map((item) => (
+            <ToggleRow
+              key={item}
+              label={t.catalogs.furtherActions[item]}
+              value={evaluation.recommendations.furtherActions.includes(item)}
+              onChange={(checked) =>
+                update('recommendations', {
+                  ...evaluation.recommendations,
+                  furtherActions: checked
+                    ? [...evaluation.recommendations.furtherActions, item]
+                    : evaluation.recommendations.furtherActions.filter((value) => value !== item),
+                })
+              }
+            />
+          ))}
+          <Text style={styles.groupTitle}>{t.fields.utilitiesIsolated}</Text>
+          {UTILITY_CUTOFFS.map((item) => (
+            <ToggleRow
+              key={item}
+              label={t.catalogs.utilities[item]}
+              value={evaluation.recommendations.utilitiesIsolated[item]}
+              onChange={(value) =>
+                update('recommendations', {
+                  ...evaluation.recommendations,
+                  utilitiesIsolated: {
+                    ...evaluation.recommendations.utilitiesIsolated,
+                    [item]: value,
+                  },
+                })
+              }
+            />
+          ))}
+          <ToggleRow
+            label={t.fields.adjacentFallingHazard}
+            value={evaluation.recommendations.adjacentFallingHazard}
+            onChange={(adjacentFallingHazard) =>
+              update('recommendations', { ...evaluation.recommendations, adjacentFallingHazard })
             }
           />
-          <Field
-            label={t.fields.specialistVisits}
-            multiline
-            value={evaluation.recommendations.specialistVisits.join('\n')}
-            onChangeText={(text) =>
-              update('recommendations', {
-                ...evaluation.recommendations,
-                specialistVisits: text.split('\n').filter(Boolean),
-              })
-            }
-          />
-          <Field
-            label={t.fields.barriers}
-            multiline
-            value={evaluation.recommendations.barriers}
-            onChangeText={(barriers) =>
-              update('recommendations', { ...evaluation.recommendations, barriers })
-            }
-          />
-          <Field
-            label={t.fields.others}
-            multiline
-            value={evaluation.recommendations.others}
-            onChangeText={(others) =>
-              update('recommendations', { ...evaluation.recommendations, others })
-            }
-          />
-        </FormGrid>
+          {evaluation.recommendations.adjacentFallingHazard && (
+            <Field
+              label={t.fields.notes}
+              multiline
+              value={evaluation.recommendations.adjacentNotes}
+              onChangeText={(adjacentNotes) =>
+                update('recommendations', { ...evaluation.recommendations, adjacentNotes })
+              }
+            />
+          )}
+          <FormGrid>
+            <Field
+              label={t.fields.safetyMeasures}
+              multiline
+              value={evaluation.recommendations.safetyMeasures.join('\n')}
+              onChangeText={(text) =>
+                update('recommendations', {
+                  ...evaluation.recommendations,
+                  safetyMeasures: text.split('\n').filter(Boolean),
+                })
+              }
+            />
+            <Field
+              label={t.fields.specialistVisits}
+              multiline
+              value={evaluation.recommendations.specialistVisits.join('\n')}
+              onChangeText={(text) =>
+                update('recommendations', {
+                  ...evaluation.recommendations,
+                  specialistVisits: text.split('\n').filter(Boolean),
+                })
+              }
+            />
+            <Field
+              label={t.fields.barriers}
+              multiline
+              value={evaluation.recommendations.barriers}
+              onChangeText={(barriers) =>
+                update('recommendations', { ...evaluation.recommendations, barriers })
+              }
+            />
+            <Field
+              label={t.fields.others}
+              multiline
+              value={evaluation.recommendations.others}
+              onChangeText={(others) =>
+                update('recommendations', { ...evaluation.recommendations, others })
+              }
+            />
+          </FormGrid>
+        </View>
       );
     case 'occupants':
       return (
@@ -1078,6 +1222,8 @@ const styles = StyleSheet.create({
   coordinate: { color: colors.textMuted, fontSize: 12, textAlign: 'center' },
   hint: { color: colors.textMuted, fontSize: 12, lineHeight: 17, width: '100%' },
   groupTitle: { color: colors.text, fontSize: 15, fontWeight: '800' },
+  guideLink: { alignSelf: 'flex-start' },
+  guideLinkText: { color: colors.primary, fontWeight: '800', fontSize: 13 },
   conditionCard: {
     borderWidth: 1,
     borderColor: colors.border,
