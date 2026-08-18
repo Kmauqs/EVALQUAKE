@@ -20,8 +20,8 @@ service cloud.firestore {
     }
 
     match /users/{userId} {
-      allow read: if signedIn() && (request.auth.uid == userId || role() in ['coordinator', 'admin']);
-      allow write: if signedIn() && role() == 'admin';
+      allow read: if signedIn() && (request.auth.uid == userId || role() == 'admin');
+      allow write: if false;
     }
 
     match /jurisdictions/{jurisdictionId} {

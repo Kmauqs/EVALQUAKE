@@ -161,6 +161,13 @@ export const finalizeEvaluation = onDocumentWritten(
   },
 );
 
+export {
+  ensureUserProfile,
+  onAuthUserCreated,
+  setUserDisabled,
+  setUserRole,
+} from './users';
+
 export const exportEvaluations = onCall(
   { region: 'us-central1', memory: '512MiB', timeoutSeconds: 120 },
   async (request) => {

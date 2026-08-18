@@ -14,6 +14,11 @@ import {
   persistentMultipleTabManager,
   type Firestore,
 } from 'firebase/firestore';
+import {
+  connectFunctionsEmulator,
+  getFunctions,
+  type Functions,
+} from 'firebase/functions';
 import { connectStorageEmulator, getStorage, type FirebaseStorage } from 'firebase/storage';
 import { Platform } from 'react-native';
 
@@ -38,6 +43,7 @@ interface FirebaseServices {
   auth: Auth;
   db: Firestore;
   storage: FirebaseStorage;
+  functions: Functions;
 }
 
 let services: FirebaseServices | null = null;
@@ -67,15 +73,17 @@ export function getFirebaseServices(): FirebaseServices | null {
     auth = getAuth(app);
   }
   const storage = getStorage(app);
+  const functions = getFunctions(app, 'us-central1');
 
   if (process.env.EXPO_PUBLIC_USE_FIREBASE_EMULATORS === 'true' && !emulatorsConnected) {
     const host = Platform.OS === 'android' ? '10.0.2.2' : '127.0.0.1';
     connectFirestoreEmulator(db, host, 8080);
     connectAuthEmulator(auth, `http://${host}:9099`, { disableWarnings: true });
     connectStorageEmulator(storage, host, 9199);
+    connectFunctionsEmulator(functions, host, 5001);
     emulatorsConnected = true;
   }
 
-  services = { app, auth, db, storage };
+  services = { app, auth, db, storage, functions };
   return services;
 }

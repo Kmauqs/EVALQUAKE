@@ -70,7 +70,13 @@ Android emulators automatically connect through `10.0.2.2`; iOS and web use `127
 
 ## Firebase users and claims
 
-Firebase Auth users require custom claims managed by a trusted administrator:
+Users can create their own email/password account from the sign-in screen. New accounts stay **pending** until an administrator assigns `role` and `jurisdictionIds`. Custom claims are written only by Cloud Functions (`setUserRole`, `setUserDisabled`) or the trusted script:
+
+```bash
+node scripts/set-user-role.mjs user@domain.com evaluator jurisdiction-demo
+```
+
+Claims shape:
 
 ```json
 {
@@ -79,9 +85,9 @@ Firebase Auth users require custom claims managed by a trusted administrator:
 }
 ```
 
-Supported roles are `evaluator`, `coordinator`, and `admin`. Firestore rules scope reads/writes to the user's jurisdictions. Once an evaluation changes from `draft` to `submitted`, client updates and deletes are denied. Corrections must be appended to `evaluations/{id}/auditLog`.
+Supported roles are `evaluator`, `coordinator`, and `admin`. The admin module lists Firestore `users/{uid}` profiles and can approve, change role/jurisdiction, or disable accounts. Firestore rules scope evaluation reads/writes to the user's jurisdictions. Once an evaluation changes from `draft` to `submitted`, client updates and deletes are denied. Corrections must be appended to `evaluations/{id}/auditLog`.
 
-When Firebase is configured, the app displays an email/password sign-in screen and only exposes the evaluator or coordinator routes allowed by those claims. New local evaluations are stamped with the authenticated Firebase UID; demo identity is used only when Firebase is not configured.
+When Firebase is configured, the app displays sign-in/sign-up and only exposes the evaluator, coordinator, or admin routes allowed by those claims. After approval, the user should tap **Check access** or sign in again to refresh the token. New local evaluations are stamped with the authenticated Firebase UID; demo identity is used only when Firebase is not configured.
 
 ## Offline and synchronization model
 

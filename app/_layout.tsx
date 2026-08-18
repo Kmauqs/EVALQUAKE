@@ -18,6 +18,7 @@ export default function RootLayout() {
               <Stack.Screen name="index" />
               <Stack.Screen name="(evaluator)" />
               <Stack.Screen name="(coordinator)" />
+              <Stack.Screen name="(admin)" />
             </Stack>
           </EvaluationProvider>
         </AuthProvider>
