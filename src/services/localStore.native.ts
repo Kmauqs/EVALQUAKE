@@ -1,6 +1,6 @@
 import * as SQLite from 'expo-sqlite';
 
-import type { Evaluation } from '@/domain/evaluation';
+import { normalizeEvaluation, type Evaluation } from '@/domain/evaluation';
 
 let databasePromise: Promise<SQLite.SQLiteDatabase> | undefined;
 
@@ -30,7 +30,7 @@ export async function listLocalEvaluations(): Promise<Evaluation[]> {
   const rows = await db.getAllAsync<{ payload: string }>(
     'SELECT payload FROM evaluations ORDER BY updated_at DESC',
   );
-  return rows.map((row) => JSON.parse(row.payload) as Evaluation);
+  return rows.map((row) => normalizeEvaluation(JSON.parse(row.payload) as Evaluation));
 }
 
 export async function getLocalEvaluation(id: string): Promise<Evaluation | null> {
@@ -39,7 +39,7 @@ export async function getLocalEvaluation(id: string): Promise<Evaluation | null>
     'SELECT payload FROM evaluations WHERE id = ?',
     id,
   );
-  return row ? (JSON.parse(row.payload) as Evaluation) : null;
+  return row ? normalizeEvaluation(JSON.parse(row.payload) as Evaluation) : null;
 }
 
 export async function saveLocalEvaluation(evaluation: Evaluation, queueSync = true) {

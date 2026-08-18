@@ -13,7 +13,7 @@ import {
 } from 'firebase/firestore';
 import { getDownloadURL, ref, uploadBytes } from 'firebase/storage';
 
-import type { Evaluation } from '@/domain/evaluation';
+import { normalizeEvaluation, type Evaluation } from '@/domain/evaluation';
 import { getFirebaseServices } from './client';
 
 export async function pushEvaluation(evaluation: Evaluation): Promise<Evaluation> {
@@ -83,7 +83,7 @@ export async function pullEvaluation(id: string): Promise<Evaluation | null> {
   const services = getFirebaseServices();
   if (!services) return null;
   const snapshot = await getDoc(doc(services.db, 'evaluations', id));
-  return snapshot.exists() ? (snapshot.data() as Evaluation) : null;
+  return snapshot.exists() ? normalizeEvaluation(snapshot.data() as Evaluation) : null;
 }
 
 export async function listRemoteEvaluations(
@@ -101,7 +101,7 @@ export async function listRemoteEvaluations(
       limit(500),
     ),
   );
-  return snapshot.docs.map((item) => item.data() as Evaluation);
+  return snapshot.docs.map((item) => normalizeEvaluation(item.data() as Evaluation));
 }
 
 export function subscribeRemoteEvaluations(
@@ -123,7 +123,8 @@ export function subscribeRemoteEvaluations(
       orderBy('updatedAt', 'desc'),
       limit(500),
     ),
-    (snapshot) => onChange(snapshot.docs.map((item) => item.data() as Evaluation)),
+    (snapshot) =>
+      onChange(snapshot.docs.map((item) => normalizeEvaluation(item.data() as Evaluation))),
     (error) => onError?.(error),
   );
 }
@@ -147,7 +148,8 @@ export function subscribeUserEvaluations(
       orderBy('updatedAt', 'desc'),
       limit(500),
     ),
-    (snapshot) => onChange(snapshot.docs.map((item) => item.data() as Evaluation)),
+    (snapshot) =>
+      onChange(snapshot.docs.map((item) => normalizeEvaluation(item.data() as Evaluation))),
     (error) => onError?.(error),
   );
 }

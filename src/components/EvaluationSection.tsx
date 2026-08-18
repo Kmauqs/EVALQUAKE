@@ -2,14 +2,40 @@ import { Camera, ImagePlus, LocateFixed, X } from 'lucide-react-native';
 import React from 'react';
 import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
 
-import type { Evaluation, Habitability, RiskLevel } from '@/domain/evaluation';
+import {
+  CONSTRUCTION_PERIODS,
+  EQUIPMENT_DAMAGE_LEVELS,
+  FLOOR_SUBTYPES,
+  FLOOR_TYPES,
+  GLOBAL_CONDITIONS,
+  GLOBAL_DAMAGE_RANGES,
+  INSPECTION_TYPES,
+  NON_STRUCTURAL_ELEMENTS,
+  NSR_GROUPS,
+  PHENOMENON_ORIGINS,
+  ROOF_GEOMETRIES,
+  ROOF_STRUCTURES,
+  SETTLEMENT_LEVELS,
+  SITE_MORPHOLOGIES,
+  SLOPE_FAILURE_LEVELS,
+  STRUCTURAL_ELEMENTS,
+  STRUCTURAL_SYSTEMS,
+  habitabilityPanelColor,
+  type EvaluationSectionKey,
+} from '@/domain/catalog';
+import {
+  applyDerivedHabitability,
+  type Evaluation,
+  type Habitability,
+  type RiskLevel,
+} from '@/domain/evaluation';
 import { useI18n } from '@/i18n/I18nProvider';
 import { colors } from '@/theme';
 import { SignatureCapture } from './SignatureCapture';
 import { Button, Field, SelectRow, ToggleRow } from './ui';
 
 interface Props {
-  section: number;
+  sectionKey: EvaluationSectionKey;
   evaluation: Evaluation;
   onChange: (evaluation: Evaluation) => void;
   onLocation: () => void;
@@ -18,7 +44,7 @@ interface Props {
 }
 
 export function EvaluationSection({
-  section,
+  sectionKey,
   evaluation,
   onChange,
   onLocation,
@@ -28,22 +54,23 @@ export function EvaluationSection({
   const { t } = useI18n();
   const update = <K extends keyof Evaluation>(key: K, value: Evaluation[K]) =>
     onChange({ ...evaluation, [key]: value });
-  const risks: Array<{ value: RiskLevel; label: string }> = [
+  const updateRisk = (next: Evaluation) => onChange(applyDerivedHabitability(next));
+  const risks: { value: RiskLevel; label: string }[] = [
     { value: 'none', label: t.none },
     { value: 'low', label: t.low },
     { value: 'moderate', label: t.moderate },
     { value: 'high', label: t.high },
     { value: 'severe', label: t.severe },
   ];
-  const classifications: Array<{ value: Habitability; label: string }> = [
+  const classifications: { value: Habitability; label: string }[] = [
     { value: 'habitable', label: t.habitable },
     { value: 'restricted', label: t.restricted },
     { value: 'unsafe', label: t.unsafe },
     { value: 'collapsed', label: t.collapsed },
   ];
 
-  switch (section) {
-    case 0:
+  switch (sectionKey) {
+    case 'cadastral':
       return (
         <FormGrid>
           <Field
@@ -108,16 +135,16 @@ export function EvaluationSection({
           </View>
         </FormGrid>
       );
-    case 1:
+    case 'inspection':
       return (
         <View style={styles.stack}>
           <SelectRow
             label={t.fields.inspectionType}
             value={evaluation.inspection.type}
-            options={[
-              { value: 'rapid', label: t.rapid },
-              { value: 'detailed', label: t.detailed },
-            ]}
+            options={INSPECTION_TYPES.map((value) => ({
+              value,
+              label: t.catalogs.inspectionTypes[value],
+            }))}
             onChange={(type) => update('inspection', { ...evaluation.inspection, type })}
           />
           <Field
@@ -138,7 +165,7 @@ export function EvaluationSection({
           />
         </View>
       );
-    case 2:
+    case 'building':
       return (
         <FormGrid>
           <Field
@@ -151,6 +178,15 @@ export function EvaluationSection({
             value={evaluation.building.name}
             onChangeText={(name) => update('building', { ...evaluation.building, name })}
           />
+          <SelectRow
+            label={t.fields.nsrGroup}
+            value={evaluation.building.nsrGroup}
+            options={NSR_GROUPS.map((value) => ({ value, label: t.catalogs.nsrGroups[value] }))}
+            onChange={(nsrGroup) => update('building', { ...evaluation.building, nsrGroup })}
+          />
+          {evaluation.building.nsrGroup ? (
+            <Hint>{t.catalogs.nsrGroupHints[evaluation.building.nsrGroup]}</Hint>
+          ) : null}
           <Field
             label={t.fields.floors}
             keyboardType="numeric"
@@ -193,21 +229,73 @@ export function EvaluationSection({
           />
         </FormGrid>
       );
-    case 3:
+    case 'structure': {
+      const subtypes = evaluation.structure.floorType
+        ? FLOOR_SUBTYPES[evaluation.structure.floorType]
+        : [];
       return (
-        <FormGrid>
-          <Field
+        <View style={styles.stack}>
+          <SelectRow
             label={t.fields.structuralSystem}
             value={evaluation.structure.structuralSystem}
-            onChangeText={(structuralSystem) =>
+            options={STRUCTURAL_SYSTEMS.map((value) => ({
+              value,
+              label: t.catalogs.structuralSystems[value],
+            }))}
+            onChange={(structuralSystem) =>
               update('structure', { ...evaluation.structure, structuralSystem })
             }
           />
-          <Field
-            label={t.fields.floorSystem}
-            value={evaluation.structure.floorSystem}
-            onChangeText={(floorSystem) =>
-              update('structure', { ...evaluation.structure, floorSystem })
+          {(evaluation.structure.structuralSystem === 's60' ||
+            evaluation.structure.roofGeometry === 'other' ||
+            evaluation.structure.roofStructure === 'other' ||
+            evaluation.structure.floorType === 'mixed') && (
+            <Hint>{t.hints.specifyInComments}</Hint>
+          )}
+          <SelectRow
+            label={t.fields.floorType}
+            value={evaluation.structure.floorType}
+            options={FLOOR_TYPES.map((value) => ({ value, label: t.catalogs.floorTypes[value] }))}
+            onChange={(floorType) =>
+              update('structure', {
+                ...evaluation.structure,
+                floorType,
+                floorSubtype: '',
+                floorSystem: t.catalogs.floorTypes[floorType],
+              })
+            }
+          />
+          {subtypes.length > 0 && (
+            <SelectRow
+              label={t.fields.floorSubtype}
+              value={evaluation.structure.floorSubtype}
+              options={subtypes.map((value) => ({
+                value,
+                label: t.catalogs.floorSubtypes[value as keyof typeof t.catalogs.floorSubtypes],
+              }))}
+              onChange={(floorSubtype) =>
+                update('structure', { ...evaluation.structure, floorSubtype })
+              }
+            />
+          )}
+          <SelectRow
+            label={t.fields.roofGeometry}
+            value={evaluation.structure.roofGeometry}
+            options={ROOF_GEOMETRIES.map((value) => ({
+              value,
+              label: t.catalogs.roofGeometries[value],
+            }))}
+            onChange={(roofGeometry) => update('structure', { ...evaluation.structure, roofGeometry })}
+          />
+          <SelectRow
+            label={t.fields.roofStructure}
+            value={evaluation.structure.roofStructure}
+            options={ROOF_STRUCTURES.map((value) => ({
+              value,
+              label: t.catalogs.roofStructures[value],
+            }))}
+            onChange={(roofStructure) =>
+              update('structure', { ...evaluation.structure, roofStructure })
             }
           />
           <Field
@@ -218,67 +306,133 @@ export function EvaluationSection({
               update('structure', { ...evaluation.structure, constructionYear })
             }
           />
-        </FormGrid>
+          <SelectRow
+            label={t.fields.constructionPeriod}
+            value={evaluation.structure.constructionPeriod}
+            options={CONSTRUCTION_PERIODS.map((value) => ({
+              value,
+              label: t.catalogs.constructionPeriods[value],
+            }))}
+            onChange={(constructionPeriod) =>
+              update('structure', { ...evaluation.structure, constructionPeriod })
+            }
+          />
+          {evaluation.structure.constructionPeriod ? (
+            <Hint>{t.catalogs.constructionPeriodHints[evaluation.structure.constructionPeriod]}</Hint>
+          ) : null}
+        </View>
       );
-    case 4:
+    }
+    case 'globalStability':
       return (
         <View style={styles.stack}>
           <SelectRow
             label={t.fields.risk}
             value={evaluation.globalStability.risk}
             options={risks}
-            onChange={(risk) => update('globalStability', { ...evaluation.globalStability, risk })}
-          />
-          <Field
-            label={t.fields.observedConditions}
-            multiline
-            value={evaluation.globalStability.observedConditions.join('\n')}
-            onChangeText={(text) =>
-              update('globalStability', {
-                ...evaluation.globalStability,
-                observedConditions: text.split('\n').filter(Boolean),
+            onChange={(risk) =>
+              updateRisk({
+                ...evaluation,
+                globalStability: { ...evaluation.globalStability, risk },
               })
             }
           />
+          {evaluation.globalStability.risk !== 'none' && (
+            <Hint>{t.riskHints[evaluation.globalStability.risk]}</Hint>
+          )}
+          <Text style={styles.groupTitle}>{t.fields.observedConditions}</Text>
+          {GLOBAL_CONDITIONS.map((item) => {
+            const current =
+              evaluation.globalStability.conditions.find((entry) => entry.item === item) ?? {
+                item,
+                checked: false,
+                notes: '',
+              };
+            return (
+              <View key={item} style={styles.conditionCard}>
+                <ToggleRow
+                  label={t.catalogs.globalConditions[item]}
+                  value={current.checked}
+                  onChange={(checked) =>
+                    update('globalStability', {
+                      ...evaluation.globalStability,
+                      conditions: evaluation.globalStability.conditions.map((entry) =>
+                        entry.item === item ? { ...entry, checked } : entry,
+                      ),
+                    })
+                  }
+                />
+                {current.checked && (
+                  <Field
+                    label={t.fields.notes}
+                    multiline
+                    value={current.notes}
+                    onChangeText={(notes) =>
+                      update('globalStability', {
+                        ...evaluation.globalStability,
+                        conditions: evaluation.globalStability.conditions.map((entry) =>
+                          entry.item === item ? { ...entry, notes } : entry,
+                        ),
+                      })
+                    }
+                  />
+                )}
+              </View>
+            );
+          })}
           <Field
-            label={t.fields.notes}
+            label={t.fields.comments}
             multiline
             value={evaluation.globalStability.notes}
             onChangeText={(notes) => update('globalStability', { ...evaluation.globalStability, notes })}
           />
         </View>
       );
-    case 5:
+    case 'geotechnical':
       return (
         <View style={styles.stack}>
-          <FormGrid>
-            <Field
-              label={t.fields.morphology}
-              value={evaluation.geotechnicalDamage.morphology}
-              onChangeText={(morphology) =>
-                update('geotechnicalDamage', { ...evaluation.geotechnicalDamage, morphology })
-              }
-            />
-            <Field
-              label={t.fields.origin}
-              value={evaluation.geotechnicalDamage.origin}
-              onChangeText={(origin) =>
-                update('geotechnicalDamage', { ...evaluation.geotechnicalDamage, origin })
-              }
-            />
-          </FormGrid>
-          <ToggleRow
+          <SelectRow
+            label={t.fields.morphology}
+            value={evaluation.geotechnicalDamage.morphology}
+            options={SITE_MORPHOLOGIES.map((value) => ({
+              value,
+              label: t.catalogs.morphologies[value],
+            }))}
+            onChange={(morphology) =>
+              update('geotechnicalDamage', { ...evaluation.geotechnicalDamage, morphology })
+            }
+          />
+          <SelectRow
             label={t.fields.settlement}
             value={evaluation.geotechnicalDamage.settlement}
+            options={SETTLEMENT_LEVELS.map((value) => ({
+              value,
+              label: t.catalogs.settlementLevels[value],
+            }))}
             onChange={(settlement) =>
               update('geotechnicalDamage', { ...evaluation.geotechnicalDamage, settlement })
             }
           />
-          <ToggleRow
+          <SelectRow
             label={t.fields.slopeFailure}
             value={evaluation.geotechnicalDamage.slopeFailure}
+            options={SLOPE_FAILURE_LEVELS.map((value) => ({
+              value,
+              label: t.catalogs.slopeFailureLevels[value],
+            }))}
             onChange={(slopeFailure) =>
               update('geotechnicalDamage', { ...evaluation.geotechnicalDamage, slopeFailure })
+            }
+          />
+          <SelectRow
+            label={t.fields.origin}
+            value={evaluation.geotechnicalDamage.origin}
+            options={PHENOMENON_ORIGINS.map((value) => ({
+              value,
+              label: t.catalogs.origins[value],
+            }))}
+            onChange={(origin) =>
+              update('geotechnicalDamage', { ...evaluation.geotechnicalDamage, origin })
             }
           />
           <SelectRow
@@ -286,19 +440,24 @@ export function EvaluationSection({
             value={evaluation.geotechnicalDamage.risk}
             options={risks}
             onChange={(risk) =>
-              update('geotechnicalDamage', { ...evaluation.geotechnicalDamage, risk })
+              updateRisk({
+                ...evaluation,
+                geotechnicalDamage: { ...evaluation.geotechnicalDamage, risk },
+              })
             }
           />
+          {evaluation.geotechnicalDamage.risk !== 'none' && <Hint>{t.hints.geotechSpecialist}</Hint>}
         </View>
       );
-    case 6:
+    case 'structuralDamage':
       return (
         <DamageEditor
-          elements={evaluation.structuralDamage.elements}
+          elements={ensureTypes(evaluation.structuralDamage.elements, STRUCTURAL_ELEMENTS)}
           risks={risks}
           onChange={(elements) =>
             update('structuralDamage', { ...evaluation.structuralDamage, elements })
           }
+          header={<Hint>{t.hints.structuralDamage}</Hint>}
           footer={
             <>
               <Field
@@ -313,68 +472,113 @@ export function EvaluationSection({
                 value={evaluation.structuralDamage.risk}
                 options={risks}
                 onChange={(risk) =>
-                  update('structuralDamage', { ...evaluation.structuralDamage, risk })
+                  updateRisk({
+                    ...evaluation,
+                    structuralDamage: { ...evaluation.structuralDamage, risk },
+                  })
                 }
               />
             </>
           }
         />
       );
-    case 7:
+    case 'nonStructural':
       return (
         <DamageEditor
-          elements={evaluation.nonStructuralDamage.elements}
+          elements={ensureTypes(evaluation.nonStructuralDamage.elements, NON_STRUCTURAL_ELEMENTS)}
           risks={risks}
           onChange={(elements) =>
             update('nonStructuralDamage', { ...evaluation.nonStructuralDamage, elements })
           }
+          showElevatorReference
           footer={
             <SelectRow
               label={t.fields.risk}
               value={evaluation.nonStructuralDamage.risk}
               options={risks}
               onChange={(risk) =>
-                update('nonStructuralDamage', { ...evaluation.nonStructuralDamage, risk })
+                updateRisk({
+                  ...evaluation,
+                  nonStructuralDamage: { ...evaluation.nonStructuralDamage, risk },
+                })
               }
             />
           }
         />
       );
-    case 8:
-      return (
-        <View style={styles.checklist}>
-          {evaluation.fieldCriteria.map((criterion, index) => (
-            <ToggleRow
-              key={criterion.item}
-              label={t.damage[criterion.item as keyof typeof t.damage] ?? criterion.item}
-              value={criterion.checked}
-              onChange={(checked) => {
-                const fieldCriteria = [...evaluation.fieldCriteria];
-                fieldCriteria[index] = { ...criterion, checked };
-                update('fieldCriteria', fieldCriteria);
-              }}
-            />
-          ))}
-        </View>
-      );
-    case 9:
+    case 'habitability': {
+      const panel = habitabilityPanelColor(evaluation.habitability);
       return (
         <View style={styles.stack}>
-          <Field
-            label={t.fields.globalDamage}
-            keyboardType="numeric"
-            value={evaluation.globalDamagePercentage}
-            onChangeText={(globalDamagePercentage) => update('globalDamagePercentage', globalDamagePercentage)}
-          />
           <SelectRow
-            label={t.classification}
-            value={evaluation.habitability}
-            options={classifications}
-            onChange={(habitability) => update('habitability', habitability)}
+            label={t.fields.globalDamage}
+            value={evaluation.globalDamagePercentage}
+            options={GLOBAL_DAMAGE_RANGES.map((value) => ({
+              value,
+              label: t.catalogs.damageRanges[value],
+            }))}
+            onChange={(globalDamagePercentage) => update('globalDamagePercentage', globalDamagePercentage)}
           />
+          <View style={[styles.classPanel, { backgroundColor: panel }]}>
+            <SelectRow
+              label={t.classification}
+              value={evaluation.habitability}
+              options={classifications}
+              onChange={(habitability) => update('habitability', habitability)}
+            />
+            <Text style={styles.classHint}>{t.habitabilityHints[evaluation.habitability]}</Text>
+          </View>
+          <Field
+            label={t.fields.placardComments}
+            multiline
+            value={evaluation.placard.comments}
+            onChangeText={(comments) => update('placard', { ...evaluation.placard, comments })}
+          />
+          <Field
+            label={t.fields.placardRestrictions}
+            multiline
+            value={evaluation.placard.restrictions}
+            onChangeText={(restrictions) => update('placard', { ...evaluation.placard, restrictions })}
+          />
+          <Field
+            label={t.fields.placardActions}
+            multiline
+            value={evaluation.placard.furtherActions}
+            onChangeText={(furtherActions) =>
+              update('placard', { ...evaluation.placard, furtherActions })
+            }
+          />
+          <FormGrid>
+            <Field
+              label={t.fields.placardDate}
+              value={evaluation.placard.date}
+              onChangeText={(date) => update('placard', { ...evaluation.placard, date })}
+              placeholder="YYYY-MM-DD"
+            />
+            <Field
+              label={t.fields.placardTime}
+              value={evaluation.placard.time}
+              onChangeText={(time) => update('placard', { ...evaluation.placard, time })}
+            />
+            <Field
+              label={t.fields.placardJurisdiction}
+              value={evaluation.placard.jurisdiction}
+              onChangeText={(jurisdiction) =>
+                update('placard', { ...evaluation.placard, jurisdiction })
+              }
+            />
+            <Field
+              label={t.fields.placardInspector}
+              value={evaluation.placard.inspectorLine}
+              onChangeText={(inspectorLine) =>
+                update('placard', { ...evaluation.placard, inspectorLine })
+              }
+            />
+          </FormGrid>
         </View>
       );
-    case 10:
+    }
+    case 'preExisting':
       return (
         <View style={styles.stack}>
           <ToggleRow
@@ -405,7 +609,7 @@ export function EvaluationSection({
           />
         </View>
       );
-    case 11:
+    case 'recommendations':
       return (
         <FormGrid>
           <Field
@@ -448,7 +652,7 @@ export function EvaluationSection({
           />
         </FormGrid>
       );
-    case 12:
+    case 'occupants':
       return (
         <FormGrid>
           <Field
@@ -467,7 +671,7 @@ export function EvaluationSection({
           />
         </FormGrid>
       );
-    case 13:
+    case 'occupancy':
       return (
         <View style={styles.stack}>
           <ToggleRow
@@ -495,7 +699,7 @@ export function EvaluationSection({
           </FormGrid>
         </View>
       );
-    case 14:
+    case 'contact':
       return (
         <FormGrid>
           <Field
@@ -529,7 +733,7 @@ export function EvaluationSection({
           />
         </FormGrid>
       );
-    case 15: {
+    case 'inspectors': {
       const inspector = evaluation.inspectors[0]!;
       const setInspector = (value: Partial<typeof inspector>) =>
         update('inspectors', [{ ...inspector, ...value }]);
@@ -563,7 +767,54 @@ export function EvaluationSection({
         </FormGrid>
       );
     }
-    case 16:
+    case 'equipment':
+      return (
+        <View style={styles.stack}>
+          <Text style={styles.groupTitle}>{t.generalThreats}</Text>
+          {evaluation.equipmentReview.items
+            .filter((item) => item.group === 'general')
+            .map((item) => (
+              <EquipmentRowEditor
+                key={item.type}
+                item={item}
+                onChange={(next) =>
+                  update('equipmentReview', {
+                    ...evaluation.equipmentReview,
+                    items: evaluation.equipmentReview.items.map((entry) =>
+                      entry.type === item.type ? next : entry,
+                    ),
+                  })
+                }
+              />
+            ))}
+          <Text style={styles.groupTitle}>{t.hospitalConsiderations}</Text>
+          {evaluation.equipmentReview.items
+            .filter((item) => item.group === 'hospital')
+            .map((item) => (
+              <EquipmentRowEditor
+                key={item.type}
+                item={item}
+                onChange={(next) =>
+                  update('equipmentReview', {
+                    ...evaluation.equipmentReview,
+                    items: evaluation.equipmentReview.items.map((entry) =>
+                      entry.type === item.type ? next : entry,
+                    ),
+                  })
+                }
+              />
+            ))}
+          <Field
+            label={t.fields.equipmentRecommendations}
+            multiline
+            value={evaluation.equipmentReview.recommendations}
+            onChangeText={(recommendations) =>
+              update('equipmentReview', { ...evaluation.equipmentReview, recommendations })
+            }
+          />
+        </View>
+      );
+    case 'media':
       return (
         <View style={styles.stack}>
           <View style={styles.drawGrid}>
@@ -700,44 +951,145 @@ function FormGrid({ children }: React.PropsWithChildren) {
   return <View style={styles.grid}>{children}</View>;
 }
 
+function Hint({ children }: { children: string }) {
+  return <Text style={styles.hint}>{children}</Text>;
+}
+
+function ensureTypes(elements: Evaluation['structuralDamage']['elements'], types: readonly string[]) {
+  const byType = new Map(elements.map((item) => [item.type, item]));
+  return types.map(
+    (type) => byType.get(type) ?? { type, severity: 'none' as const, affectedPercentage: '' },
+  );
+}
+
 function DamageEditor({
   elements,
   risks,
   onChange,
   footer,
+  header,
+  showElevatorReference,
 }: {
   elements: Evaluation['structuralDamage']['elements'];
-  risks: Array<{ value: RiskLevel; label: string }>;
+  risks: { value: RiskLevel; label: string }[];
   onChange: (elements: Evaluation['structuralDamage']['elements']) => void;
   footer: React.ReactNode;
+  header?: React.ReactNode;
+  showElevatorReference?: boolean;
 }) {
   const { t } = useI18n();
   return (
     <View style={styles.stack}>
+      {header}
       {elements.map((element, index) => (
-        <SelectRow
-          key={element.type}
-          label={t.damage[element.type as keyof typeof t.damage] ?? element.type}
-          value={element.severity}
-          options={risks}
-          onChange={(severity) => {
-            const next = [...elements];
-            next[index] = { ...element, severity };
-            onChange(next);
-          }}
-        />
+        <View key={element.type} style={styles.conditionCard}>
+          <SelectRow
+            label={t.damage[element.type as keyof typeof t.damage] ?? element.type}
+            value={element.severity}
+            options={risks}
+            onChange={(severity) => {
+              const next = [...elements];
+              next[index] = { ...element, severity };
+              onChange(next);
+            }}
+          />
+          <Field
+            label={t.fields.affectedPercentage}
+            keyboardType="numeric"
+            value={element.affectedPercentage}
+            onChangeText={(affectedPercentage) => {
+              const next = [...elements];
+              next[index] = { ...element, affectedPercentage };
+              onChange(next);
+            }}
+          />
+          {showElevatorReference && element.type === 'elevators' && (
+            <>
+              <Text style={styles.hint}>{t.elevatorReference}</Text>
+              <Image
+                source={require('../../assets/elevator-atc20.png')}
+                resizeMode="contain"
+                style={styles.elevatorImage}
+              />
+              <Field
+                label={t.fields.notes}
+                multiline
+                value={element.notes ?? ''}
+                onChangeText={(notes) => {
+                  const next = [...elements];
+                  next[index] = { ...element, notes };
+                  onChange(next);
+                }}
+              />
+            </>
+          )}
+        </View>
       ))}
       {footer}
     </View>
   );
 }
 
+function EquipmentRowEditor({
+  item,
+  onChange,
+}: {
+  item: Evaluation['equipmentReview']['items'][number];
+  onChange: (item: Evaluation['equipmentReview']['items'][number]) => void;
+}) {
+  const { t } = useI18n();
+  const label = item.custom
+    ? t.otherEquipment
+    : (t.catalogs.equipment[item.type as keyof typeof t.catalogs.equipment] ?? item.type);
+  return (
+    <View style={styles.conditionCard}>
+      {item.custom ? (
+        <Field
+          label={t.fields.equipmentName}
+          value={item.name}
+          onChangeText={(name) => onChange({ ...item, name })}
+          placeholder={label}
+        />
+      ) : (
+        <Text style={styles.equipmentLabel}>{label}</Text>
+      )}
+      <SelectRow
+        label={t.fields.equipmentDamage}
+        value={item.damage}
+        options={EQUIPMENT_DAMAGE_LEVELS.map((value) => ({
+          value,
+          label: t.catalogs.equipmentDamage[value],
+        }))}
+        onChange={(damage) => onChange({ ...item, damage })}
+      />
+      <Field
+        label={t.fields.equipmentComments}
+        value={item.comments}
+        onChangeText={(comments) => onChange({ ...item, comments })}
+      />
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 16 },
-  stack: { gap: 20 },
-  checklist: { gap: 5 },
+  stack: { gap: 16 },
   location: { flex: 1, minWidth: 240, gap: 8, justifyContent: 'flex-end' },
   coordinate: { color: colors.textMuted, fontSize: 12, textAlign: 'center' },
+  hint: { color: colors.textMuted, fontSize: 12, lineHeight: 17, width: '100%' },
+  groupTitle: { color: colors.text, fontSize: 15, fontWeight: '800' },
+  conditionCard: {
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 12,
+    padding: 12,
+    gap: 12,
+    backgroundColor: colors.white,
+  },
+  classPanel: { borderRadius: 14, padding: 14, gap: 12 },
+  classHint: { color: colors.white, fontSize: 12, lineHeight: 17, fontWeight: '600' },
+  equipmentLabel: { color: colors.text, fontSize: 14, fontWeight: '700' },
+  elevatorImage: { width: '100%', height: 280, backgroundColor: colors.surfaceMuted, borderRadius: 8 },
   drawGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 16 },
   sketchPicker: { flex: 1, minWidth: 280, gap: 8 },
   mediaHeader: { flexDirection: 'row', justifyContent: 'space-between' },

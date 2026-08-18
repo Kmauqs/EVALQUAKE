@@ -1,16 +1,21 @@
 import { useLocalSearchParams } from 'expo-router';
-import { ArrowLeft, CheckCircle2, FileText, Save } from 'lucide-react-native';
+import { ArrowLeft, CheckCircle2, FileText } from 'lucide-react-native';
 import React, { useEffect, useState } from 'react';
 import { Alert, Linking, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { EvaluationSection } from '@/components/EvaluationSection';
 import { AppShell, Button, Card, ClassificationBadge, SectionProgress } from '@/components/ui';
 import type { Evaluation } from '@/domain/evaluation';
-import { validateForSubmission } from '@/domain/evaluation';
+import {
+  lastSectionIndex,
+  sectionCountFor,
+  sectionKeysFor,
+  validateForSubmission,
+} from '@/domain/evaluation';
+import { resolveAttachmentUrl } from '@/firebase/repository';
 import { useI18n } from '@/i18n/I18nProvider';
 import { useSafeBack } from '@/navigation/useSafeBack';
 import { renderReportHtml } from '@/report/renderReportHtml';
-import { resolveAttachmentUrl } from '@/firebase/repository';
 import { captureCoordinates, pickDamagePhoto, pickDamagePhotos } from '@/services/device';
 import { createPdf, sharePdf } from '@/services/pdf';
 import { useEvaluations } from '@/state/EvaluationProvider';
@@ -51,6 +56,12 @@ export default function EvaluationWizard() {
     );
   }
 
+  const keys = sectionKeysFor(evaluation);
+  const total = sectionCountFor(evaluation);
+  const last = lastSectionIndex(evaluation);
+  const current = Math.min(section, last);
+  const sectionKey = keys[current] ?? 'cadastral';
+
   const openExistingReport = async () => {
     let uri = Platform.OS === 'web' ? undefined : evaluation.localPdfUri;
     if (!uri && evaluation.canonicalPdfStoragePath) {
@@ -83,7 +94,7 @@ export default function EvaluationWizard() {
               icon={<FileText size={18} color={colors.white} />}
               onPress={() => void openExistingReport()}
             >
-              {t.sharePdf}
+              {t.generatePdf}
             </Button>
           </View>
         </Card>
@@ -92,7 +103,7 @@ export default function EvaluationWizard() {
   }
 
   const go = async (next: number) => {
-    const bounded = Math.max(0, Math.min(16, next));
+    const bounded = Math.max(0, Math.min(last, next));
     const updated = { ...evaluation, currentSection: bounded };
     setSection(bounded);
     setEvaluation(updated);
@@ -165,7 +176,7 @@ export default function EvaluationWizard() {
         status: 'submitted',
         syncState: 'pending',
         reportLanguage: language,
-        currentSection: 16,
+        currentSection: last,
         updatedAt: new Date().toISOString(),
       };
       await save(submitted);
@@ -189,25 +200,26 @@ export default function EvaluationWizard() {
           </Text>
         </View>
         <View style={styles.saved}>
-          <Save size={14} color={colors.textMuted} />
           <Text style={styles.savedText}>{message || t.pendingSync}</Text>
         </View>
       </View>
 
       <Card style={styles.formCard}>
         <SectionProgress
-          current={section}
-          total={17}
-          title={t.sections[section]!}
-          onBack={section > 0 ? () => void go(section - 1) : undefined}
-          onNext={section < 16 ? () => void go(section + 1) : undefined}
+          current={current}
+          total={total}
+          title={t.sections[sectionKey]}
+          onBack={current > 0 ? () => void go(current - 1) : undefined}
+          onNext={current < last ? () => void go(current + 1) : undefined}
         />
         <View style={styles.divider} />
         <EvaluationSection
-          section={section}
+          sectionKey={sectionKey}
           evaluation={evaluation}
           onChange={(next) => {
             setMessage('');
+            const nextLast = lastSectionIndex(next);
+            if (section > nextLast) setSection(nextLast);
             setEvaluation(next);
           }}
           onLocation={() => void locate()}
@@ -216,13 +228,13 @@ export default function EvaluationWizard() {
         />
         <View style={styles.divider} />
         <View style={styles.actions}>
-          {section > 0 && (
-            <Button variant="ghost" onPress={() => void go(section - 1)}>
+          {current > 0 && (
+            <Button variant="ghost" onPress={() => void go(current - 1)}>
               {t.back}
             </Button>
           )}
           <View style={styles.actionsRight}>
-            {section === 16 && (
+            {current === last && (
               <Button
                 variant="secondary"
                 icon={<FileText size={18} color={colors.primary} />}
@@ -232,8 +244,8 @@ export default function EvaluationWizard() {
                 {t.generatePdf}
               </Button>
             )}
-            {section < 16 ? (
-              <Button onPress={() => void go(section + 1)}>{t.next}</Button>
+            {current < last ? (
+              <Button onPress={() => void go(current + 1)}>{t.next}</Button>
             ) : (
               <Button
                 icon={<CheckCircle2 size={18} color={colors.white} />}
@@ -267,5 +279,5 @@ const styles = StyleSheet.create({
   submittedTitle: { color: colors.text, fontSize: 25, fontWeight: '900' },
   officialNumber: { color: colors.primary, fontSize: 17, fontWeight: '900' },
   submittedDescription: { color: colors.textMuted, lineHeight: 21 },
-  submittedActions: { flexDirection: 'row', justifyContent: 'flex-end', gap: 10, marginTop: 8 },
+  submittedActions: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'flex-end', gap: 10, marginTop: 8 },
 });

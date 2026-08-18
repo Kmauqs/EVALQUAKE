@@ -4,6 +4,7 @@ import React from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 
 import { AppShell, Button, Card, ClassificationBadge, OfflinePill } from '@/components/ui';
+import { sectionCountFor } from '@/domain/evaluation';
 import { useI18n } from '@/i18n/I18nProvider';
 import { useSafeBack } from '@/navigation/useSafeBack';
 import { useEvaluations } from '@/state/EvaluationProvider';
@@ -74,7 +75,7 @@ export default function EvaluatorHome() {
                       <View
                         style={[
                           styles.progressFill,
-                          { width: `${((evaluation.currentSection + 1) / 17) * 100}%` },
+                          { width: `${((evaluation.currentSection + 1) / sectionCountFor(evaluation)) * 100}%` },
                         ]}
                       />
                     </View>
