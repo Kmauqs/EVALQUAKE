@@ -1,7 +1,7 @@
 # EVALQUAKE
 
 **Versión actual: [0.2.1](CHANGELOG.md)**
-
+![alt]([url](https://github.com/Kmauqs/EVALQUAKE/blob/main/icon_960.png))
 Evaluación rápida de daños en edificaciones, bilingüe (español/inglés) y offline-first para Android, iOS y web. Sigue `ARCHITECTURE.md` y usa `icon_960.png` como icono, favicon, splash y base visual.
 
 Sitio de producción: [https://evalquake.web.app](https://evalquake.web.app)
