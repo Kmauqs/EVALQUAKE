@@ -1,4 +1,4 @@
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useLocalSearchParams } from 'expo-router';
 import { ArrowLeft, CheckCircle2, FileText, Save } from 'lucide-react-native';
 import React, { useEffect, useState } from 'react';
 import { Alert, Linking, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
@@ -8,6 +8,7 @@ import { AppShell, Button, Card, ClassificationBadge, SectionProgress } from '@/
 import type { Evaluation } from '@/domain/evaluation';
 import { validateForSubmission } from '@/domain/evaluation';
 import { useI18n } from '@/i18n/I18nProvider';
+import { useSafeBack } from '@/navigation/useSafeBack';
 import { renderReportHtml } from '@/report/renderReportHtml';
 import { resolveAttachmentUrl } from '@/firebase/repository';
 import { captureCoordinates, pickDamagePhoto } from '@/services/device';
@@ -17,7 +18,7 @@ import { colors, layout } from '@/theme';
 
 export default function EvaluationWizard() {
   const { id } = useLocalSearchParams<{ id: string }>();
-  const router = useRouter();
+  const goBack = useSafeBack('/(evaluator)');
   const { t, language } = useI18n();
   const { get, save } = useEvaluations();
   const [evaluation, setEvaluation] = useState<Evaluation | null>(null);
@@ -75,7 +76,7 @@ export default function EvaluationWizard() {
           </Text>
           <Text style={styles.submittedDescription}>{t.immutableNotice}</Text>
           <View style={styles.submittedActions}>
-            <Button variant="ghost" onPress={() => router.back()}>
+            <Button variant="ghost" onPress={goBack}>
               {t.back}
             </Button>
             <Button
@@ -167,7 +168,7 @@ export default function EvaluationWizard() {
       };
       await save(submitted);
       setEvaluation(submitted);
-      Alert.alert(t.submitted, t.immutableNotice, [{ text: t.close, onPress: () => router.back() }]);
+      Alert.alert(t.submitted, t.immutableNotice, [{ text: t.close, onPress: goBack }]);
     } finally {
       setBusy(false);
     }
@@ -176,7 +177,7 @@ export default function EvaluationWizard() {
   return (
     <AppShell>
       <View style={styles.titleRow}>
-        <Pressable onPress={() => router.back()} style={styles.back}>
+        <Pressable onPress={goBack} style={styles.back}>
           <ArrowLeft size={20} color={colors.primary} />
         </Pressable>
         <View style={styles.titleCopy}>

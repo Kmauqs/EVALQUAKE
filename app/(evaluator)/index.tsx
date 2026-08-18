@@ -5,6 +5,7 @@ import { ActivityIndicator, Pressable, StyleSheet, Text, View, useWindowDimensio
 
 import { AppShell, Button, Card, ClassificationBadge, OfflinePill } from '@/components/ui';
 import { useI18n } from '@/i18n/I18nProvider';
+import { useSafeBack } from '@/navigation/useSafeBack';
 import { useEvaluations } from '@/state/EvaluationProvider';
 import { colors } from '@/theme';
 
@@ -12,6 +13,7 @@ export default function EvaluatorHome() {
   const { t, language } = useI18n();
   const { evaluations, loading, create } = useEvaluations();
   const router = useRouter();
+  const goBack = useSafeBack('/');
   const { width } = useWindowDimensions();
   const narrow = width < 600;
 
@@ -23,7 +25,7 @@ export default function EvaluatorHome() {
   return (
     <AppShell>
       <View style={[styles.topRow, narrow && styles.topRowNarrow]}>
-        <Pressable onPress={() => router.back()} style={styles.back}>
+        <Pressable onPress={goBack} style={styles.back}>
           <ArrowLeft size={20} color={colors.primary} />
         </Pressable>
         <View style={styles.heading}>

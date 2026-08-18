@@ -1,4 +1,4 @@
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useLocalSearchParams } from 'expo-router';
 import { ArrowLeft, Braces, FileText, MapPin } from 'lucide-react-native';
 import React, { useEffect, useState } from 'react';
 import { Pressable, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
@@ -9,6 +9,7 @@ import type { Evaluation } from '@/domain/evaluation';
 import { demoEvaluations } from '@/domain/fixtures';
 import { pullEvaluation } from '@/firebase/repository';
 import { useI18n } from '@/i18n/I18nProvider';
+import { useSafeBack } from '@/navigation/useSafeBack';
 import { renderReportHtml } from '@/report/renderReportHtml';
 import { createPdf, sharePdf } from '@/services/pdf';
 import { useEvaluations } from '@/state/EvaluationProvider';
@@ -19,7 +20,7 @@ export default function EvaluationDetail() {
   const { t, language } = useI18n();
   const { configured } = useAuth();
   const { get } = useEvaluations();
-  const router = useRouter();
+  const goBack = useSafeBack('/(coordinator)');
   const { width } = useWindowDimensions();
   const narrow = width < 700;
   const [evaluation, setEvaluation] = useState<Evaluation | null>(
@@ -63,7 +64,7 @@ export default function EvaluationDetail() {
   return (
     <AppShell>
       <View style={[styles.header, narrow && styles.headerNarrow]}>
-        <Pressable onPress={() => router.back()} style={styles.back}>
+        <Pressable onPress={goBack} style={styles.back}>
           <ArrowLeft size={20} color={colors.primary} />
         </Pressable>
         <View style={styles.heading}>

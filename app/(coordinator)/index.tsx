@@ -10,6 +10,7 @@ import type { Evaluation, Habitability } from '@/domain/evaluation';
 import { demoEvaluations } from '@/domain/fixtures';
 import { subscribeRemoteEvaluations } from '@/firebase/repository';
 import { useI18n } from '@/i18n/I18nProvider';
+import { useSafeBack } from '@/navigation/useSafeBack';
 import { exportCsv, exportJson } from '@/services/exportData';
 import { useEvaluations } from '@/state/EvaluationProvider';
 import { colors } from '@/theme';
@@ -19,6 +20,7 @@ export default function CoordinatorDashboard() {
   const { configured, jurisdictionIds } = useAuth();
   const { evaluations: local } = useEvaluations();
   const router = useRouter();
+  const goBack = useSafeBack('/');
   const { width } = useWindowDimensions();
   const narrow = width < 700;
   const [query, setQuery] = useState('');
@@ -56,7 +58,7 @@ export default function CoordinatorDashboard() {
   return (
     <AppShell>
       <View style={[styles.titleRow, narrow && styles.titleRowNarrow]}>
-        <Pressable onPress={() => router.back()} style={styles.back}>
+        <Pressable onPress={goBack} style={styles.back}>
           <ArrowLeft size={20} color={colors.primary} />
         </Pressable>
         <View style={styles.heading}>
