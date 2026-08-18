@@ -1,16 +1,21 @@
 import {
+  browserLocalPersistence,
+  browserSessionPersistence,
   createUserWithEmailAndPassword,
   onAuthStateChanged,
+  setPersistence,
   signInWithEmailAndPassword,
   signOut as firebaseSignOut,
   type User,
 } from 'firebase/auth';
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
+import { Platform } from 'react-native';
 
 import type { UserRole } from '@/domain/evaluation';
 import type { AccountStatus, AppUser } from '@/domain/user';
 import { firebaseConfigured, getFirebaseServices } from '@/firebase/client';
 import { ensureUserProfile, subscribeUserProfile } from '@/firebase/users';
+import { clearSessionMarker, isSessionExpired, markSessionStart, prepareSession } from '@/auth/session';
 
 interface AuthState {
   user: User | null;
@@ -21,8 +26,8 @@ interface AuthState {
   profile: AppUser | null;
   loading: boolean;
   configured: boolean;
-  login: (email: string, password: string) => Promise<void>;
-  register: (email: string, password: string) => Promise<void>;
+  login: (email: string, password: string, remember?: boolean) => Promise<void>;
+  register: (email: string, password: string, remember?: boolean) => Promise<void>;
   logout: () => Promise<void>;
   refreshAccess: () => Promise<void>;
 }
@@ -50,6 +55,11 @@ export function AuthProvider({ children }: React.PropsWithChildren) {
     const services = getFirebaseServices();
     if (!services) return;
     return onAuthStateChanged(services.auth, async (nextUser) => {
+      if (nextUser && (await isSessionExpired())) {
+        await firebaseSignOut(services.auth);
+        await clearSessionMarker();
+        return;
+      }
       setUser(nextUser);
       if (!nextUser) {
         setRole(null);
@@ -121,18 +131,35 @@ export function AuthProvider({ children }: React.PropsWithChildren) {
       profile,
       loading,
       configured: firebaseConfigured,
-      login: async (email, password) => {
+      login: async (email, password, remember = true) => {
         const services = getFirebaseServices();
         if (!services) return;
+        prepareSession(remember);
+        if (Platform.OS === 'web') {
+          await setPersistence(
+            services.auth,
+            remember ? browserLocalPersistence : browserSessionPersistence,
+          );
+        }
         await signInWithEmailAndPassword(services.auth, email.trim(), password);
+        await markSessionStart(remember);
       },
-      register: async (email, password) => {
+      register: async (email, password, remember = true) => {
         const services = getFirebaseServices();
         if (!services) return;
+        prepareSession(remember);
+        if (Platform.OS === 'web') {
+          await setPersistence(
+            services.auth,
+            remember ? browserLocalPersistence : browserSessionPersistence,
+          );
+        }
         await createUserWithEmailAndPassword(services.auth, email.trim(), password);
+        await markSessionStart(remember);
       },
       logout: async () => {
         const services = getFirebaseServices();
+        await clearSessionMarker();
         if (services) await firebaseSignOut(services.auth);
       },
       refreshAccess,

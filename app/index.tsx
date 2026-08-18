@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import { ActivityIndicator, Alert, Image, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 
 import { authErrorMessage, useAuth } from '@/auth/AuthProvider';
-import { AppShell, Button, Card, Field, OfflinePill } from '@/components/ui';
+import { AppShell, Button, Card, Field, OfflinePill, ToggleRow } from '@/components/ui';
 import { useI18n } from '@/i18n/I18nProvider';
 import { colors } from '@/theme';
 
@@ -19,6 +19,7 @@ export default function WelcomeScreen() {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [busy, setBusy] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
+  const [remember, setRemember] = useState(true);
 
   if (loading) {
     return (
@@ -35,7 +36,10 @@ export default function WelcomeScreen() {
         return;
       }
       setBusy(true);
-      const action = mode === 'register' ? register(email, password) : login(email, password);
+      const action =
+        mode === 'register'
+          ? register(email, password, remember)
+          : login(email, password, remember);
       void action
         .catch((error) =>
           Alert.alert(
@@ -75,6 +79,8 @@ export default function WelcomeScreen() {
               secureTextEntry
             />
           )}
+          <ToggleRow label={t.staySignedIn} value={remember} onChange={setRemember} />
+          <Text style={styles.authLead}>{t.staySignedInHint}</Text>
           <Button loading={busy} onPress={submit}>
             {mode === 'register' ? t.createAccount : t.signIn}
           </Button>
