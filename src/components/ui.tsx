@@ -37,23 +37,25 @@ export function AppHeader() {
     <View style={styles.header}>
       <View style={styles.brand}>
         <Image source={require('../../icon_960.png')} style={styles.logo} />
-        <View>
-          <View style={styles.brandTitleRow}>
-            <Text style={styles.brandTitle}>{t.appName}</Text>
-            <Text style={styles.version}>v{APP_VERSION}</Text>
-          </View>
+        <View style={styles.brandCopy}>
+          <Text style={styles.brandTitle}>{t.appName}</Text>
           {width > 560 && <Text style={styles.brandSubtitle}>{t.tagline}</Text>}
         </View>
       </View>
-      <Pressable
-        accessibilityRole="button"
-        accessibilityLabel={t.language}
-        onPress={() => setLanguage(language === 'es' ? 'en' : 'es')}
-        style={styles.languageButton}
-      >
-        <Globe2 size={17} color={colors.primary} />
-        <Text style={styles.languageText}>{language === 'es' ? 'EN' : 'ES'}</Text>
-      </Pressable>
+      <View style={styles.headerActions}>
+        <View accessibilityLabel={`EVALQUAKE ${APP_VERSION}`} style={styles.versionBadge}>
+          <Text style={styles.versionText}>v{APP_VERSION}</Text>
+        </View>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={t.language}
+          onPress={() => setLanguage(language === 'es' ? 'en' : 'es')}
+          style={styles.languageButton}
+        >
+          <Globe2 size={17} color={colors.primary} />
+          <Text style={styles.languageText}>{language === 'es' ? 'EN' : 'ES'}</Text>
+        </Pressable>
+      </View>
     </View>
   );
 }
@@ -251,12 +253,21 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
   },
-  brand: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  brand: { flexDirection: 'row', alignItems: 'center', gap: 12, flexShrink: 1 },
+  brandCopy: { flexShrink: 1 },
   logo: { width: 44, height: 44, borderRadius: 22 },
-  brandTitleRow: { flexDirection: 'row', alignItems: 'baseline', gap: 8 },
   brandTitle: { color: colors.primaryDark, fontWeight: '900', fontSize: 18, letterSpacing: 0.5 },
-  version: { color: colors.textMuted, fontSize: 11, fontWeight: '700' },
   brandSubtitle: { color: colors.textMuted, fontSize: 11, marginTop: 2 },
+  headerActions: { flexDirection: 'row', alignItems: 'center', gap: 8, flexShrink: 0 },
+  versionBadge: {
+    borderWidth: 1,
+    borderColor: colors.primary,
+    backgroundColor: colors.primarySoft,
+    paddingHorizontal: 10,
+    paddingVertical: 7,
+    borderRadius: 999,
+  },
+  versionText: { color: colors.primaryDark, fontSize: 12, fontWeight: '800' },
   languageButton: {
     flexDirection: 'row',
     gap: 7,
