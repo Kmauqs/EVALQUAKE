@@ -22,7 +22,12 @@ import { colors, layout, shadows } from '@/theme';
 import { APP_VERSION } from '@/version';
 
 export function AppShell({ children, scroll = true }: React.PropsWithChildren<{ scroll?: boolean }>) {
-  const content = <View style={styles.shellContent}>{children}</View>;
+  const content = (
+    <View style={styles.shellContent}>
+      {children}
+      <SupportStrip />
+    </View>
+  );
   return (
     <SafeAreaView style={styles.safe}>
       <AppHeader />
@@ -36,44 +41,79 @@ export function AppHeader() {
   const { width } = useWindowDimensions();
   const router = useRouter();
   const pathname = usePathname();
+  const compact = width < 640;
+  const iconOnly = width < 420;
   return (
-    <View style={styles.header}>
+    <View style={[styles.header, compact && styles.headerCompact]}>
       <Pressable
         accessibilityRole="button"
         accessibilityLabel={t.appName}
         onPress={() => router.replace('/')}
         style={styles.brand}
       >
-        <Image source={require('../../icon_960.png')} style={styles.logo} />
+        <Image source={require('../../icon_960.png')} style={[styles.logo, compact && styles.logoCompact]} />
         <View style={styles.brandCopy}>
-          <Text style={styles.brandTitle}>{t.appName}</Text>
+          <Text numberOfLines={1} style={[styles.brandTitle, compact && styles.brandTitleCompact]}>
+            {t.appName}
+          </Text>
           {width > 560 && <Text style={styles.brandSubtitle}>{t.tagline}</Text>}
         </View>
       </Pressable>
-      <View style={styles.headerActions}>
+      <View style={[styles.headerActions, compact && styles.headerActionsCompact]}>
         <Pressable
           accessibilityRole="button"
           accessibilityLabel={t.guide}
           onPress={() => {
             if (pathname !== '/guide') router.push('/guide' as Href);
           }}
-          style={styles.guideButton}
+          style={[styles.guideButton, compact && styles.headerChipCompact]}
         >
-          <BookOpen size={17} color={colors.primary} />
+          <BookOpen size={compact ? 16 : 17} color={colors.primary} />
           {width > 560 && <Text style={styles.languageText}>{t.guide}</Text>}
         </Pressable>
-        <View accessibilityLabel={`EVALQUAKE ${APP_VERSION}`} style={styles.versionBadge}>
-          <Text style={styles.versionText}>v{APP_VERSION}</Text>
+        <View
+          accessibilityLabel={`EVALQUAKE ${APP_VERSION}`}
+          style={[styles.versionBadge, compact && styles.versionBadgeCompact]}
+        >
+          <Text style={[styles.versionText, compact && styles.versionTextCompact]}>v{APP_VERSION}</Text>
         </View>
         <Pressable
           accessibilityRole="button"
           accessibilityLabel={t.language}
           onPress={() => setLanguage(language === 'es' ? 'en' : 'es')}
-          style={styles.languageButton}
+          style={[styles.languageButton, compact && styles.headerChipCompact]}
         >
-          <Globe2 size={17} color={colors.primary} />
-          <Text style={styles.languageText}>{language === 'es' ? 'EN' : 'ES'}</Text>
+          <Globe2 size={compact ? 16 : 17} color={colors.primary} />
+          {!iconOnly && <Text style={styles.languageText}>{language === 'es' ? 'EN' : 'ES'}</Text>}
         </Pressable>
+      </View>
+    </View>
+  );
+}
+
+export function SupportStrip() {
+  const { t } = useI18n();
+  const { width } = useWindowDimensions();
+  const compact = width < 520;
+  const height = compact ? 32 : 40;
+  const terraWidth = Math.round((height * 268) / 120);
+  const gtekWidth = Math.round((height * 284) / 120);
+  return (
+    <View style={styles.support} accessibilityLabel={t.supportedBy}>
+      <Text style={styles.supportLabel}>{t.supportedBy}</Text>
+      <View style={[styles.supportLogos, compact && styles.supportLogosWrap]}>
+        <Image
+          accessibilityLabel="Grupo Terra"
+          source={require('../../assets/partners/grupo-terra.png')}
+          style={{ width: terraWidth, height }}
+          resizeMode="contain"
+        />
+        <Image
+          accessibilityLabel="Gtek ingeniería"
+          source={require('../../assets/partners/gtek.png')}
+          style={{ width: gtekWidth, height }}
+          resizeMode="contain"
+        />
       </View>
     </View>
   );
@@ -271,13 +311,24 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    gap: 10,
   },
-  brand: { flexDirection: 'row', alignItems: 'center', gap: 12, flexShrink: 1 },
-  brandCopy: { flexShrink: 1 },
-  logo: { width: 44, height: 44, borderRadius: 22 },
-  brandTitle: { color: colors.primaryDark, fontWeight: '900', fontSize: 18, letterSpacing: 0.5 },
+  headerCompact: { minHeight: 60, paddingHorizontal: 12 },
+  brand: { flexDirection: 'row', alignItems: 'center', gap: 8, flexShrink: 0 },
+  brandCopy: { flexShrink: 0 },
+  logo: { width: 44, height: 44, borderRadius: 22, flexShrink: 0 },
+  logoCompact: { width: 32, height: 32, borderRadius: 16 },
+  brandTitle: {
+    color: colors.primaryDark,
+    fontWeight: '900',
+    fontSize: 18,
+    letterSpacing: 0.5,
+    flexShrink: 0,
+  },
+  brandTitleCompact: { fontSize: 15, letterSpacing: 0 },
   brandSubtitle: { color: colors.textMuted, fontSize: 11, marginTop: 2 },
   headerActions: { flexDirection: 'row', alignItems: 'center', gap: 8, flexShrink: 0 },
+  headerActionsCompact: { gap: 6 },
   versionBadge: {
     borderWidth: 1,
     borderColor: colors.primary,
@@ -287,6 +338,34 @@ const styles = StyleSheet.create({
     borderRadius: 999,
   },
   versionText: { color: colors.primaryDark, fontSize: 12, fontWeight: '800' },
+  versionBadgeCompact: { paddingHorizontal: 7, paddingVertical: 5 },
+  versionTextCompact: { fontSize: 11 },
+  headerChipCompact: { paddingHorizontal: 8, paddingVertical: 7 },
+  support: {
+    width: '100%',
+    marginTop: 28,
+    marginBottom: 12,
+    paddingTop: 18,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+    alignItems: 'center',
+    gap: 10,
+  },
+  supportLabel: {
+    color: colors.textMuted,
+    fontSize: 12,
+    fontWeight: '700',
+    textTransform: 'uppercase',
+    letterSpacing: 0.6,
+  },
+  supportLogos: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 22,
+    flexWrap: 'wrap',
+  },
+  supportLogosWrap: { gap: 16 },
   languageButton: {
     flexDirection: 'row',
     gap: 7,

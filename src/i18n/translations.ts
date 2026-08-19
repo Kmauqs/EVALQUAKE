@@ -57,6 +57,7 @@ export const es = {
   guideKicker: 'ATC-20 · Guía gráfica',
   guideFigureCaption:
     'Puntos de revisión de ascensores / elevadores a tracción. La fosa y la sala de máquinas solo las inspecciona personal calificado.',
+  supportedBy: 'Con apoyo de',
   captureLocation: 'Capturar ubicación',
   locationCaptured: 'Ubicación capturada',
   addPhoto: 'Agregar foto',
@@ -547,6 +548,7 @@ export const en = {
   guideKicker: 'ATC-20 · Graphic guide',
   guideFigureCaption:
     'Traction elevator inspection points. Pit and machine-room checks are only for qualified personnel.',
+  supportedBy: 'With support from',
   captureLocation: 'Capture location',
   locationCaptured: 'Location captured',
   addPhoto: 'Add photo',

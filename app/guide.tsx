@@ -1,6 +1,6 @@
 import { ArrowLeft } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
-import React from 'react';
+import React, { useState } from 'react';
 import { Image, Pressable, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 
 import { AppShell, Card } from '@/components/ui';
@@ -9,22 +9,37 @@ import {
   type GuideFigure,
   type GuideFigureRow,
 } from '@/guide/content';
-import { guideImages, guideImageSize } from '@/guide/images';
+import { guideImageSize, guideImageSource } from '@/guide/images';
 import { useI18n } from '@/i18n/I18nProvider';
 import { useSafeBack } from '@/navigation/useSafeBack';
 import { colors, layout } from '@/theme';
 
+function useBoxWidth() {
+  const [width, setWidth] = useState(0);
+  const onLayout = (event: { nativeEvent: { layout: { width: number } } }) => {
+    const next = Math.round(event.nativeEvent.layout.width);
+    if (next > 0 && next !== width) setWidth(next);
+  };
+  return { width, onLayout };
+}
+
+function imageHeight(key: number, boxWidth: number, fallbackRatio: number) {
+  const size = guideImageSize[key];
+  const ratio = size ? size.width / size.height : fallbackRatio;
+  return Math.max(120, Math.round((boxWidth || 280) / ratio));
+}
+
 function Figure({ figure }: { figure: GuideFigure }) {
-  const source = guideImages[figure.key];
-  const size = guideImageSize[figure.key];
+  const source = guideImageSource(figure.key);
+  const { width, onLayout } = useBoxWidth();
   if (!source) return null;
-  const aspectRatio = size ? size.width / size.height : 16 / 10;
+  const height = imageHeight(figure.key, width, 16 / 10);
   return (
-    <View style={styles.figureWrap}>
+    <View style={styles.figureWrap} onLayout={onLayout}>
       <Image
         accessibilityLabel={figure.caption}
         source={source}
-        style={[styles.figure, { aspectRatio }]}
+        style={[styles.figure, { height }]}
         resizeMode="contain"
       />
       {figure.caption ? <Text style={styles.caption}>{figure.caption}</Text> : null}
@@ -33,21 +48,24 @@ function Figure({ figure }: { figure: GuideFigure }) {
 }
 
 function FigureRow({ row, stacked }: { row: GuideFigureRow; stacked: boolean }) {
+  const { width, onLayout } = useBoxWidth();
+  const columns = Math.max(1, row.keys.length);
+  const gap = 8;
+  const itemWidth = stacked || width === 0 ? width : Math.max(80, (width - gap * (columns - 1)) / columns);
   return (
     <View style={styles.figureRow}>
       <Text style={styles.rowTitle}>{row.title}</Text>
-      <View style={[styles.rowImages, stacked && styles.rowImagesStacked]}>
+      <View style={[styles.rowImages, stacked && styles.rowImagesStacked]} onLayout={onLayout}>
         {row.keys.map((key, index) => {
-          const source = guideImages[key];
-          const size = guideImageSize[key];
+          const source = guideImageSource(key);
           if (!source) return null;
-          const aspectRatio = size ? size.width / size.height : 1;
+          const height = imageHeight(key, stacked ? width : itemWidth, 1);
           return (
             <View key={key} style={stacked ? styles.rowItemStacked : styles.rowItem}>
               <Image
                 accessibilityLabel={row.labels[index]}
                 source={source}
-                style={[styles.rowImage, { aspectRatio }]}
+                style={[styles.rowImage, { height }]}
                 resizeMode="contain"
               />
               {row.labels[index] ? <Text style={styles.rowLabel}>{row.labels[index]}</Text> : null}
@@ -153,7 +171,7 @@ const styles = StyleSheet.create({
   bullet: { color: colors.text, lineHeight: 22, fontSize: 15, paddingLeft: 4 },
   group: { gap: 8, marginTop: 8 },
   groupTitle: { color: colors.text, fontWeight: '800', fontSize: 16 },
-  figureWrap: { gap: 6, marginTop: 4 },
+  figureWrap: { gap: 6, marginTop: 4, width: '100%', alignSelf: 'stretch' },
   figure: { width: '100%', backgroundColor: colors.white, borderRadius: 8 },
   caption: { color: colors.textMuted, fontSize: 12, lineHeight: 18 },
   figureRow: { gap: 8, marginTop: 8 },

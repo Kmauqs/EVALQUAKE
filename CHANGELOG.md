@@ -22,7 +22,20 @@ La versión visible en la cabecera de la app sale de `src/version.ts`.
 
 ## [Unreleased]
 
-Cambios posteriores a 0.4.1 se listan aquí hasta el siguiente corte.
+Cambios posteriores a 0.4.3 se listan aquí hasta el siguiente corte.
+
+## [0.4.3] — 2026-08-19
+
+### Added
+
+- Logotipos de Grupo Terra y Gtek ingeniería, con la leyenda «Con apoyo de», en el pie de todas las pantallas.
+
+## [0.4.2] — 2026-08-19
+
+### Fixed
+
+- El título EVALQUAKE ya no se parte en pantallas estrechas.
+- Las figuras de la guía tienen altura explícita para que se vean en la web.
 
 ## [0.4.1] — 2026-08-19
 

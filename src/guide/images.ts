@@ -1,4 +1,5 @@
 import type { ImageSourcePropType } from 'react-native';
+import { Platform } from 'react-native';
 
 export const guideImages: Record<number, ImageSourcePropType> = {
   1: require('../../assets/guide/image01.jpg'),
@@ -191,3 +192,11 @@ export const guideImageSize: Record<number, { width: number; height: number }> =
   92: { width: 635, height: 800 },
   93: { width: 800, height: 558 },
 };
+
+export function guideImageSource(key: number): ImageSourcePropType | undefined {
+  if (Platform.OS === 'web') {
+    const padded = String(key).padStart(2, '0');
+    return { uri: `/media/guide/image${padded}.jpg` };
+  }
+  return guideImages[key];
+}
