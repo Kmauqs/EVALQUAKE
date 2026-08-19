@@ -1,18 +1,70 @@
 import { ArrowLeft } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
 import React from 'react';
-import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Image, Pressable, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 
 import { AppShell, Card } from '@/components/ui';
-import { guideBlocks } from '@/guide/content';
+import {
+  guideBlocks,
+  type GuideFigure,
+  type GuideFigureRow,
+} from '@/guide/content';
+import { guideImages, guideImageSize } from '@/guide/images';
 import { useI18n } from '@/i18n/I18nProvider';
 import { useSafeBack } from '@/navigation/useSafeBack';
 import { colors, layout } from '@/theme';
+
+function Figure({ figure }: { figure: GuideFigure }) {
+  const source = guideImages[figure.key];
+  const size = guideImageSize[figure.key];
+  if (!source) return null;
+  const aspectRatio = size ? size.width / size.height : 16 / 10;
+  return (
+    <View style={styles.figureWrap}>
+      <Image
+        accessibilityLabel={figure.caption}
+        source={source}
+        style={[styles.figure, { aspectRatio }]}
+        resizeMode="contain"
+      />
+      {figure.caption ? <Text style={styles.caption}>{figure.caption}</Text> : null}
+    </View>
+  );
+}
+
+function FigureRow({ row, stacked }: { row: GuideFigureRow; stacked: boolean }) {
+  return (
+    <View style={styles.figureRow}>
+      <Text style={styles.rowTitle}>{row.title}</Text>
+      <View style={[styles.rowImages, stacked && styles.rowImagesStacked]}>
+        {row.keys.map((key, index) => {
+          const source = guideImages[key];
+          const size = guideImageSize[key];
+          if (!source) return null;
+          const aspectRatio = size ? size.width / size.height : 1;
+          return (
+            <View key={key} style={stacked ? styles.rowItemStacked : styles.rowItem}>
+              <Image
+                accessibilityLabel={row.labels[index]}
+                source={source}
+                style={[styles.rowImage, { aspectRatio }]}
+                resizeMode="contain"
+              />
+              {row.labels[index] ? <Text style={styles.rowLabel}>{row.labels[index]}</Text> : null}
+            </View>
+          );
+        })}
+      </View>
+    </View>
+  );
+}
 
 export default function InspectionGuideScreen() {
   const { t, language } = useI18n();
   const router = useRouter();
   const goBack = useSafeBack('/');
+  const { width } = useWindowDimensions();
+  const stacked = width < 720;
   const sections = guideBlocks(language);
 
   return (
@@ -40,24 +92,30 @@ export default function InspectionGuideScreen() {
               • {item}
             </Text>
           ))}
+          {section.figures?.map((figure) => (
+            <Figure key={figure.key} figure={figure} />
+          ))}
+          {section.figureRows?.map((row) => (
+            <FigureRow key={row.title} row={row} stacked={stacked} />
+          ))}
           {section.groups?.map((group) => (
             <View key={group.title} style={styles.group}>
               <Text style={styles.groupTitle}>{group.title}</Text>
-              {group.bullets.map((item) => (
+              {group.bullets?.map((item) => (
                 <Text key={item} style={styles.bullet}>
                   • {item}
                 </Text>
+              ))}
+              {group.figures?.map((figure) => (
+                <Figure key={figure.key} figure={figure} />
+              ))}
+              {group.figureRows?.map((row) => (
+                <FigureRow key={row.title} row={row} stacked={stacked} />
               ))}
             </View>
           ))}
         </Card>
       ))}
-
-      <Card style={styles.card}>
-        <Text style={styles.sectionTitle}>{t.elevatorReference}</Text>
-        <Image source={require('../assets/elevator-atc20.png')} style={styles.figure} resizeMode="contain" />
-        <Text style={styles.caption}>{t.guideFigureCaption}</Text>
-      </Card>
 
       <Pressable onPress={() => router.replace('/')} style={styles.homeLink}>
         <Text style={styles.homeLinkText}>{t.back}</Text>
@@ -93,10 +151,19 @@ const styles = StyleSheet.create({
   sectionTitle: { color: colors.primaryDark, fontSize: 18, fontWeight: '900' },
   paragraph: { color: colors.text, lineHeight: 22, fontSize: 15 },
   bullet: { color: colors.text, lineHeight: 22, fontSize: 15, paddingLeft: 4 },
-  group: { gap: 6, marginTop: 4 },
-  groupTitle: { color: colors.text, fontWeight: '800', fontSize: 15 },
-  figure: { width: '100%', height: 280, backgroundColor: colors.white, borderRadius: 8 },
+  group: { gap: 8, marginTop: 8 },
+  groupTitle: { color: colors.text, fontWeight: '800', fontSize: 16 },
+  figureWrap: { gap: 6, marginTop: 4 },
+  figure: { width: '100%', backgroundColor: colors.white, borderRadius: 8 },
   caption: { color: colors.textMuted, fontSize: 12, lineHeight: 18 },
+  figureRow: { gap: 8, marginTop: 8 },
+  rowTitle: { color: colors.text, fontWeight: '700', fontSize: 14 },
+  rowImages: { flexDirection: 'row', gap: 8 },
+  rowImagesStacked: { flexDirection: 'column' },
+  rowItem: { flex: 1, gap: 4 },
+  rowItemStacked: { width: '100%', gap: 4 },
+  rowImage: { width: '100%', backgroundColor: colors.white, borderRadius: 8 },
+  rowLabel: { color: colors.textMuted, fontSize: 12, fontWeight: '700', textAlign: 'center' },
   homeLink: { alignSelf: 'center', marginVertical: 22 },
   homeLinkText: { color: colors.primary, fontWeight: '800' },
 });

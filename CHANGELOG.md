@@ -22,7 +22,13 @@ La versión visible en la cabecera de la app sale de `src/version.ts`.
 
 ## [Unreleased]
 
-Cambios posteriores a 0.4.0 se listan aquí hasta el siguiente corte.
+Cambios posteriores a 0.4.1 se listan aquí hasta el siguiente corte.
+
+## [0.4.1] — 2026-08-19
+
+### Added
+
+- Figuras de la guía gráfica de inspección, extraídas del DOCX y mostradas en cada sección correspondiente.
 
 ## [0.4.0] — 2026-08-18
 
