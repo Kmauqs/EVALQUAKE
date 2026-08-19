@@ -4,6 +4,8 @@ import React from 'react';
 import {
   ActivityIndicator,
   Image,
+  Linking,
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -108,12 +110,18 @@ export function SupportStrip() {
           style={{ width: terraWidth, height }}
           resizeMode="contain"
         />
-        <Image
+        <Pressable
+          accessibilityRole="link"
           accessibilityLabel="Gtek ingeniería"
-          source={require('../../assets/partners/gtek.png')}
-          style={{ width: gtekWidth, height }}
-          resizeMode="contain"
-        />
+          style={Platform.OS === 'web' ? { cursor: 'pointer' as const } : undefined}
+          onPress={() => void Linking.openURL('https://gtek.com.co')}
+        >
+          <Image
+            source={require('../../assets/partners/gtek.png')}
+            style={{ width: gtekWidth, height }}
+            resizeMode="contain"
+          />
+        </Pressable>
       </View>
     </View>
   );

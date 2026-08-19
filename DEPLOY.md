@@ -82,9 +82,11 @@ Si Actions falló, o quiere publicar **ahora** desde el PC:
 ```powershell
 cd E:\dev\EVALQUAKE
 $env:EXPO_PUBLIC_USE_FIREBASE_EMULATORS = "false"
-npx expo export --platform web --clear
+npm run export:web
 npx firebase deploy --only hosting
 ```
+
+`export:web` copia las figuras de la guía a `public/media` y luego genera `dist`. **Primero exportar, después desplegar.** Si se despliega un `dist` viejo, la cabecera seguirá en la versión anterior.
 
 `.env` local alimenta el export. **No** deje `EXPO_PUBLIC_USE_FIREBASE_EMULATORS=true` en ese build: el sitio intentaría hablar con `127.0.0.1`.
 

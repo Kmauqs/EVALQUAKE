@@ -22,7 +22,20 @@ La versión visible en la cabecera de la app sale de `src/version.ts`.
 
 ## [Unreleased]
 
-Cambios posteriores a 0.4.3 se listan aquí hasta el siguiente corte.
+Cambios posteriores a 0.4.5 se listan aquí hasta el siguiente corte.
+
+## [0.4.5] — 2026-08-19
+
+### Changed
+
+- La sección de amenaza sísmica de la guía muestra solo el mapa y su pie de figura.
+- El logotipo de Gtek enlaza a https://gtek.com.co.
+
+## [0.4.4] — 2026-08-19
+
+### Fixed
+
+- Las figuras de la guía y los logotipos de apoyo se empaquetan con el bundle web para que Firebase Hosting los sirva.
 
 ## [0.4.3] — 2026-08-19
 

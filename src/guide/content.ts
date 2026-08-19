@@ -41,9 +41,6 @@ const copy = {
       'La evaluación rápida suele durar 10 a 30 minutos. La detallada, 1 a 4 horas. La evaluación ingenieril puede tomar días y la realiza un especialista.',
     ],
     hazardTitle: 'Amenaza sísmica del evento',
-    hazardP: [
-      'Usar el mapa de aceleración máxima del terreno y la información técnica disponible para la zona afectada.',
-    ],
     hazardCaption: 'Mapa de simulación de aceleración máxima del terreno (fuente: INGENIAR).',
     methodsTitle: 'Métodos de evaluación (ATC-20)',
     methodsCaption: 'Diagrama de flujo para la evaluación y marcación de edificaciones.',
@@ -201,7 +198,6 @@ const copy = {
       'Rapid evaluation usually takes 10–30 minutes. Detailed evaluation takes 1–4 hours. Engineering evaluation may take days and is done by a specialist.',
     ],
     hazardTitle: 'Seismic hazard of the event',
-    hazardP: ['Use the peak ground acceleration map and the technical information available for the affected area.'],
     hazardCaption: 'Peak ground acceleration simulation map (source: INGENIAR).',
     methodsTitle: 'ATC-20 evaluation methods',
     methodsCaption: 'Flowchart for building evaluation and posting.',
@@ -366,7 +362,6 @@ export function guideBlocks(language: Language): GuideBlock[] {
     {
       id: 'hazard',
       title: t.hazardTitle,
-      paragraphs: [...t.hazardP],
       figures: [{ key: 1, caption: t.hazardCaption }],
     },
     {
