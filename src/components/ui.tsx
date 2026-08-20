@@ -165,12 +165,14 @@ export function Button({
         style,
       ]}
     >
-      {loading ? (
-        <ActivityIndicator color={spinnerOnDark ? colors.white : colors.primary} />
-      ) : (
-        icon
-      )}
-      <Text style={[styles.buttonText, styles[`buttonText_${variant}`]]}>{children}</Text>
+      <View style={styles.buttonInner}>
+        {loading ? (
+          <ActivityIndicator color={spinnerOnDark ? colors.white : colors.primary} />
+        ) : (
+          icon
+        )}
+        <Text style={[styles.buttonText, styles[`buttonText_${variant}`]]}>{children}</Text>
+      </View>
     </Pressable>
   );
 }
@@ -426,19 +428,24 @@ const styles = StyleSheet.create({
     minHeight: 46,
     borderRadius: 12,
     paddingHorizontal: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexShrink: 0,
+  },
+  buttonInner: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 9,
-    flexShrink: 0,
+    maxWidth: '100%',
   },
   button_primary: { backgroundColor: colors.primary },
   button_secondary: { backgroundColor: colors.primarySoft, borderWidth: 1, borderColor: colors.mint },
   button_ghost: { backgroundColor: 'transparent', borderWidth: 1, borderColor: colors.border },
   button_danger: { backgroundColor: colors.danger },
   buttonPressed: { opacity: 0.65 },
-  buttonText: { fontSize: 15, fontWeight: '800', flexShrink: 1, textAlign: 'center' },
+  buttonText: { fontSize: 15, fontWeight: '800', textAlign: 'center' },
   buttonText_primary: { color: colors.white },
   buttonText_secondary: { color: colors.primaryDark },
   buttonText_ghost: { color: colors.primary },

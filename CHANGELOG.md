@@ -22,7 +22,13 @@ La versión visible en la cabecera de la app sale de `src/version.ts`.
 
 ## [Unreleased]
 
-Cambios posteriores a 0.6.0 se listan aquí hasta el siguiente corte.
+Cambios posteriores a 0.6.1 se listan aquí hasta el siguiente corte.
+
+## [0.6.1] — 2026-08-20
+
+### Fixed
+
+- El texto de los botones vuelve a quedar centrado en pantallas estrechas.
 
 ## [0.6.0] — 2026-08-20
 
