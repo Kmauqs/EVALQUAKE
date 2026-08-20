@@ -22,7 +22,31 @@ La versión visible en la cabecera de la app sale de `src/version.ts`.
 
 ## [Unreleased]
 
-Cambios posteriores a 0.4.5 se listan aquí hasta el siguiente corte.
+Cambios posteriores a 0.5.1 se listan aquí hasta el siguiente corte.
+
+## [0.5.1] — 2026-08-20
+
+### Fixed
+
+- Las opciones y campos del formulario ya no se superponen en pantallas estrechas.
+
+## [0.5.0] — 2026-08-20
+
+### Added
+
+- Cuestionario opcional de cantidades de reparación (muros, cubiertas, vigas y columnas), con áreas/volúmenes calculados y exportación CSV de la tabla.
+
+## [0.4.7] — 2026-08-20
+
+### Added
+
+- Los evaluadores pueden eliminar borradores incompletos. Las evaluaciones firmadas o enviadas no se pueden borrar.
+
+## [0.4.6] — 2026-08-20
+
+### Added
+
+- En catastro se pueden escribir latitud y longitud a mano, además de capturarlas con GPS.
 
 ## [0.4.5] — 2026-08-19
 

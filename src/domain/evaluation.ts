@@ -17,6 +17,7 @@ import {
   type NsrGroup,
   type StructuralSystemCode,
 } from './catalog';
+import { emptyRepairQuantities, type RepairQuantities } from './quantities';
 
 export type Language = 'es' | 'en';
 export type UserRole = 'evaluator' | 'coordinator' | 'admin';
@@ -192,6 +193,7 @@ export interface Evaluation {
   inspectors: Inspector[];
   inspectedAt: string;
   photos: Attachment[];
+  repairQuantities: RepairQuantities;
   sketchUri?: string;
   sketchStoragePath?: string;
   signatureUri?: string;
@@ -371,6 +373,7 @@ export function createEvaluation(
     inspectors: [{ name: '', profession: '', license: '', inspectorId: '', entity: '' }],
     inspectedAt: now,
     photos: [],
+    repairQuantities: emptyRepairQuantities(),
     reportLanguage: 'es',
     createdByUserId,
     deviceId,
@@ -516,6 +519,12 @@ export function normalizeEvaluation(raw: Evaluation): Evaluation {
     },
     inspectors: raw.inspectors?.length ? raw.inspectors : base.inspectors,
     photos: raw.photos ?? [],
+    repairQuantities: {
+      walls: raw.repairQuantities?.walls ?? [],
+      roofs: raw.repairQuantities?.roofs ?? [],
+      beams: raw.repairQuantities?.beams ?? [],
+      columns: raw.repairQuantities?.columns ?? [],
+    },
   };
 }
 
@@ -549,6 +558,14 @@ export function canSaveEvaluation(existing: Evaluation | null, next: Evaluation)
   if (!existing) return true;
   if (existing.id !== next.id) return false;
   return existing.status === 'draft';
+}
+
+export function canDeleteEvaluation(evaluation: Evaluation) {
+  if (evaluation.status !== 'draft') return false;
+  if (evaluation.officialNumber != null) return false;
+  if (evaluation.canonicalPdfStoragePath) return false;
+  if (evaluation.signatureUri?.trim()) return false;
+  return true;
 }
 
 export function classificationColor(value: Habitability) {

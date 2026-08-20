@@ -1,18 +1,19 @@
 import { useRouter } from 'expo-router';
-import { ArrowLeft, Building2, Plus, RotateCw } from 'lucide-react-native';
+import { ArrowLeft, Building2, Plus, RotateCw, Trash2 } from 'lucide-react-native';
 import React from 'react';
-import { ActivityIndicator, Pressable, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
+import { ActivityIndicator, Alert, Pressable, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 
 import { AppShell, Button, Card, ClassificationBadge, OfflinePill } from '@/components/ui';
-import { sectionCountFor } from '@/domain/evaluation';
+import { canDeleteEvaluation, sectionCountFor } from '@/domain/evaluation';
 import { useI18n } from '@/i18n/I18nProvider';
 import { useSafeBack } from '@/navigation/useSafeBack';
+import { confirmDestructive } from '@/services/confirm';
 import { useEvaluations } from '@/state/EvaluationProvider';
 import { colors } from '@/theme';
 
 export default function EvaluatorHome() {
   const { t, language } = useI18n();
-  const { evaluations, loading, create } = useEvaluations();
+  const { evaluations, loading, create, remove } = useEvaluations();
   const router = useRouter();
   const goBack = useSafeBack('/');
   const { width } = useWindowDimensions();
@@ -21,6 +22,18 @@ export default function EvaluatorHome() {
   const createNew = async () => {
     const evaluation = await create();
     router.push(`/(evaluator)/evaluation/${evaluation.id}`);
+  };
+
+  const requestDelete = (id: string) => {
+    confirmDestructive(
+      t.deleteEvaluationTitle,
+      t.deleteEvaluationConfirm,
+      t.deleteEvaluation,
+      t.cancel,
+      () => {
+        void remove(id).catch(() => Alert.alert(t.deleteEvaluationTitle, t.deleteFailed));
+      },
+    );
   };
 
   return (
@@ -54,44 +67,53 @@ export default function EvaluatorHome() {
       ) : (
         <View style={styles.list}>
           {evaluations.map((evaluation) => (
-            <Pressable
-              key={evaluation.id}
-              onPress={() => router.push(`/(evaluator)/evaluation/${evaluation.id}`)}
-            >
-              <Card style={styles.item}>
-                <View style={styles.itemMain}>
-                  <View style={styles.itemIcon}>
-                    <Building2 size={22} color={colors.primary} />
-                  </View>
-                  <View style={styles.itemCopy}>
-                    <Text style={styles.address}>
-                      {evaluation.building.address || `${t.draft} · ${evaluation.id.slice(-6).toUpperCase()}`}
-                    </Text>
-                    <Text style={styles.meta}>
-                      {evaluation.identification.neighborhood || t.currentEvent} ·{' '}
-                      {new Date(evaluation.updatedAt).toLocaleDateString(language)}
-                    </Text>
-                    <View style={styles.progressLine}>
-                      <View
-                        style={[
-                          styles.progressFill,
-                          { width: `${((evaluation.currentSection + 1) / sectionCountFor(evaluation)) * 100}%` },
-                        ]}
-                      />
-                    </View>
+            <Card key={evaluation.id} style={styles.item}>
+              <Pressable
+                onPress={() => router.push(`/(evaluator)/evaluation/${evaluation.id}`)}
+                style={styles.itemMain}
+              >
+                <View style={styles.itemIcon}>
+                  <Building2 size={22} color={colors.primary} />
+                </View>
+                <View style={styles.itemCopy}>
+                  <Text style={styles.address}>
+                    {evaluation.building.address || `${t.draft} · ${evaluation.id.slice(-6).toUpperCase()}`}
+                  </Text>
+                  <Text style={styles.meta}>
+                    {evaluation.identification.neighborhood || t.currentEvent} ·{' '}
+                    {new Date(evaluation.updatedAt).toLocaleDateString(language)}
+                  </Text>
+                  <View style={styles.progressLine}>
+                    <View
+                      style={[
+                        styles.progressFill,
+                        { width: `${((evaluation.currentSection + 1) / sectionCountFor(evaluation)) * 100}%` },
+                      ]}
+                    />
                   </View>
                 </View>
-                <View style={styles.itemStatus}>
-                  <ClassificationBadge value={evaluation.habitability} compact />
-                  <View style={styles.sync}>
-                    <RotateCw size={12} color={colors.textMuted} />
-                    <Text style={styles.syncText}>
-                      {evaluation.syncState === 'synced' ? t.synced : t.pendingSync}
-                    </Text>
-                  </View>
+              </Pressable>
+              <View style={styles.itemStatus}>
+                <ClassificationBadge value={evaluation.habitability} compact />
+                <View style={styles.sync}>
+                  <RotateCw size={12} color={colors.textMuted} />
+                  <Text style={styles.syncText}>
+                    {evaluation.syncState === 'synced' ? t.synced : t.pendingSync}
+                  </Text>
                 </View>
-              </Card>
-            </Pressable>
+                {canDeleteEvaluation(evaluation) && (
+                  <Pressable
+                    accessibilityRole="button"
+                    accessibilityLabel={t.deleteEvaluation}
+                    hitSlop={8}
+                    onPress={() => requestDelete(evaluation.id)}
+                    style={styles.deleteButton}
+                  >
+                    <Trash2 size={16} color={colors.danger} />
+                  </Pressable>
+                )}
+              </View>
+            </Card>
           ))}
         </View>
       )}
@@ -125,6 +147,15 @@ const styles = StyleSheet.create({
   progressLine: { height: 4, backgroundColor: colors.surfaceMuted, borderRadius: 2, marginTop: 10 },
   progressFill: { height: 4, backgroundColor: colors.primary, borderRadius: 2 },
   itemStatus: { alignItems: 'flex-end', gap: 8 },
+  deleteButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: colors.border,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   sync: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   syncText: { color: colors.textMuted, fontSize: 11 },
 });

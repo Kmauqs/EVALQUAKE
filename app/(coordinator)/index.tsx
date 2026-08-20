@@ -11,7 +11,7 @@ import { demoEvaluations } from '@/domain/fixtures';
 import { subscribeRemoteEvaluations } from '@/firebase/repository';
 import { useI18n } from '@/i18n/I18nProvider';
 import { useSafeBack } from '@/navigation/useSafeBack';
-import { exportCsv, exportJson } from '@/services/exportData';
+import { exportCsv, exportJson, exportQuantitiesCsv } from '@/services/exportData';
 import { useEvaluations } from '@/state/EvaluationProvider';
 import { colors } from '@/theme';
 
@@ -74,6 +74,14 @@ export default function CoordinatorDashboard() {
             style={narrow ? styles.exportButtonNarrow : undefined}
           >
             {t.exportCsv}
+          </Button>
+          <Button
+            variant="ghost"
+            icon={<Download size={17} color={colors.primary} />}
+            onPress={() => void exportQuantitiesCsv(filtered, language)}
+            style={narrow ? styles.exportButtonNarrow : undefined}
+          >
+            {t.exportQuantitiesCsv}
           </Button>
           <Button
             variant="secondary"

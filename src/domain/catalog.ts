@@ -198,8 +198,71 @@ export const BASE_SECTION_KEYS = [
   'occupancy',
   'contact',
   'inspectors',
+  'quantities',
   'media',
 ] as const;
+
+export const QUANTITY_DAMAGE_LEVELS = ['light', 'moderate', 'severe'] as const;
+export type QuantityDamageLevel = (typeof QUANTITY_DAMAGE_LEVELS)[number];
+
+export const WALL_TYPES = [
+  'unreinforced_masonry',
+  'confined_masonry',
+  'grouted_masonry',
+  'concrete_wall',
+  'gypsum_drywall',
+  'fiber_cement_drywall',
+  'wood_panel',
+  'bahareque',
+  'other',
+] as const;
+export type WallType = (typeof WALL_TYPES)[number];
+
+export const WALL_REPAIRS = [
+  'expansion_joints',
+  'surface_treatment',
+  'plaster',
+  'rebuild',
+  'change_typology',
+] as const;
+export type WallRepair = (typeof WALL_REPAIRS)[number];
+
+export const ROOF_STRUCTURE_TYPES = [
+  'concrete_slab',
+  'steel_purlins',
+  'lattice_purlins',
+  'wood_purlins',
+  'other',
+] as const;
+export type RoofStructureType = (typeof ROOF_STRUCTURE_TYPES)[number];
+
+export const ROOF_REPAIRS = [
+  'roof_survey',
+  'replace_tiles',
+  'replace_purlins',
+  'reconstruction',
+  'change_typology',
+] as const;
+export type RoofRepair = (typeof ROOF_REPAIRS)[number];
+
+export const FRAME_MATERIALS = [
+  'reinforced_concrete',
+  'extruded_steel',
+  'steel_truss',
+  'wood',
+  'other',
+] as const;
+export type FrameMaterial = (typeof FRAME_MATERIALS)[number];
+
+export const FRAME_REPAIRS = [
+  'surface_treatment',
+  'plaster',
+  'repair_joint',
+  'rebuild',
+  'change_typology',
+  'other',
+] as const;
+export type FrameRepair = (typeof FRAME_REPAIRS)[number];
 
 export type EvaluationSectionKey = (typeof BASE_SECTION_KEYS)[number] | 'equipment';
 

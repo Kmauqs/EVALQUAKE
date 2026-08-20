@@ -3,6 +3,8 @@ import * as Sharing from 'expo-sharing';
 import { Platform } from 'react-native';
 
 import type { Evaluation } from '@/domain/evaluation';
+import { quantityCsvHeader, quantityCsvRows } from '@/domain/quantities';
+import { en, es } from '@/i18n/translations';
 
 function downloadWeb(contents: string, name: string, type: string) {
   const blob = new Blob([contents], { type });
@@ -47,4 +49,18 @@ export async function exportCsv(evaluations: Evaluation[]) {
   const contents = rows.map((row) => row.map(quote).join(',')).join('\n');
   if (Platform.OS === 'web') downloadWeb(contents, 'evalquake-evaluations.csv', 'text/csv');
   else await shareNative(contents, 'evalquake-evaluations.csv', 'text/csv');
+}
+
+export async function exportQuantitiesCsv(evaluations: Evaluation[], language: 'es' | 'en' = 'es') {
+  const t = language === 'es' ? es : en;
+  const quote = (value: unknown) => `"${String(value ?? '').replaceAll('"', '""')}"`;
+  const header = quantityCsvHeader(t);
+  const body = evaluations.flatMap((evaluation) => quantityCsvRows(evaluation, t).slice(1));
+  const contents = [header, ...body].map((row) => row.map(quote).join(',')).join('\n');
+  const name =
+    evaluations.length === 1
+      ? `evalquake-cantidades-${evaluations[0]!.id}.csv`
+      : 'evalquake-cantidades.csv';
+  if (Platform.OS === 'web') downloadWeb(contents, name, 'text/csv');
+  else await shareNative(contents, name, 'text/csv');
 }

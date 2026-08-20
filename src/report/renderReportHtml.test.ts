@@ -28,6 +28,7 @@ describe('bilingual report renderer', () => {
     const english = renderReportHtml(evaluation, 'en');
     expect(spanish).toContain('Identificación catastral');
     expect(english).toContain('Cadastral identification');
+    expect(spanish).toContain('Cantidades para reparación');
     expect(spanish).toContain('Área en planta');
     expect(spanish).toContain('Pisos bajo rasante');
     expect(spanish).toContain('Se informó a ocupantes');

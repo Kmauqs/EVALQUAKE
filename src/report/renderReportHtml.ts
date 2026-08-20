@@ -1,6 +1,16 @@
 import type { Evaluation, Language } from '../domain/evaluation';
 import { sectionKeysFor } from '../domain/evaluation';
 import type { EvaluationSectionKey } from '../domain/catalog';
+import {
+  formatMeasure,
+  memberVolume,
+  roofArea,
+  totalMemberLength,
+  totalMemberVolume,
+  totalRoofArea,
+  totalWallArea,
+  wallArea,
+} from '../domain/quantities';
 import { en, es, type Dictionary } from '../i18n/translations';
 import { escapeHtml, wrapPrintableHtml } from './htmlChrome';
 
@@ -217,6 +227,49 @@ export function renderReportHtml(evaluation: Evaluation, language: Language) {
           )}${row(t.fields.license, inspector.license)}${row(t.fields.entity, inspector.entity)}</div>`,
       )
       .join(''),
+    quantities:
+      `<p class="hint">${escape(t.hints.quantitiesOptional)}</p>` +
+      evaluation.repairQuantities.walls
+        .map((wall, index) =>
+          row(
+            `${t.quantityWalls} ${index + 1}`,
+            `${wall.location || '—'} · ${formatMeasure(wallArea(wall))} m²`,
+          ),
+        )
+        .join('') +
+      evaluation.repairQuantities.roofs
+        .map((roof, index) =>
+          row(`${t.quantityRoofs} ${index + 1}`, `${formatMeasure(roofArea(roof))} m²`),
+        )
+        .join('') +
+      evaluation.repairQuantities.beams
+        .map((beam, index) =>
+          row(`${t.quantityBeams} ${index + 1}`, `${formatMeasure(memberVolume(beam))} m³`),
+        )
+        .join('') +
+      evaluation.repairQuantities.columns
+        .map((column, index) =>
+          row(`${t.quantityColumns} ${index + 1}`, `${formatMeasure(memberVolume(column))} m³`),
+        )
+        .join('') +
+      row(t.fields.quantityTotalWallArea, `${formatMeasure(totalWallArea(evaluation.repairQuantities.walls))} m²`) +
+      row(t.fields.quantityTotalRoofArea, `${formatMeasure(totalRoofArea(evaluation.repairQuantities.roofs))} m²`) +
+      row(
+        `${t.quantityBeams} — ${t.fields.quantityTotalLength}`,
+        `${formatMeasure(totalMemberLength(evaluation.repairQuantities.beams))} m`,
+      ) +
+      row(
+        `${t.quantityBeams} — ${t.fields.quantityTotalVolume}`,
+        `${formatMeasure(totalMemberVolume(evaluation.repairQuantities.beams))} m³`,
+      ) +
+      row(
+        `${t.quantityColumns} — ${t.fields.quantityTotalLength}`,
+        `${formatMeasure(totalMemberLength(evaluation.repairQuantities.columns))} m`,
+      ) +
+      row(
+        `${t.quantityColumns} — ${t.fields.quantityTotalVolume}`,
+        `${formatMeasure(totalMemberVolume(evaluation.repairQuantities.columns))} m³`,
+      ),
     media: `<div class="evidence">
         <div class="drawing"><strong>${escape(t.sketch)}</strong>${
           evaluation.sketchUri

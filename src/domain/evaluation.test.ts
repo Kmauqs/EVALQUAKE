@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  canDeleteEvaluation,
   canSaveEvaluation,
   classificationColor,
   createEvaluation,
@@ -23,7 +24,8 @@ describe('evaluation domain', () => {
     expect(evaluation.structure.irregularities).toHaveLength(5);
     expect(evaluation.createdByUserId).toBe('firebase-user-1');
     expect(evaluation.deviceId).toBe('device-1');
-    expect(sectionCountFor(evaluation)).toBe(16);
+    expect(evaluation.repairQuantities.walls).toEqual([]);
+    expect(sectionCountFor(evaluation)).toBe(17);
   });
 
   it('requires safety-critical fields before submission', () => {
@@ -60,8 +62,8 @@ describe('evaluation domain', () => {
     const evaluation = createEvaluation('eq-equip');
     evaluation.inspection.type = 'complete';
     evaluation.building.nsrGroup = 'group_ii';
-    expect(sectionCountFor(evaluation)).toBe(17);
-    expect(lastSectionIndex(evaluation)).toBe(16);
+    expect(sectionCountFor(evaluation)).toBe(18);
+    expect(lastSectionIndex(evaluation)).toBe(17);
   });
 
   it('migrates legacy rapid inspections and wall damage into the new shape', () => {
@@ -124,5 +126,14 @@ describe('evaluation domain', () => {
     expect(canSaveEvaluation(draft, submitted)).toBe(true);
     expect(canSaveEvaluation(submitted, { ...submitted, comments: 'Changed' })).toBe(false);
     expect(canSaveEvaluation(submitted, { ...submitted, status: 'draft' })).toBe(false);
+  });
+
+  it('allows deleting unsigned drafts and blocks signed or submitted evaluations', () => {
+    const draft = createEvaluation('deletable-id');
+    expect(canDeleteEvaluation(draft)).toBe(true);
+    expect(canDeleteEvaluation({ ...draft, signatureUri: 'data:image/png,sig' })).toBe(false);
+    expect(canDeleteEvaluation({ ...draft, status: 'submitted' })).toBe(false);
+    expect(canDeleteEvaluation({ ...draft, status: 'synced' })).toBe(false);
+    expect(canDeleteEvaluation({ ...draft, officialNumber: 12 })).toBe(false);
   });
 });

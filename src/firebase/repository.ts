@@ -1,5 +1,6 @@
 import {
   collection,
+  deleteDoc,
   doc,
   getDoc,
   getDocs,
@@ -102,6 +103,14 @@ export async function listRemoteEvaluations(
     ),
   );
   return snapshot.docs.map((item) => normalizeEvaluation(item.data() as Evaluation));
+}
+
+export async function deleteRemoteEvaluation(id: string) {
+  const services = getFirebaseServices();
+  if (!services) return;
+  const reference = doc(services.db, 'evaluations', id);
+  const snapshot = await getDoc(reference);
+  if (snapshot.exists()) await deleteDoc(reference);
 }
 
 export function subscribeRemoteEvaluations(

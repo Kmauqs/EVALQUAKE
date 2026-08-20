@@ -1,12 +1,13 @@
 import { useLocalSearchParams } from 'expo-router';
-import { ArrowLeft, CheckCircle2, FileText, Tag } from 'lucide-react-native';
-import React, { useEffect, useState } from 'react';
+import { ArrowLeft, CheckCircle2, FileText, Tag, Trash2 } from 'lucide-react-native';
+import React, { useEffect, useRef, useState } from 'react';
 import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { EvaluationSection } from '@/components/EvaluationSection';
 import { AppShell, Button, Card, ClassificationBadge, SectionProgress } from '@/components/ui';
 import type { Evaluation } from '@/domain/evaluation';
 import {
+  canDeleteEvaluation,
   lastSectionIndex,
   sectionCountFor,
   sectionKeysFor,
@@ -16,7 +17,9 @@ import { useI18n } from '@/i18n/I18nProvider';
 import { useSafeBack } from '@/navigation/useSafeBack';
 import { renderPlacardHtml } from '@/report/renderPlacardHtml';
 import { renderReportHtml } from '@/report/renderReportHtml';
+import { confirmDestructive } from '@/services/confirm';
 import { captureCoordinates, pickDamagePhoto, pickDamagePhotos } from '@/services/device';
+import { exportQuantitiesCsv } from '@/services/exportData';
 import { openHtmlDocument } from '@/services/htmlDocument';
 import { useEvaluations } from '@/state/EvaluationProvider';
 import { colors, layout } from '@/theme';
@@ -25,10 +28,12 @@ export default function EvaluationWizard() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const goBack = useSafeBack('/(evaluator)');
   const { t, language } = useI18n();
-  const { get, save } = useEvaluations();
+  const { get, save, remove } = useEvaluations();
   const [evaluation, setEvaluation] = useState<Evaluation | null>(null);
   const [section, setSection] = useState(0);
   const [busy, setBusy] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const deletingRef = useRef(false);
   const [message, setMessage] = useState('');
 
   useEffect(() => {
@@ -41,12 +46,13 @@ export default function EvaluationWizard() {
   }, [id, get]);
 
   useEffect(() => {
-    if (!evaluation || evaluation.status !== 'draft') return;
+    if (deletingRef.current || deleting || !evaluation || evaluation.status !== 'draft') return;
     const timeout = setTimeout(() => {
+      if (deletingRef.current) return;
       void save({ ...evaluation, currentSection: section }).then(() => setMessage(t.save));
     }, 700);
     return () => clearTimeout(timeout);
-  }, [evaluation, section, save, t.save]);
+  }, [evaluation, section, save, t.save, deleting]);
 
   if (!evaluation) {
     return (
@@ -98,8 +104,19 @@ export default function EvaluationWizard() {
             >
               {t.generatePlacard}
             </Button>
-            <Button icon={<FileText size={18} color={colors.white} />} onPress={() => void openReport()}>
+            <Button
+              variant="secondary"
+              icon={<FileText size={18} color={colors.primary} />}
+              onPress={() => void openReport()}
+            >
               {t.viewReport}
+            </Button>
+            <Button
+              variant="ghost"
+              icon={<FileText size={18} color={colors.primary} />}
+              onPress={() => void exportQuantitiesCsv([evaluation], language)}
+            >
+              {t.exportQuantitiesCsv}
             </Button>
           </View>
         </Card>
@@ -177,6 +194,26 @@ export default function EvaluationWizard() {
     }
   };
 
+  const requestDelete = () => {
+    confirmDestructive(
+      t.deleteEvaluationTitle,
+      t.deleteEvaluationConfirm,
+      t.deleteEvaluation,
+      t.cancel,
+      () => {
+        deletingRef.current = true;
+        setDeleting(true);
+        void remove(evaluation.id)
+          .then(goBack)
+          .catch(() => {
+            deletingRef.current = false;
+            setDeleting(false);
+            Alert.alert(t.deleteEvaluationTitle, t.deleteFailed);
+          });
+      },
+    );
+  };
+
   return (
     <AppShell>
       <View style={styles.titleRow}>
@@ -218,11 +255,23 @@ export default function EvaluationWizard() {
         />
         <View style={styles.divider} />
         <View style={styles.actions}>
-          {current > 0 && (
-            <Button variant="ghost" onPress={() => void go(current - 1)}>
-              {t.back}
-            </Button>
-          )}
+          <View style={styles.actionsLeft}>
+            {current > 0 && (
+              <Button variant="ghost" onPress={() => void go(current - 1)}>
+                {t.back}
+              </Button>
+            )}
+            {canDeleteEvaluation(evaluation) && (
+              <Button
+                variant="danger"
+                icon={<Trash2 size={18} color={colors.white} />}
+                loading={deleting}
+                onPress={requestDelete}
+              >
+                {t.deleteEvaluation}
+              </Button>
+            )}
+          </View>
           <View style={styles.actionsRight}>
             {current === last && (
               <>
@@ -273,7 +322,8 @@ const styles = StyleSheet.create({
   savedText: { color: colors.textMuted, fontSize: 11 },
   formCard: { width: '100%', maxWidth: layout.contentWidth, alignSelf: 'center', marginTop: 15, marginBottom: 24 },
   divider: { height: 1, backgroundColor: colors.border, marginVertical: 22 },
-  actions: { flexDirection: 'row', justifyContent: 'space-between', gap: 10 },
+  actions: { flexDirection: 'row', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap' },
+  actionsLeft: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
   actionsRight: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'flex-end', gap: 10, flex: 1 },
   submittedCard: { width: '100%', maxWidth: 620, alignSelf: 'center', marginTop: 40, gap: 14 },
   submittedTitle: { color: colors.text, fontSize: 25, fontWeight: '900' },

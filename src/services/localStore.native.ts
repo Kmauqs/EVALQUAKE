@@ -95,3 +95,18 @@ export async function completeLocalSync(
   });
   return completed;
 }
+
+export async function deleteLocalEvaluation(id: string, queueRemoteDelete = true) {
+  const db = await database();
+  await db.runAsync('DELETE FROM evaluations WHERE id = ?', id);
+  if (queueRemoteDelete) {
+    await db.runAsync(
+      `INSERT INTO outbox (evaluation_id, operation, created_at) VALUES (?, 'delete', ?)
+       ON CONFLICT(evaluation_id) DO UPDATE SET operation = 'delete'`,
+      id,
+      new Date().toISOString(),
+    );
+    return;
+  }
+  await db.runAsync('DELETE FROM outbox WHERE evaluation_id = ?', id);
+}

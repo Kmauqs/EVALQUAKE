@@ -54,7 +54,12 @@ service cloud.firestore {
         && request.resource.data.jurisdictionId == resource.data.jurisdictionId
         && request.resource.data.officialNumber == resource.data.officialNumber
         && request.resource.data.status in ['draft', 'submitted'];
-      allow delete: if false;
+      allow delete: if canAccessJurisdiction(resource.data.jurisdictionId)
+        && request.auth.uid == resource.data.createdByUserId
+        && resource.data.status == 'draft'
+        && resource.data.officialNumber == null
+        && (resource.data.signatureUri == null || resource.data.signatureUri == '')
+        && (resource.data.canonicalPdfStoragePath == null || resource.data.canonicalPdfStoragePath == '');
 
       match /auditLog/{entryId} {
         allow read: if canAccessJurisdiction(

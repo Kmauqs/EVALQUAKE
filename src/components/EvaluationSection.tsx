@@ -1,6 +1,6 @@
 import { Camera, ImagePlus, LocateFixed, X } from 'lucide-react-native';
 import { type Href, useRouter } from 'expo-router';
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import {
@@ -31,13 +31,16 @@ import {
 } from '@/domain/catalog';
 import {
   applyDerivedHabitability,
+  type Coordinates,
   type Evaluation,
   type Habitability,
   type RiskLevel,
 } from '@/domain/evaluation';
 import { inspectionPointHints } from '@/guide/content';
 import { useI18n } from '@/i18n/I18nProvider';
+import { exportQuantitiesCsv } from '@/services/exportData';
 import { colors } from '@/theme';
+import { QuantitySurvey } from './QuantitySurvey';
 import { SignatureCapture } from './SignatureCapture';
 import { Button, Field, SelectRow, ToggleRow } from './ui';
 
@@ -126,21 +129,13 @@ export function EvaluationSection({
               update('identification', { ...evaluation.identification, propertyRegistration })
             }
           />
-          <View style={styles.location}>
-            <Button
-              variant="secondary"
-              icon={<LocateFixed size={18} color={colors.primary} />}
-              onPress={onLocation}
-            >
-              {evaluation.identification.coordinates ? t.locationCaptured : t.captureLocation}
-            </Button>
-            {evaluation.identification.coordinates && (
-              <Text style={styles.coordinate}>
-                {evaluation.identification.coordinates.latitude.toFixed(5)},{' '}
-                {evaluation.identification.coordinates.longitude.toFixed(5)}
-              </Text>
-            )}
-          </View>
+          <CoordinateCapture
+            coordinates={evaluation.identification.coordinates}
+            onCaptureGps={onLocation}
+            onChange={(coordinates) =>
+              update('identification', { ...evaluation.identification, coordinates })
+            }
+          />
         </FormGrid>
       );
     case 'inspection':
@@ -911,6 +906,14 @@ export function EvaluationSection({
         </FormGrid>
       );
     }
+    case 'quantities':
+      return (
+        <QuantitySurvey
+          evaluation={evaluation}
+          onChange={onChange}
+          onExport={() => void exportQuantitiesCsv([evaluation], language)}
+        />
+      );
     case 'equipment':
       return (
         <View style={styles.stack}>
@@ -1091,6 +1094,92 @@ export function EvaluationSection({
   }
 }
 
+function formatCoord(value?: number) {
+  return value == null || !Number.isFinite(value) ? '' : String(value);
+}
+
+function parseCoordinate(text: string): number | undefined {
+  const normalized = text.trim().replace(/\s/g, '').replace(',', '.');
+  if (!normalized || normalized === '-' || normalized === '.' || normalized === '-.') return undefined;
+  if (!/^-?\d+(\.\d+)?$/.test(normalized)) return undefined;
+  const value = Number(normalized);
+  return Number.isFinite(value) ? value : undefined;
+}
+
+function CoordinateCapture({
+  coordinates,
+  onCaptureGps,
+  onChange,
+}: {
+  coordinates?: Coordinates;
+  onCaptureGps: () => void;
+  onChange: (coordinates: Coordinates | undefined) => void;
+}) {
+  const { t } = useI18n();
+  const [latitudeText, setLatitudeText] = useState(() => formatCoord(coordinates?.latitude));
+  const [longitudeText, setLongitudeText] = useState(() => formatCoord(coordinates?.longitude));
+
+  useEffect(() => {
+    setLatitudeText(formatCoord(coordinates?.latitude));
+    setLongitudeText(formatCoord(coordinates?.longitude));
+  }, [coordinates?.latitude, coordinates?.longitude]);
+
+  const commit = (nextLat: string, nextLng: string) => {
+    setLatitudeText(nextLat);
+    setLongitudeText(nextLng);
+    if (!nextLat.trim() && !nextLng.trim()) {
+      if (coordinates) onChange(undefined);
+      return;
+    }
+    const latitude = parseCoordinate(nextLat);
+    const longitude = parseCoordinate(nextLng);
+    if (
+      latitude == null ||
+      longitude == null ||
+      latitude < -90 ||
+      latitude > 90 ||
+      longitude < -180 ||
+      longitude > 180
+    ) {
+      return;
+    }
+    if (coordinates?.latitude === latitude && coordinates?.longitude === longitude) return;
+    onChange({ latitude, longitude });
+  };
+
+  return (
+    <View style={styles.location}>
+      <Button
+        variant="secondary"
+        icon={<LocateFixed size={18} color={colors.primary} />}
+        onPress={onCaptureGps}
+      >
+        {coordinates ? t.locationCaptured : t.captureLocation}
+      </Button>
+      <View style={styles.coordFields}>
+        <Field
+          label={t.fields.latitude}
+          value={latitudeText}
+          onChangeText={(text) => commit(text, longitudeText)}
+          keyboardType="numbers-and-punctuation"
+          autoCorrect={false}
+          autoCapitalize="none"
+          placeholder="4.65000"
+        />
+        <Field
+          label={t.fields.longitude}
+          value={longitudeText}
+          onChangeText={(text) => commit(latitudeText, text)}
+          keyboardType="numbers-and-punctuation"
+          autoCorrect={false}
+          autoCapitalize="none"
+          placeholder="-74.05000"
+        />
+      </View>
+    </View>
+  );
+}
+
 function FormGrid({ children }: React.PropsWithChildren) {
   return <View style={styles.grid}>{children}</View>;
 }
@@ -1216,12 +1305,12 @@ function EquipmentRowEditor({
 }
 
 const styles = StyleSheet.create({
-  grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 16 },
-  stack: { gap: 16 },
-  location: { flex: 1, minWidth: 240, gap: 8, justifyContent: 'flex-end' },
-  coordinate: { color: colors.textMuted, fontSize: 12, textAlign: 'center' },
+  grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 16, width: '100%' },
+  stack: { gap: 16, width: '100%' },
+  location: { flexBasis: '100%', width: '100%', minWidth: 240, gap: 10 },
+  coordFields: { flexDirection: 'row', flexWrap: 'wrap', gap: 16 },
   hint: { color: colors.textMuted, fontSize: 12, lineHeight: 17, width: '100%' },
-  groupTitle: { color: colors.text, fontSize: 15, fontWeight: '800' },
+  groupTitle: { color: colors.text, fontSize: 15, fontWeight: '800', width: '100%' },
   guideLink: { alignSelf: 'flex-start' },
   guideLinkText: { color: colors.primary, fontWeight: '800', fontSize: 13 },
   conditionCard: {
@@ -1231,6 +1320,8 @@ const styles = StyleSheet.create({
     padding: 12,
     gap: 12,
     backgroundColor: colors.white,
+    width: '100%',
+    flexShrink: 0,
   },
   classPanel: { borderRadius: 14, padding: 14, gap: 12 },
   classHint: { color: colors.white, fontSize: 12, lineHeight: 17, fontWeight: '600' },
