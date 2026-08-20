@@ -162,7 +162,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  heading: { flex: 1 },
+  heading: { flex: 1, minWidth: 0 },
   kicker: { color: colors.primary, fontWeight: '900', fontSize: 12, textTransform: 'uppercase' },
   title: { color: colors.text, fontSize: 26, fontWeight: '900', marginTop: 2 },
   card: { width: '100%', maxWidth: layout.contentWidth, alignSelf: 'center', marginTop: 12, gap: 10 },

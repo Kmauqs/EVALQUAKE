@@ -109,7 +109,7 @@ export function DrawPad({
 }
 
 const styles = StyleSheet.create({
-  wrapper: { flex: 1, minWidth: 280, gap: 8 },
+  wrapper: { flexGrow: 1, flexBasis: 280, minWidth: 0, maxWidth: '100%', gap: 8 },
   header: { flexDirection: 'row', justifyContent: 'space-between' },
   label: { color: colors.text, fontSize: 13, fontWeight: '700' },
   clear: { color: colors.primary, fontWeight: '800', fontSize: 13 },

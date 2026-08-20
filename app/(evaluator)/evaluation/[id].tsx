@@ -1,7 +1,7 @@
 import { useLocalSearchParams } from 'expo-router';
 import { ArrowLeft, CheckCircle2, FileText, Tag, Trash2 } from 'lucide-react-native';
 import React, { useEffect, useRef, useState } from 'react';
-import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Alert, Pressable, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 
 import { EvaluationSection } from '@/components/EvaluationSection';
 import { AppShell, Button, Card, ClassificationBadge, SectionProgress } from '@/components/ui';
@@ -28,6 +28,8 @@ export default function EvaluationWizard() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const goBack = useSafeBack('/(evaluator)');
   const { t, language } = useI18n();
+  const { width } = useWindowDimensions();
+  const narrow = width < layout.compactWidth;
   const { get, save, remove } = useEvaluations();
   const [evaluation, setEvaluation] = useState<Evaluation | null>(null);
   const [section, setSection] = useState(0);
@@ -216,7 +218,7 @@ export default function EvaluationWizard() {
 
   return (
     <AppShell>
-      <View style={styles.titleRow}>
+      <View style={[styles.titleRow, narrow && styles.titleRowNarrow]}>
         <Pressable onPress={goBack} style={styles.back}>
           <ArrowLeft size={20} color={colors.primary} />
         </Pressable>
@@ -226,7 +228,7 @@ export default function EvaluationWizard() {
             {evaluation.building.address || t.newEvaluation}
           </Text>
         </View>
-        <View style={styles.saved}>
+        <View style={[styles.saved, narrow && styles.savedNarrow]}>
           <Text style={styles.savedText}>{message || t.pendingSync}</Text>
         </View>
       </View>
@@ -254,10 +256,10 @@ export default function EvaluationWizard() {
           onSketch={(source) => void addSketch(source)}
         />
         <View style={styles.divider} />
-        <View style={styles.actions}>
-          <View style={styles.actionsLeft}>
+        <View style={[styles.actions, narrow && styles.actionsNarrow]}>
+          <View style={[styles.actionsLeft, narrow && styles.actionsGroupNarrow]}>
             {current > 0 && (
-              <Button variant="ghost" onPress={() => void go(current - 1)}>
+              <Button variant="ghost" onPress={() => void go(current - 1)} style={narrow ? styles.actionButtonNarrow : undefined}>
                 {t.back}
               </Button>
             )}
@@ -267,12 +269,13 @@ export default function EvaluationWizard() {
                 icon={<Trash2 size={18} color={colors.white} />}
                 loading={deleting}
                 onPress={requestDelete}
+                style={narrow ? styles.actionButtonNarrow : undefined}
               >
                 {t.deleteEvaluation}
               </Button>
             )}
           </View>
-          <View style={styles.actionsRight}>
+          <View style={[styles.actionsRight, narrow && styles.actionsGroupNarrow]}>
             {current === last && (
               <>
                 <Button
@@ -280,6 +283,7 @@ export default function EvaluationWizard() {
                   icon={<Tag size={18} color={colors.primary} />}
                   loading={busy}
                   onPress={() => void openPlacard()}
+                  style={narrow ? styles.actionButtonNarrow : undefined}
                 >
                   {t.generatePlacard}
                 </Button>
@@ -288,18 +292,22 @@ export default function EvaluationWizard() {
                   icon={<FileText size={18} color={colors.primary} />}
                   loading={busy}
                   onPress={() => void openReport()}
+                  style={narrow ? styles.actionButtonNarrow : undefined}
                 >
                   {t.viewReport}
                 </Button>
               </>
             )}
             {current < last ? (
-              <Button onPress={() => void go(current + 1)}>{t.next}</Button>
+              <Button onPress={() => void go(current + 1)} style={narrow ? styles.actionButtonNarrow : undefined}>
+                {t.next}
+              </Button>
             ) : (
               <Button
                 icon={<CheckCircle2 size={18} color={colors.white} />}
                 loading={busy}
                 onPress={() => void submit()}
+                style={narrow ? styles.actionButtonNarrow : undefined}
               >
                 {t.submit}
               </Button>
@@ -314,17 +322,22 @@ export default function EvaluationWizard() {
 const styles = StyleSheet.create({
   loading: { textAlign: 'center', color: colors.primary, marginTop: 60 },
   titleRow: { width: '100%', maxWidth: layout.contentWidth, alignSelf: 'center', flexDirection: 'row', alignItems: 'center', gap: 12, marginTop: 8 },
-  back: { width: 44, height: 44, borderRadius: 12, borderWidth: 1, borderColor: colors.border, alignItems: 'center', justifyContent: 'center' },
-  titleCopy: { flex: 1 },
+  titleRowNarrow: { flexWrap: 'wrap', alignItems: 'flex-start' },
+  back: { width: 44, height: 44, borderRadius: 12, borderWidth: 1, borderColor: colors.border, alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
+  titleCopy: { flex: 1, minWidth: 0 },
   id: { color: colors.primary, fontWeight: '900', fontSize: 11, textTransform: 'uppercase' },
-  address: { color: colors.text, fontWeight: '900', fontSize: 19, marginTop: 2 },
-  saved: { flexDirection: 'row', alignItems: 'center', gap: 5 },
-  savedText: { color: colors.textMuted, fontSize: 11 },
+  address: { color: colors.text, fontWeight: '900', fontSize: 19, marginTop: 2, lineHeight: 24 },
+  saved: { flexDirection: 'row', alignItems: 'center', gap: 5, flexShrink: 0, maxWidth: 160 },
+  savedNarrow: { maxWidth: '100%', width: '100%', paddingLeft: 56 },
+  savedText: { color: colors.textMuted, fontSize: 11, flexShrink: 1 },
   formCard: { width: '100%', maxWidth: layout.contentWidth, alignSelf: 'center', marginTop: 15, marginBottom: 24 },
   divider: { height: 1, backgroundColor: colors.border, marginVertical: 22 },
   actions: { flexDirection: 'row', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap' },
+  actionsNarrow: { flexDirection: 'column', alignItems: 'stretch' },
   actionsLeft: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
   actionsRight: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'flex-end', gap: 10, flex: 1 },
+  actionsGroupNarrow: { width: '100%', flex: 0, flexDirection: 'column', alignItems: 'stretch' },
+  actionButtonNarrow: { width: '100%' },
   submittedCard: { width: '100%', maxWidth: 620, alignSelf: 'center', marginTop: 40, gap: 14 },
   submittedTitle: { color: colors.text, fontSize: 25, fontWeight: '900' },
   officialNumber: { color: colors.primary, fontSize: 17, fontWeight: '900' },

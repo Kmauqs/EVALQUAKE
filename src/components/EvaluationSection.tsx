@@ -27,6 +27,7 @@ import {
   TYPICAL_RESTRICTIONS,
   UTILITY_CUTOFFS,
   habitabilityPanelColor,
+  habitabilityPanelFill,
   type EvaluationSectionKey,
 } from '@/domain/catalog';
 import {
@@ -42,7 +43,7 @@ import { exportQuantitiesCsv } from '@/services/exportData';
 import { colors } from '@/theme';
 import { QuantitySurvey } from './QuantitySurvey';
 import { SignatureCapture } from './SignatureCapture';
-import { Button, Field, SelectRow, ToggleRow } from './ui';
+import { Button, ClassificationBadge, Field, SelectRow, ToggleRow } from './ui';
 
 interface Props {
   sectionKey: EvaluationSectionKey;
@@ -579,6 +580,7 @@ export function EvaluationSection({
       );
     case 'habitability': {
       const panel = habitabilityPanelColor(evaluation.habitability);
+      const panelFill = habitabilityPanelFill(evaluation.habitability);
       return (
         <View style={styles.stack}>
           <SelectRow
@@ -590,7 +592,8 @@ export function EvaluationSection({
             }))}
             onChange={(globalDamagePercentage) => update('globalDamagePercentage', globalDamagePercentage)}
           />
-          <View style={[styles.classPanel, { backgroundColor: panel }]}>
+          <View style={[styles.classPanel, { backgroundColor: panelFill, borderColor: panel }]}>
+            <ClassificationBadge value={evaluation.habitability} />
             <SelectRow
               label={t.classification}
               value={evaluation.habitability}
@@ -1307,7 +1310,7 @@ function EquipmentRowEditor({
 const styles = StyleSheet.create({
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 16, width: '100%' },
   stack: { gap: 16, width: '100%' },
-  location: { flexBasis: '100%', width: '100%', minWidth: 240, gap: 10 },
+  location: { flexBasis: '100%', width: '100%', minWidth: 0, maxWidth: '100%', gap: 10 },
   coordFields: { flexDirection: 'row', flexWrap: 'wrap', gap: 16 },
   hint: { color: colors.textMuted, fontSize: 12, lineHeight: 17, width: '100%' },
   groupTitle: { color: colors.text, fontSize: 15, fontWeight: '800', width: '100%' },
@@ -1323,13 +1326,20 @@ const styles = StyleSheet.create({
     width: '100%',
     flexShrink: 0,
   },
-  classPanel: { borderRadius: 14, padding: 14, gap: 12 },
-  classHint: { color: colors.white, fontSize: 12, lineHeight: 17, fontWeight: '600' },
+  classPanel: {
+    borderRadius: 14,
+    padding: 14,
+    gap: 12,
+    borderWidth: 2,
+    borderLeftWidth: 6,
+    width: '100%',
+  },
+  classHint: { color: colors.text, fontSize: 12, lineHeight: 18, fontWeight: '600' },
   equipmentLabel: { color: colors.text, fontSize: 14, fontWeight: '700' },
   elevatorImage: { width: '100%', height: 280, backgroundColor: colors.surfaceMuted, borderRadius: 8 },
   drawGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 16 },
-  sketchPicker: { flex: 1, minWidth: 280, gap: 8 },
-  mediaHeader: { flexDirection: 'row', justifyContent: 'space-between' },
+  sketchPicker: { flexGrow: 1, flexBasis: 280, minWidth: 0, maxWidth: '100%', gap: 8 },
+  mediaHeader: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', gap: 8 },
   mediaLabel: { color: colors.text, fontSize: 13, fontWeight: '700' },
   clear: { color: colors.primary, fontWeight: '800', fontSize: 13 },
   sketchPreview: {
@@ -1370,7 +1380,7 @@ const styles = StyleSheet.create({
     flexGrow: 1,
     flexBasis: 240,
     maxWidth: 360,
-    minWidth: 220,
+    minWidth: 0,
     borderWidth: 1,
     borderColor: colors.border,
     borderRadius: 12,

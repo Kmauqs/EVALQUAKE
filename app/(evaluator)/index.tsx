@@ -67,7 +67,7 @@ export default function EvaluatorHome() {
       ) : (
         <View style={styles.list}>
           {evaluations.map((evaluation) => (
-            <Card key={evaluation.id} style={styles.item}>
+            <Card key={evaluation.id} style={[styles.item, narrow && styles.itemNarrow]}>
               <Pressable
                 onPress={() => router.push(`/(evaluator)/evaluation/${evaluation.id}`)}
                 style={styles.itemMain}
@@ -93,7 +93,7 @@ export default function EvaluatorHome() {
                   </View>
                 </View>
               </Pressable>
-              <View style={styles.itemStatus}>
+              <View style={[styles.itemStatus, narrow && styles.itemStatusNarrow]}>
                 <ClassificationBadge value={evaluation.habitability} compact />
                 <View style={styles.sync}>
                   <RotateCw size={12} color={colors.textMuted} />
@@ -139,14 +139,22 @@ const styles = StyleSheet.create({
   emptyText: { color: colors.textMuted, marginTop: 7, textAlign: 'center' },
   list: { gap: 12, marginTop: 20, paddingBottom: 20 },
   item: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 14 },
-  itemMain: { flexDirection: 'row', gap: 13, alignItems: 'center', flex: 1 },
-  itemIcon: { width: 44, height: 44, borderRadius: 12, backgroundColor: colors.primarySoft, alignItems: 'center', justifyContent: 'center' },
-  itemCopy: { flex: 1 },
+  itemNarrow: { flexDirection: 'column', alignItems: 'stretch' },
+  itemMain: { flexDirection: 'row', gap: 13, alignItems: 'center', flex: 1, minWidth: 0 },
+  itemIcon: { width: 44, height: 44, borderRadius: 12, backgroundColor: colors.primarySoft, alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
+  itemCopy: { flex: 1, minWidth: 0 },
   address: { color: colors.text, fontWeight: '800', fontSize: 16 },
   meta: { color: colors.textMuted, fontSize: 12, marginTop: 4 },
   progressLine: { height: 4, backgroundColor: colors.surfaceMuted, borderRadius: 2, marginTop: 10 },
   progressFill: { height: 4, backgroundColor: colors.primary, borderRadius: 2 },
-  itemStatus: { alignItems: 'flex-end', gap: 8 },
+  itemStatus: { alignItems: 'flex-end', gap: 8, flexShrink: 0 },
+  itemStatusNarrow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    alignItems: 'center',
+    justifyContent: 'flex-start',
+    paddingLeft: 57,
+  },
   deleteButton: {
     width: 36,
     height: 36,

@@ -31,7 +31,7 @@ import {
 } from '@/domain/quantities';
 import { useI18n } from '@/i18n/I18nProvider';
 import { colors } from '@/theme';
-import { Button, Field, SelectRow } from './ui';
+import { Button, Field, SelectRow, uiStyles, useChoiceWrap } from './ui';
 
 interface Props {
   evaluation: Evaluation;
@@ -469,10 +469,11 @@ function MultiSelect<T extends string>({
   options: { value: T; label: string }[];
   onChange: (values: T[]) => void;
 }) {
+  const wide = useChoiceWrap();
   return (
     <View style={styles.multi}>
       <Text style={styles.label}>{label}</Text>
-      <View style={styles.choiceWrap}>
+      <View style={[uiStyles.choiceWrap, wide && uiStyles.choiceWrapWide]}>
         {options.map((option) => {
           const active = values.includes(option.value);
           return (
@@ -483,9 +484,17 @@ function MultiSelect<T extends string>({
                   active ? values.filter((value) => value !== option.value) : [...values, option.value],
                 )
               }
-              style={[styles.choice, active && styles.choiceActive]}
+              style={[uiStyles.choice, wide && uiStyles.choiceWide, active && uiStyles.choiceActive]}
             >
-              <Text style={[styles.choiceText, active && styles.choiceTextActive]}>{option.label}</Text>
+              <Text
+                style={[
+                  uiStyles.choiceText,
+                  !wide && uiStyles.choiceTextFill,
+                  active && uiStyles.choiceTextActive,
+                ]}
+              >
+                {option.label}
+              </Text>
             </Pressable>
           );
         })}
@@ -513,32 +522,11 @@ const styles = StyleSheet.create({
     flexShrink: 0,
   },
   itemHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 10 },
-  itemTitle: { color: colors.text, fontWeight: '800', fontSize: 14, flex: 1 },
-  remove: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  itemTitle: { color: colors.text, fontWeight: '800', fontSize: 14, flex: 1, minWidth: 0 },
+  remove: { flexDirection: 'row', alignItems: 'center', gap: 6, flexShrink: 0 },
   removeText: { color: colors.danger, fontWeight: '800', fontSize: 13 },
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12, width: '100%' },
   computed: { color: colors.primaryDark, fontSize: 13, fontWeight: '800' },
-  multi: { gap: 7 },
+  multi: { gap: 7, width: '100%', minWidth: 0 },
   label: { color: colors.text, fontSize: 13, fontWeight: '700' },
-  choiceWrap: {
-    width: '100%',
-    flexDirection: 'column',
-    alignItems: 'stretch',
-    gap: 8,
-  },
-  choice: {
-    minHeight: 44,
-    width: '100%',
-    paddingHorizontal: 13,
-    paddingVertical: 10,
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: 10,
-    justifyContent: 'center',
-    backgroundColor: colors.white,
-    flexShrink: 0,
-  },
-  choiceActive: { backgroundColor: colors.primary, borderColor: colors.primary },
-  choiceText: { color: colors.text, fontWeight: '600' },
-  choiceTextActive: { color: colors.white },
 });

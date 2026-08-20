@@ -301,6 +301,15 @@ export function habitabilityPanelColor(value: Habitability) {
   }[value];
 }
 
+export function habitabilityPanelFill(value: Habitability) {
+  return {
+    habitable: '#E3F0E6',
+    restricted: '#FBF4D6',
+    unsafe: '#F8E6E4',
+    collapsed: '#E6E7E6',
+  }[value];
+}
+
 export function migrateInspectionType(value: string | undefined) {
   if (value === 'rapid') return 'exterior_only';
   if (value === 'detailed') return 'complete';

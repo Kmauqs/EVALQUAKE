@@ -22,7 +22,14 @@ La versión visible en la cabecera de la app sale de `src/version.ts`.
 
 ## [Unreleased]
 
-Cambios posteriores a 0.5.1 se listan aquí hasta el siguiente corte.
+Cambios posteriores a 0.5.2 se listan aquí hasta el siguiente corte.
+
+## [0.5.2] — 2026-08-20
+
+### Fixed
+
+- El texto de filas, interruptores y badges ya no se superpone en móvil; las opciones se envuelven en escritorio sin colapsar altura.
+- El panel de habitabilidad usa fondo claro y texto oscuro para mantener contraste.
 
 ## [0.5.1] — 2026-08-20
 

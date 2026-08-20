@@ -131,6 +131,11 @@ export function Card({ children, style }: React.PropsWithChildren<{ style?: obje
   return <View style={[styles.card, style]}>{children}</View>;
 }
 
+export function useChoiceWrap() {
+  const { width } = useWindowDimensions();
+  return width >= layout.choiceWrapMinWidth;
+}
+
 export function Button({
   children,
   onPress,
@@ -147,6 +152,7 @@ export function Button({
   loading?: boolean;
   style?: object;
 }>) {
+  const spinnerOnDark = variant === 'primary' || variant === 'danger';
   return (
     <Pressable
       accessibilityRole="button"
@@ -159,7 +165,11 @@ export function Button({
         style,
       ]}
     >
-      {loading ? <ActivityIndicator color={variant === 'primary' ? colors.white : colors.primary} /> : icon}
+      {loading ? (
+        <ActivityIndicator color={spinnerOnDark ? colors.white : colors.primary} />
+      ) : (
+        icon
+      )}
       <Text style={[styles.buttonText, styles[`buttonText_${variant}`]]}>{children}</Text>
     </Pressable>
   );
@@ -195,18 +205,25 @@ export function SelectRow<T extends string>({
   options: readonly { value: T; label: string }[];
   onChange: (value: T) => void;
 }) {
+  const wide = useChoiceWrap();
   return (
     <View style={styles.field}>
       <Text style={styles.label}>{label}</Text>
-      <View style={styles.choiceWrap}>
+      <View style={[styles.choiceWrap, wide && styles.choiceWrapWide]}>
         {options.map((option) => (
           <Pressable
             key={option.value}
             onPress={() => onChange(option.value)}
-            style={[styles.choice, value === option.value && styles.choiceActive]}
+            style={[styles.choice, wide && styles.choiceWide, value === option.value && styles.choiceActive]}
           >
             {value === option.value && <Check size={15} color={colors.white} />}
-            <Text style={[styles.choiceText, value === option.value && styles.choiceTextActive]}>
+            <Text
+              style={[
+                styles.choiceText,
+                !wide && styles.choiceTextFill,
+                value === option.value && styles.choiceTextActive,
+              ]}
+            >
               {option.label}
             </Text>
           </Pressable>
@@ -253,7 +270,7 @@ export function ClassificationBadge({
   }[value];
   return (
     <View style={[styles.badge, { backgroundColor: color }, compact && styles.badgeCompact]}>
-      <Text style={styles.badgeText}>{t[value]}</Text>
+      <Text style={[styles.badgeText, value === 'restricted' && styles.badgeTextOnYellow]}>{t[value]}</Text>
     </View>
   );
 }
@@ -282,6 +299,8 @@ export function SectionProgress({
   onNext?: () => void;
 }) {
   const { t } = useI18n();
+  const { width } = useWindowDimensions();
+  const compact = width < layout.compactWidth;
   return (
     <View>
       <View style={styles.progressHeader}>
@@ -297,7 +316,7 @@ export function SectionProgress({
         <Pressable disabled={!onBack} onPress={onBack} style={styles.iconButton}>
           <ChevronLeft color={onBack ? colors.primary : colors.border} />
         </Pressable>
-        <Text style={styles.sectionTitle}>{title}</Text>
+        <Text style={[styles.sectionTitle, compact && styles.sectionTitleCompact]}>{title}</Text>
         <Pressable disabled={!onNext} onPress={onNext} style={styles.iconButton}>
           <ChevronRight color={onNext ? colors.primary : colors.border} />
         </Pressable>
@@ -408,16 +427,18 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     paddingHorizontal: 18,
     flexDirection: 'row',
+    flexWrap: 'wrap',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 9,
+    flexShrink: 0,
   },
   button_primary: { backgroundColor: colors.primary },
   button_secondary: { backgroundColor: colors.primarySoft, borderWidth: 1, borderColor: colors.mint },
   button_ghost: { backgroundColor: 'transparent', borderWidth: 1, borderColor: colors.border },
   button_danger: { backgroundColor: colors.danger },
   buttonPressed: { opacity: 0.65 },
-  buttonText: { fontSize: 15, fontWeight: '800' },
+  buttonText: { fontSize: 15, fontWeight: '800', flexShrink: 1, textAlign: 'center' },
   buttonText_primary: { color: colors.white },
   buttonText_secondary: { color: colors.primaryDark },
   buttonText_ghost: { color: colors.primary },
@@ -451,6 +472,11 @@ const styles = StyleSheet.create({
     alignItems: 'stretch',
     gap: 8,
   },
+  choiceWrapWide: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    alignItems: 'stretch',
+  },
   choice: {
     minHeight: 44,
     width: '100%',
@@ -465,18 +491,25 @@ const styles = StyleSheet.create({
     backgroundColor: colors.white,
     flexShrink: 0,
   },
+  choiceWide: {
+    width: 'auto',
+    maxWidth: '100%',
+    alignSelf: 'flex-start',
+  },
   choiceActive: { backgroundColor: colors.primary, borderColor: colors.primary },
-  choiceText: { color: colors.text, fontWeight: '600', flex: 1, flexShrink: 1 },
+  choiceText: { color: colors.text, fontWeight: '600', flexShrink: 1, minWidth: 0 },
+  choiceTextFill: { flex: 1 },
   choiceTextActive: { color: colors.white },
   toggleRow: {
     minHeight: 55,
     paddingVertical: 7,
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     justifyContent: 'space-between',
     gap: 16,
+    width: '100%',
   },
-  toggleLabel: { color: colors.text, fontWeight: '600', flex: 1, flexShrink: 1 },
+  toggleLabel: { color: colors.text, fontWeight: '600', flex: 1, flexShrink: 1, minWidth: 0, lineHeight: 20 },
   switch: {
     width: 78,
     height: 36,
@@ -487,15 +520,25 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     padding: 3,
+    flexShrink: 0,
+    marginTop: 2,
   },
   switchActive: { backgroundColor: colors.primarySoft },
   switchKnob: { width: 28, height: 28, borderRadius: 14, backgroundColor: colors.textMuted },
   switchKnobActive: { backgroundColor: colors.primary, transform: [{ translateX: 40 }] },
   switchText: { position: 'absolute', right: 9, color: colors.textMuted, fontSize: 11, fontWeight: '800' },
   switchTextActive: { left: 9, color: colors.primary, right: undefined },
-  badge: { alignSelf: 'flex-start', paddingHorizontal: 12, paddingVertical: 7, borderRadius: 999 },
+  badge: {
+    alignSelf: 'flex-start',
+    maxWidth: '100%',
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    borderRadius: 999,
+    flexShrink: 1,
+  },
   badgeCompact: { paddingVertical: 5, paddingHorizontal: 9 },
-  badgeText: { color: colors.white, fontSize: 12, fontWeight: '900' },
+  badgeText: { color: colors.white, fontSize: 12, fontWeight: '900', flexShrink: 1 },
+  badgeTextOnYellow: { color: colors.text },
   offlinePill: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -512,9 +555,18 @@ const styles = StyleSheet.create({
   progressPercent: { color: colors.textMuted, fontWeight: '700' },
   progressTrack: { height: 6, borderRadius: 3, backgroundColor: colors.surfaceMuted, marginTop: 9, overflow: 'hidden' },
   progressFill: { height: '100%', backgroundColor: colors.primary, borderRadius: 3 },
-  sectionTitleRow: { flexDirection: 'row', alignItems: 'center', marginTop: 16 },
-  sectionTitle: { flex: 1, textAlign: 'center', color: colors.text, fontSize: 22, fontWeight: '900' },
-  iconButton: { width: 42, height: 42, alignItems: 'center', justifyContent: 'center' },
+  sectionTitleRow: { flexDirection: 'row', alignItems: 'center', marginTop: 16, gap: 4 },
+  sectionTitle: {
+    flex: 1,
+    minWidth: 0,
+    textAlign: 'center',
+    color: colors.text,
+    fontSize: 22,
+    lineHeight: 28,
+    fontWeight: '900',
+  },
+  sectionTitleCompact: { fontSize: 17, lineHeight: 22 },
+  iconButton: { width: 42, height: 42, alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
 });
 
 export const uiStyles = styles;
