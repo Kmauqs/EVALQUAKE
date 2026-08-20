@@ -54,6 +54,7 @@ git push origin main
 Eso dispara el workflow **Deploy to Firebase Hosting on merge**. Requisitos:
 
 - Secrets del repo: `EXPO_PUBLIC_FIREBASE_*` y `FIREBASE_SERVICE_ACCOUNT_EVALQUAKE`.
+- Opcional: `EXPO_PUBLIC_TRACESTRACK_KEY` para teselas topográficas Tracestrack en el mapa de coordinación (si falta, se usan teselas públicas de OpenStreetMap).
 - El job debe usar `EXPO_PUBLIC_USE_FIREBASE_EMULATORS=false` (ya está en el workflow).
 
 Si esos secrets faltan, el sitio vuelve a **modo demostración** y desaparece el registro.

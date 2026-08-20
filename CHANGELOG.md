@@ -22,7 +22,13 @@ La versión visible en la cabecera de la app sale de `src/version.ts`.
 
 ## [Unreleased]
 
-Cambios posteriores a 0.5.2 se listan aquí hasta el siguiente corte.
+Cambios posteriores a 0.6.0 se listan aquí hasta el siguiente corte.
+
+## [0.6.0] — 2026-08-20
+
+### Added
+
+- El mapa de coordinación muestra teselas OpenStreetMap o Tracestrack (si hay `EXPO_PUBLIC_TRACESTRACK_KEY`), con cambio a vista satelital y marcadores coloreados por habitabilidad.
 
 ## [0.5.2] — 2026-08-20
 
