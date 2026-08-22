@@ -11,7 +11,7 @@ import { demoEvaluations } from '@/domain/fixtures';
 import { subscribeRemoteEvaluations } from '@/firebase/repository';
 import { useI18n } from '@/i18n/I18nProvider';
 import { useSafeBack } from '@/navigation/useSafeBack';
-import { exportCsv, exportJson } from '@/services/exportData';
+import { exportCsv, exportJson, exportQuantitiesCsv } from '@/services/exportData';
 import { useEvaluations } from '@/state/EvaluationProvider';
 import { colors } from '@/theme';
 
@@ -74,6 +74,14 @@ export default function CoordinatorDashboard() {
             style={narrow ? styles.exportButtonNarrow : undefined}
           >
             {t.exportCsv}
+          </Button>
+          <Button
+            variant="ghost"
+            icon={<Download size={17} color={colors.primary} />}
+            onPress={() => void exportQuantitiesCsv(filtered, language)}
+            style={narrow ? styles.exportButtonNarrow : undefined}
+          >
+            {t.exportQuantitiesCsv}
           </Button>
           <Button
             variant="secondary"
@@ -187,7 +195,7 @@ const styles = StyleSheet.create({
   statValue: { color: colors.text, fontSize: 26, fontWeight: '900' },
   statLabel: { color: colors.textMuted, fontWeight: '700' },
   filters: { marginTop: 18, flexDirection: 'row', flexWrap: 'wrap', gap: 12, alignItems: 'center' },
-  search: { flex: 1, minWidth: 280, height: 48, backgroundColor: colors.white, borderWidth: 1, borderColor: colors.border, borderRadius: 12, flexDirection: 'row', alignItems: 'center', paddingHorizontal: 14, gap: 8 },
+  search: { flexGrow: 1, flexBasis: 240, minWidth: 0, maxWidth: '100%', height: 48, backgroundColor: colors.white, borderWidth: 1, borderColor: colors.border, borderRadius: 12, flexDirection: 'row', alignItems: 'center', paddingHorizontal: 14, gap: 8 },
   searchInput: { flex: 1, color: colors.text, height: '100%' },
   filterChips: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
   filterChip: { paddingHorizontal: 12, paddingVertical: 9, borderRadius: 999, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.white },
@@ -197,12 +205,12 @@ const styles = StyleSheet.create({
   content: { flexDirection: 'row', gap: 18, marginTop: 22, paddingBottom: 30 },
   contentNarrow: { flexDirection: 'column' },
   mapColumn: { flex: 1.45, minWidth: 0 },
-  listColumn: { flex: 1, minWidth: 300 },
+  listColumn: { flex: 1, minWidth: 0 },
   sectionTitle: { color: colors.text, fontSize: 18, fontWeight: '900', marginBottom: 10 },
   list: { gap: 9 },
   row: { padding: 15 },
-  rowTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  rowNumber: { color: colors.primary, fontWeight: '900', fontSize: 12 },
+  rowTop: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8 },
+  rowNumber: { color: colors.primary, fontWeight: '900', fontSize: 12, flex: 1, minWidth: 0, flexShrink: 1 },
   rowAddress: { color: colors.text, fontWeight: '800', marginTop: 10 },
   rowMeta: { color: colors.textMuted, fontSize: 12, marginTop: 5 },
   rowDate: { color: colors.textMuted, fontSize: 10, marginTop: 8 },

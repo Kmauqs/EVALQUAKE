@@ -16,6 +16,7 @@ export default function RootLayout() {
             <StatusBar style="dark" />
             <Stack screenOptions={{ headerShown: false }}>
               <Stack.Screen name="index" />
+              <Stack.Screen name="guide" />
               <Stack.Screen name="(evaluator)" />
               <Stack.Screen name="(coordinator)" />
               <Stack.Screen name="(admin)" />

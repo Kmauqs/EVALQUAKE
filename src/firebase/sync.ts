@@ -2,7 +2,7 @@ import * as Network from 'expo-network';
 
 import { completeLocalSync, getLocalEvaluation, listOutboxIds, removeFromOutbox } from '@/services/localStore';
 import { firebaseConfigured, getFirebaseServices } from './client';
-import { pushEvaluation } from './repository';
+import { deleteRemoteEvaluation, pushEvaluation } from './repository';
 
 let syncing = false;
 
@@ -20,7 +20,13 @@ export async function syncOutbox() {
     for (const id of await listOutboxIds()) {
       const local = await getLocalEvaluation(id);
       if (!local) {
-        await removeFromOutbox(id);
+        try {
+          await deleteRemoteEvaluation(id);
+          await removeFromOutbox(id);
+          synced += 1;
+        } catch {
+          failed += 1;
+        }
         continue;
       }
       if (local.createdByUserId !== currentUser.uid) continue;

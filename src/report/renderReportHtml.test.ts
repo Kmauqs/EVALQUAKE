@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import { createEvaluation } from '../domain/evaluation';
 import { en, es } from '../i18n/translations';
+import { renderPlacardHtml } from './renderPlacardHtml';
 import { renderReportHtml } from './renderReportHtml';
 
 describe('bilingual report renderer', () => {
@@ -10,6 +11,12 @@ describe('bilingual report renderer', () => {
     expect(Object.keys(es.fields)).toEqual(Object.keys(en.fields));
     expect(Object.keys(es.damage)).toEqual(Object.keys(en.damage));
     expect(Object.keys(es.catalogs)).toEqual(Object.keys(en.catalogs));
+    expect(Object.keys(es.hints)).toEqual(Object.keys(en.hints));
+    expect(Object.keys(es.catalogs.irregularities)).toEqual(Object.keys(en.catalogs.irregularities));
+    expect(Object.keys(es.catalogs.typicalRestrictions)).toEqual(
+      Object.keys(en.catalogs.typicalRestrictions),
+    );
+    expect(Object.keys(es.catalogs.furtherActions)).toEqual(Object.keys(en.catalogs.furtherActions));
     expect(es.sections).not.toHaveProperty('8');
   });
 
@@ -21,7 +28,10 @@ describe('bilingual report renderer', () => {
     const english = renderReportHtml(evaluation, 'en');
     expect(spanish).toContain('Identificación catastral');
     expect(english).toContain('Cadastral identification');
+    expect(spanish).toContain('Cantidades para reparación');
     expect(spanish).toContain('Área en planta');
+    expect(spanish).toContain('Pisos bajo rasante');
+    expect(spanish).toContain('Se informó a ocupantes');
     expect(spanish).toContain('Imprimir en PDF');
     expect(english).toContain('Print to PDF');
     expect(spanish).toContain('window.print()');
@@ -60,5 +70,18 @@ describe('bilingual report renderer', () => {
     const html = renderReportHtml(evaluation, 'es');
     expect(html).toContain('Lista de revisión de equipos');
     expect(html).toContain('Calefactores principales');
+  });
+
+  it('renders ATC-20 occupancy placards with print-to-PDF', () => {
+    const evaluation = createEvaluation('EQ-PLACARD');
+    evaluation.habitability = 'restricted';
+    evaluation.building.address = 'Calle 10 # 20-30';
+    evaluation.placard.restrictions = 'No usar la chimenea';
+    const html = renderPlacardHtml(evaluation, 'es');
+    expect(html).toContain('USO RESTRINGIDO');
+    expect(html).toContain('Calle 10 # 20-30');
+    expect(html).toContain('No usar la chimenea');
+    expect(html).toContain('Imprimir en PDF');
+    expect(html).toContain('@media print');
   });
 });

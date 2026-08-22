@@ -54,6 +54,7 @@ git push origin main
 Eso dispara el workflow **Deploy to Firebase Hosting on merge**. Requisitos:
 
 - Secrets del repo: `EXPO_PUBLIC_FIREBASE_*` y `FIREBASE_SERVICE_ACCOUNT_EVALQUAKE`.
+- Opcional: `EXPO_PUBLIC_TRACESTRACK_KEY` para teselas topográficas Tracestrack en el mapa de coordinación (si falta, se usan teselas públicas de OpenStreetMap).
 - El job debe usar `EXPO_PUBLIC_USE_FIREBASE_EMULATORS=false` (ya está en el workflow).
 
 Si esos secrets faltan, el sitio vuelve a **modo demostración** y desaparece el registro.
@@ -82,9 +83,11 @@ Si Actions falló, o quiere publicar **ahora** desde el PC:
 ```powershell
 cd E:\dev\EVALQUAKE
 $env:EXPO_PUBLIC_USE_FIREBASE_EMULATORS = "false"
-npx expo export --platform web --clear
+npm run export:web
 npx firebase deploy --only hosting
 ```
+
+`export:web` copia las figuras de la guía a `public/media` y luego genera `dist`. **Primero exportar, después desplegar.** Si se despliega un `dist` viejo, la cabecera seguirá en la versión anterior.
 
 `.env` local alimenta el export. **No** deje `EXPO_PUBLIC_USE_FIREBASE_EMULATORS=true` en ese build: el sitio intentaría hablar con `127.0.0.1`.
 

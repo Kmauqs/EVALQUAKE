@@ -14,7 +14,7 @@ function demo(
     status: 'synced',
     syncState: 'synced',
     officialNumber: Number(id.replace(/\D/g, '')),
-    currentSection: 15,
+    currentSection: 16,
     identification: {
       ...evaluation.identification,
       department: 'Cundinamarca',

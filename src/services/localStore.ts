@@ -32,3 +32,7 @@ export async function completeLocalSync(
 ): Promise<boolean> {
   return (await implementation()).completeLocalSync(id, expectedUpdatedAt, remote);
 }
+
+export async function deleteLocalEvaluation(id: string, queueRemoteDelete = true) {
+  return (await implementation()).deleteLocalEvaluation(id, queueRemoteDelete);
+}

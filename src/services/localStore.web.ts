@@ -76,3 +76,24 @@ export async function completeLocalSync(
     return true;
   });
 }
+
+export async function deleteLocalEvaluation(id: string, queueRemoteDelete = true) {
+  return serialize(async () => {
+    const value = await AsyncStorage.getItem(EVALUATIONS_KEY);
+    const records = value ? (JSON.parse(value) as Evaluation[]) : [];
+    await AsyncStorage.setItem(
+      EVALUATIONS_KEY,
+      JSON.stringify(records.filter((record) => record.id !== id)),
+    );
+
+    const outboxValue = await AsyncStorage.getItem(OUTBOX_KEY);
+    const outbox = outboxValue ? (JSON.parse(outboxValue) as string[]) : [];
+    if (queueRemoteDelete) {
+      if (!outbox.includes(id)) {
+        await AsyncStorage.setItem(OUTBOX_KEY, JSON.stringify([...outbox, id]));
+      }
+      return;
+    }
+    await AsyncStorage.setItem(OUTBOX_KEY, JSON.stringify(outbox.filter((item) => item !== id)));
+  });
+}

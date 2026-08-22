@@ -1,5 +1,5 @@
 import { useLocalSearchParams } from 'expo-router';
-import { ArrowLeft, Braces, FileText, MapPin } from 'lucide-react-native';
+import { ArrowLeft, Braces, FileText, MapPin, Tag } from 'lucide-react-native';
 import React, { useEffect, useState } from 'react';
 import { Pressable, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 
@@ -10,8 +10,9 @@ import { demoEvaluations } from '@/domain/fixtures';
 import { pullEvaluation } from '@/firebase/repository';
 import { useI18n } from '@/i18n/I18nProvider';
 import { useSafeBack } from '@/navigation/useSafeBack';
+import { renderPlacardHtml } from '@/report/renderPlacardHtml';
 import { renderReportHtml } from '@/report/renderReportHtml';
-import { createPdf, sharePdf } from '@/services/pdf';
+import { openHtmlDocument } from '@/services/htmlDocument';
 import { useEvaluations } from '@/state/EvaluationProvider';
 import { colors, layout } from '@/theme';
 
@@ -42,8 +43,14 @@ export default function EvaluationDetail() {
   }
 
   const openReport = async () => {
-    const uri = evaluation.localPdfUri ?? (await createPdf(renderReportHtml(evaluation, language)));
-    await sharePdf(uri);
+    await openHtmlDocument(renderReportHtml(evaluation, language), `evalquake-${evaluation.id}.html`);
+  };
+
+  const openPlacard = async () => {
+    await openHtmlDocument(
+      renderPlacardHtml(evaluation, language),
+      `evalquake-placard-${evaluation.id}.html`,
+    );
   };
 
   const rows = [
@@ -92,7 +99,15 @@ export default function EvaluationDetail() {
           onPress={() => void openReport()}
           style={narrow ? styles.actionButtonNarrow : undefined}
         >
-          {t.report}
+          {t.viewReport}
+        </Button>
+        <Button
+          variant="secondary"
+          icon={<Tag size={18} color={colors.primary} />}
+          onPress={() => void openPlacard()}
+          style={narrow ? styles.actionButtonNarrow : undefined}
+        >
+          {t.generatePlacard}
         </Button>
         <Button
           variant="ghost"
@@ -133,8 +148,8 @@ const styles = StyleSheet.create({
   id: { color: colors.primary, fontSize: 12, fontWeight: '900' },
   title: { color: colors.text, fontSize: 27, fontWeight: '900', marginTop: 4 },
   titleNarrow: { fontSize: 23, lineHeight: 29 },
-  location: { flexDirection: 'row', gap: 5, alignItems: 'center', marginTop: 7 },
-  locationText: { color: colors.textMuted, fontSize: 13 },
+  location: { flexDirection: 'row', gap: 5, alignItems: 'flex-start', marginTop: 7 },
+  locationText: { color: colors.textMuted, fontSize: 13, flex: 1, minWidth: 0 },
   badgeNarrow: { width: '100%', paddingLeft: 58 },
   actions: { width: '100%', maxWidth: layout.contentWidth, alignSelf: 'center', flexDirection: 'row', gap: 9, marginTop: 20 },
   actionsNarrow: { flexDirection: 'column', paddingLeft: 58 },
@@ -144,7 +159,7 @@ const styles = StyleSheet.create({
   rowNarrow: { flexDirection: 'column', gap: 6 },
   label: { width: '38%', color: colors.textMuted, fontWeight: '700' },
   labelNarrow: { width: '100%' },
-  value: { flex: 1, color: colors.text, fontWeight: '700' },
+  value: { flex: 1, minWidth: 0, color: colors.text, fontWeight: '700' },
   rawCard: { width: '100%', maxWidth: layout.contentWidth, alignSelf: 'center', marginTop: 14, marginBottom: 24 },
   raw: { fontFamily: 'monospace', color: colors.text, fontSize: 12, lineHeight: 18 },
 });

@@ -69,6 +69,53 @@ export const GLOBAL_CONDITIONS = [
 ] as const;
 export type GlobalConditionId = (typeof GLOBAL_CONDITIONS)[number];
 
+export const STRUCTURAL_IRREGULARITIES = [
+  'soft_story',
+  'plan_irregular',
+  'short_column',
+  'setback',
+  'discontinuous_wall',
+] as const;
+
+export const TYPICAL_RESTRICTIONS = [
+  'short_entry_belongings',
+  'repair_only',
+  'no_public',
+  'no_specified_areas',
+  'no_specified_exits',
+  'no_chimney',
+] as const;
+
+export const FURTHER_ACTIONS = [
+  'barricade',
+  'shore',
+  'detailed_eval',
+  'engineering_eval',
+  'geotech_visit',
+  'hazmat',
+] as const;
+
+export const UTILITY_CUTOFFS = ['gas', 'electric', 'water'] as const;
+
+export const INSPECTION_POINT_GROUPS: Record<string, string> = {
+  s11: 'concrete_frames',
+  s12: 'concrete_walls',
+  s13: 'concrete_frames',
+  s14: 'precast',
+  s21: 'masonry_confined',
+  s22: 'masonry_reinforced',
+  s23: 'masonry_unreinforced',
+  s31: 'steel',
+  s32: 'steel',
+  s33: 'steel',
+  s41: 'wood',
+  s42: 'wood',
+  s51: 'vernacular',
+  s52: 'vernacular',
+  s60: 'mixed',
+};
+
+
 export const SITE_MORPHOLOGIES = [
   'divide',
   'crest',
@@ -151,8 +198,71 @@ export const BASE_SECTION_KEYS = [
   'occupancy',
   'contact',
   'inspectors',
+  'quantities',
   'media',
 ] as const;
+
+export const QUANTITY_DAMAGE_LEVELS = ['light', 'moderate', 'severe'] as const;
+export type QuantityDamageLevel = (typeof QUANTITY_DAMAGE_LEVELS)[number];
+
+export const WALL_TYPES = [
+  'unreinforced_masonry',
+  'confined_masonry',
+  'grouted_masonry',
+  'concrete_wall',
+  'gypsum_drywall',
+  'fiber_cement_drywall',
+  'wood_panel',
+  'bahareque',
+  'other',
+] as const;
+export type WallType = (typeof WALL_TYPES)[number];
+
+export const WALL_REPAIRS = [
+  'expansion_joints',
+  'surface_treatment',
+  'plaster',
+  'rebuild',
+  'change_typology',
+] as const;
+export type WallRepair = (typeof WALL_REPAIRS)[number];
+
+export const ROOF_STRUCTURE_TYPES = [
+  'concrete_slab',
+  'steel_purlins',
+  'lattice_purlins',
+  'wood_purlins',
+  'other',
+] as const;
+export type RoofStructureType = (typeof ROOF_STRUCTURE_TYPES)[number];
+
+export const ROOF_REPAIRS = [
+  'roof_survey',
+  'replace_tiles',
+  'replace_purlins',
+  'reconstruction',
+  'change_typology',
+] as const;
+export type RoofRepair = (typeof ROOF_REPAIRS)[number];
+
+export const FRAME_MATERIALS = [
+  'reinforced_concrete',
+  'extruded_steel',
+  'steel_truss',
+  'wood',
+  'other',
+] as const;
+export type FrameMaterial = (typeof FRAME_MATERIALS)[number];
+
+export const FRAME_REPAIRS = [
+  'surface_treatment',
+  'plaster',
+  'repair_joint',
+  'rebuild',
+  'change_typology',
+  'other',
+] as const;
+export type FrameRepair = (typeof FRAME_REPAIRS)[number];
 
 export type EvaluationSectionKey = (typeof BASE_SECTION_KEYS)[number] | 'equipment';
 
@@ -188,6 +298,15 @@ export function habitabilityPanelColor(value: Habitability) {
     restricted: '#D69E00',
     unsafe: '#C43D32',
     collapsed: '#242824',
+  }[value];
+}
+
+export function habitabilityPanelFill(value: Habitability) {
+  return {
+    habitable: '#E3F0E6',
+    restricted: '#FBF4D6',
+    unsafe: '#F8E6E4',
+    collapsed: '#E6E7E6',
   }[value];
 }
 
