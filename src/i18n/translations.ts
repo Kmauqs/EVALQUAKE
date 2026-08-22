@@ -69,6 +69,7 @@ export const es = {
   sharePdf: 'Abrir informe',
   guide: 'Guía de inspección',
   guideKicker: 'ATC-20 · Guía gráfica',
+  guideCollapsedHint: 'Toque un título o subtítulo para expandirlo. Al abrir la guía, todas las secciones están contraídas.',
   guideFigureCaption:
     'Puntos de revisión de ascensores / elevadores a tracción. La fosa y la sala de máquinas solo las inspecciona personal calificado.',
   supportedBy: 'Con apoyo de',
@@ -665,6 +666,7 @@ export const en = {
   sharePdf: 'Open report',
   guide: 'Inspection guide',
   guideKicker: 'ATC-20 · Graphic guide',
+  guideCollapsedHint: 'Tap a title or subtitle to expand it. All sections start collapsed.',
   guideFigureCaption:
     'Traction elevator inspection points. Pit and machine-room checks are only for qualified personnel.',
   supportedBy: 'With support from',

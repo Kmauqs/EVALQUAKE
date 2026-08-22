@@ -22,7 +22,13 @@ La versión visible en la cabecera de la app sale de `src/version.ts`.
 
 ## [Unreleased]
 
-Cambios posteriores a 0.6.1 se listan aquí hasta el siguiente corte.
+Cambios posteriores a 0.7.0 se listan aquí hasta el siguiente corte.
+
+## [0.7.0] — 2026-08-21
+
+### Added
+
+- La guía de inspección abre con todos los títulos y subtítulos contraídos; se expanden al tocarlos para navegar el documento.
 
 ## [0.6.1] — 2026-08-20
 
