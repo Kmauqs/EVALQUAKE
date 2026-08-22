@@ -15,6 +15,7 @@ export const es = {
   next: 'Siguiente',
   save: 'Guardar',
   cancel: 'Cancelar',
+  selectOption: 'Seleccione…',
   submit: 'Enviar evaluación',
   submitting: 'Enviando…',
   required: 'Campo obligatorio',
@@ -205,6 +206,9 @@ export const es = {
     storiesBelowGrade: 'Pisos bajo rasante / sótanos',
     predominantUse: 'Uso predominante',
     dimensions: 'Dimensiones aproximadas',
+    dimensionLength: 'Largo (m)',
+    dimensionWidth: 'Ancho (m)',
+    dimensionHeight: 'Alto (m)',
     footprintArea: 'Área en planta (m²)',
     estimatedOccupants: 'Ocupantes estimados',
     units: 'Número de unidades',
@@ -299,6 +303,10 @@ export const es = {
     openGuide: 'Ver puntos de inspección en la guía',
     quantitiesOptional:
       'Cuestionario opcional. Sirve para armar el listado de cantidades de reparación; no es necesario para enviar la evaluación.',
+    addressFromCadastral:
+      'Se carga desde la identificación catastral. Puede ajustarla si es necesario.',
+    constructionPeriodFromYear:
+      'Si escribe el año, el periodo se asigna solo. Si no conoce el año exacto, déjelo vacío y elija el periodo.',
   },
   riskHints: {
     none: '',
@@ -616,6 +624,7 @@ export const en = {
   next: 'Next',
   save: 'Save',
   cancel: 'Cancel',
+  selectOption: 'Select…',
   submit: 'Submit assessment',
   submitting: 'Submitting…',
   required: 'Required field',
@@ -806,6 +815,9 @@ export const en = {
     storiesBelowGrade: 'Stories below grade / basement',
     predominantUse: 'Predominant use',
     dimensions: 'Approximate dimensions',
+    dimensionLength: 'Length (m)',
+    dimensionWidth: 'Width (m)',
+    dimensionHeight: 'Height (m)',
     footprintArea: 'Plan area (m²)',
     estimatedOccupants: 'Estimated occupants',
     units: 'Number of units',
@@ -900,6 +912,9 @@ export const en = {
     openGuide: 'See inspection points in the guide',
     quantitiesOptional:
       'Optional questionnaire. It builds the repair-quantity list and is not required to submit the assessment.',
+    addressFromCadastral: 'Loaded from cadastral identification. You can adjust it if needed.',
+    constructionPeriodFromYear:
+      'Entering the year fills the period automatically. If the exact year is unknown, leave it blank and choose the period.',
   },
   riskHints: {
     none: '',

@@ -1,7 +1,13 @@
 import { describe, expect, it } from 'vitest';
 
 import { createEvaluation } from './evaluation';
-import { applyPlaceLookup, normalizeColombianName, parseNominatimAddress } from './placeLookup';
+import {
+  applyPlaceLookup,
+  formatCadastralAddress,
+  normalizeColombianName,
+  parseNominatimAddress,
+  withBuildingAddressFromCadastral,
+} from './placeLookup';
 
 describe('place lookup', () => {
   it('normalizes Bogotá department names', () => {
@@ -66,5 +72,32 @@ describe('place lookup', () => {
     expect(next.identification.municipality).toBe('Pereira');
     expect(next.identification.commune).toBe('Cuba');
     expect(next.building.address).toBe('Carrera 1 # 2-3');
+  });
+
+  it('composes the building address from cadastral location fields', () => {
+    const evaluation = createEvaluation('eq-test');
+    evaluation.identification.sector = 'Carrera 7 # 72-41';
+    evaluation.identification.neighborhood = 'El Chicó';
+    evaluation.identification.commune = 'Chapinero';
+    evaluation.identification.municipality = 'Bogotá D.C.';
+    evaluation.identification.department = 'Bogotá D.C.';
+    expect(formatCadastralAddress(evaluation)).toBe('Carrera 7 # 72-41, El Chicó, Chapinero, Bogotá D.C.');
+  });
+
+  it('loads the section 3 address from cadastral data when empty', () => {
+    const evaluation = createEvaluation('eq-test');
+    evaluation.identification.sector = 'Calle 10';
+    evaluation.identification.municipality = 'Armenia';
+    evaluation.identification.department = 'Quindío';
+    const next = withBuildingAddressFromCadastral(evaluation);
+    expect(next.building.address).toBe('Calle 10, Armenia, Quindío');
+  });
+
+  it('does not overwrite a building address the inspector already edited', () => {
+    const evaluation = createEvaluation('eq-test');
+    evaluation.identification.sector = 'Calle 10';
+    evaluation.identification.municipality = 'Armenia';
+    evaluation.building.address = 'Edificio Central, piso 3';
+    expect(withBuildingAddressFromCadastral(evaluation)).toBe(evaluation);
   });
 });

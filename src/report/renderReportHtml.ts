@@ -11,6 +11,7 @@ import {
   totalWallArea,
   wallArea,
 } from '../domain/quantities';
+import { formatCadastralAddress } from '../domain/placeLookup';
 import { en, es, type Dictionary } from '../i18n/translations';
 import { escapeHtml, wrapPrintableHtml } from './htmlChrome';
 
@@ -42,7 +43,7 @@ export function renderReportHtml(evaluation: Evaluation, language: Language) {
       row(t.fields.municipality, evaluation.identification.municipality) +
       row(t.fields.commune, evaluation.identification.commune) +
       row(t.fields.neighborhood, evaluation.identification.neighborhood) +
-      row(t.address, evaluation.building.address || evaluation.identification.sector) +
+      row(t.address, evaluation.identification.sector || evaluation.building.address) +
       row(t.fields.cadastralCode, evaluation.identification.cadastralCode) +
       row(t.fields.propertyRegistration, evaluation.identification.propertyRegistration) +
       row(
@@ -65,13 +66,17 @@ export function renderReportHtml(evaluation: Evaluation, language: Language) {
       ) +
       row(t.fields.occupantsNotified, evaluation.inspection.occupantsNotified ? t.yes : t.no),
     building:
-      row(t.address, evaluation.building.address) +
+      row(t.address, evaluation.building.address || formatCadastralAddress(evaluation)) +
       row(t.fields.buildingName, evaluation.building.name) +
       row(t.fields.nsrGroup, catalogLabel(t.catalogs.nsrGroups, evaluation.building.nsrGroup)) +
       row(t.fields.floors, evaluation.building.floors) +
       row(t.fields.storiesBelowGrade, evaluation.building.storiesBelowGrade) +
       row(t.fields.predominantUse, evaluation.building.predominantUse) +
-      row(t.fields.dimensions, evaluation.building.dimensions) +
+      (evaluation.building.length || evaluation.building.width || evaluation.building.height
+        ? row(t.fields.dimensionLength, evaluation.building.length) +
+          row(t.fields.dimensionWidth, evaluation.building.width) +
+          row(t.fields.dimensionHeight, evaluation.building.height)
+        : row(t.fields.dimensions, evaluation.building.dimensions)) +
       row(t.fields.footprintArea, evaluation.building.footprintArea) +
       row(t.fields.estimatedOccupants, evaluation.building.estimatedOccupants) +
       row(t.fields.units, evaluation.building.units),

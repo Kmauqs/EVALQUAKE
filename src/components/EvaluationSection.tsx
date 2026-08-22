@@ -5,6 +5,7 @@ import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import {
   CONSTRUCTION_PERIODS,
+  periodFromConstructionYear,
   EQUIPMENT_DAMAGE_LEVELS,
   FLOOR_SUBTYPES,
   FLOOR_TYPES,
@@ -32,6 +33,7 @@ import {
 } from '@/domain/catalog';
 import {
   applyDerivedHabitability,
+  composeBuildingDimensions,
   type Coordinates,
   type Evaluation,
   type Habitability,
@@ -40,7 +42,11 @@ import {
 import { inspectionPointHints } from '@/guide/content';
 import { useI18n } from '@/i18n/I18nProvider';
 import { exportQuantitiesCsv } from '@/services/exportData';
-import { applyPlaceLookup } from '@/domain/placeLookup';
+import {
+  applyPlaceLookup,
+  formatCadastralAddress,
+  withBuildingAddressFromCadastral,
+} from '@/domain/placeLookup';
 import { lookupPlace } from '@/services/reverseGeocode';
 import { colors } from '@/theme';
 import { QuantitySurvey } from './QuantitySurvey';
@@ -68,6 +74,10 @@ export function EvaluationSection({
   const router = useRouter();
   const update = <K extends keyof Evaluation>(key: K, value: Evaluation[K]) =>
     onChange({ ...evaluation, [key]: value });
+  const patchBuilding = (patch: Partial<Evaluation['building']>) => {
+    const building = { ...evaluation.building, ...patch };
+    update('building', { ...building, dimensions: composeBuildingDimensions(building) });
+  };
   const updateRisk = (next: Evaluation) => onChange(applyDerivedHabitability(next));
   const risks: { value: RiskLevel; label: string }[] = [
     { value: 'none', label: t.none },
@@ -129,11 +139,7 @@ export function EvaluationSection({
     case 'building':
       return (
         <FormGrid>
-          <Field
-            label={t.address}
-            value={evaluation.building.address}
-            onChangeText={(address) => update('building', { ...evaluation.building, address })}
-          />
+          <BuildingAddressField evaluation={evaluation} onChange={onChange} />
           <Field
             label={t.fields.buildingName}
             value={evaluation.building.name}
@@ -169,11 +175,32 @@ export function EvaluationSection({
               update('building', { ...evaluation.building, predominantUse })
             }
           />
-          <Field
-            label={t.fields.dimensions}
-            value={evaluation.building.dimensions}
-            onChangeText={(dimensions) => update('building', { ...evaluation.building, dimensions })}
-          />
+          <View style={styles.location}>
+            <Text style={styles.groupTitle}>{t.fields.dimensions}</Text>
+            <View style={styles.coordFields}>
+              <Field
+                label={t.fields.dimensionLength}
+                keyboardType="numbers-and-punctuation"
+                value={evaluation.building.length}
+                onChangeText={(length) => patchBuilding({ length })}
+                style={styles.dimensionField}
+              />
+              <Field
+                label={t.fields.dimensionWidth}
+                keyboardType="numbers-and-punctuation"
+                value={evaluation.building.width}
+                onChangeText={(width) => patchBuilding({ width })}
+                style={styles.dimensionField}
+              />
+              <Field
+                label={t.fields.dimensionHeight}
+                keyboardType="numbers-and-punctuation"
+                value={evaluation.building.height}
+                onChangeText={(height) => patchBuilding({ height })}
+                style={styles.dimensionField}
+              />
+            </View>
+          </View>
           <Field
             label={t.fields.footprintArea}
             keyboardType="numeric"
@@ -323,10 +350,13 @@ export function EvaluationSection({
             label={t.fields.constructionYear}
             keyboardType="numeric"
             value={evaluation.structure.constructionYear}
-            onChangeText={(constructionYear) =>
-              update('structure', { ...evaluation.structure, constructionYear })
-            }
+            onChangeText={(constructionYear) => {
+              const constructionPeriod =
+                periodFromConstructionYear(constructionYear) ?? evaluation.structure.constructionPeriod;
+              update('structure', { ...evaluation.structure, constructionYear, constructionPeriod });
+            }}
           />
+          <Hint>{t.hints.constructionPeriodFromYear}</Hint>
           <SelectRow
             label={t.fields.constructionPeriod}
             value={evaluation.structure.constructionPeriod}
@@ -1046,6 +1076,48 @@ export function EvaluationSection({
   }
 }
 
+function BuildingAddressField({
+  evaluation,
+  onChange,
+}: {
+  evaluation: Evaluation;
+  onChange: (evaluation: Evaluation) => void;
+}) {
+  const { t } = useI18n();
+  const evaluationRef = useRef(evaluation);
+  const onChangeRef = useRef(onChange);
+  evaluationRef.current = evaluation;
+  onChangeRef.current = onChange;
+
+  useEffect(() => {
+    const next = withBuildingAddressFromCadastral(evaluationRef.current);
+    if (next !== evaluationRef.current) onChangeRef.current(next);
+  }, [
+    evaluation.identification.sector,
+    evaluation.identification.neighborhood,
+    evaluation.identification.commune,
+    evaluation.identification.municipality,
+    evaluation.identification.department,
+    evaluation.building.address,
+  ]);
+
+  return (
+    <>
+      <Field
+        label={t.address}
+        value={evaluation.building.address || formatCadastralAddress(evaluation)}
+        onChangeText={(address) =>
+          onChange({
+            ...evaluation,
+            building: { ...evaluation.building, address },
+          })
+        }
+      />
+      <Hint>{t.hints.addressFromCadastral}</Hint>
+    </>
+  );
+}
+
 const lastCadastralLookups = new Map<string, string>();
 
 function CadastralSection({
@@ -1145,14 +1217,22 @@ function CadastralSection({
       />
       <Field
         label={t.address}
-        value={evaluation.building.address}
-        onChangeText={(address) =>
+        value={evaluation.identification.sector}
+        onChangeText={(sector) => {
+          const previous = evaluation.identification.sector.trim();
+          const currentBuilding = evaluation.building.address.trim();
+          const shouldSyncBuilding =
+            !currentBuilding ||
+            currentBuilding === previous ||
+            currentBuilding === formatCadastralAddress(evaluation);
           onChange({
             ...evaluation,
-            identification: { ...evaluation.identification, sector: address },
-            building: { ...evaluation.building, address },
-          })
-        }
+            identification: { ...evaluation.identification, sector },
+            building: shouldSyncBuilding
+              ? { ...evaluation.building, address: sector }
+              : evaluation.building,
+          });
+        }}
       />
       <Field
         label={t.fields.cadastralCode}
@@ -1383,6 +1463,7 @@ const styles = StyleSheet.create({
   stack: { gap: 16, width: '100%' },
   location: { flexBasis: '100%', width: '100%', minWidth: 0, maxWidth: '100%', gap: 10 },
   coordFields: { flexDirection: 'row', flexWrap: 'wrap', gap: 16 },
+  dimensionField: { flexBasis: 140, flexGrow: 1 },
   hint: { color: colors.textMuted, fontSize: 12, lineHeight: 17, width: '100%' },
   groupTitle: { color: colors.text, fontSize: 15, fontWeight: '800', width: '100%' },
   guideLink: { alignSelf: 'flex-start' },

@@ -22,7 +22,37 @@ La versión visible en la cabecera de la app sale de `src/version.ts`.
 
 ## [Unreleased]
 
-Cambios posteriores a 0.8.0 se listan aquí hasta el siguiente corte.
+Cambios posteriores a 0.10.0 se listan aquí hasta el siguiente corte.
+
+## [0.10.0] — 2026-08-22
+
+### Added
+
+- El periodo de construcción se asigna con el año escrito; si el año no se conoce, el periodo se elige a mano.
+
+## [0.9.2] — 2026-08-22
+
+### Fixed
+
+- Las listas de 4 o más opciones (tipo de inspección, riesgo, morfología, cantidades, etc.) usan desplegable para que no se corten.
+
+## [0.9.1] — 2026-08-22
+
+### Fixed
+
+- El sistema estructural predominante se elige en una lista desplegable para que las opciones no se solapen con las ayudas.
+
+## [0.9.0] — 2026-08-22
+
+### Added
+
+- La ficha de la edificación pide largo, ancho y alto en lugar de un solo campo de dimensiones.
+
+## [0.8.1] — 2026-08-22
+
+### Fixed
+
+- La ficha de identificación de la edificación carga la dirección definida en la identificación catastral.
 
 ## [0.8.0] — 2026-08-22
 

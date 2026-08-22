@@ -106,3 +106,38 @@ export function hasPlaceData(place: PlaceLookup | null): place is PlaceLookup {
     place && (place.department || place.municipality || place.commune || place.neighborhood || place.address),
   );
 }
+
+export function cadastralStreet(evaluation: Evaluation) {
+  const sector = evaluation.identification.sector.trim();
+  if (sector) return sector;
+  const address = evaluation.building.address.trim();
+  return address.includes(', ') ? '' : address;
+}
+
+export function formatCadastralAddress(evaluation: Evaluation) {
+  const { neighborhood, commune, municipality, department } = evaluation.identification;
+  const parts = [cadastralStreet(evaluation), neighborhood, commune, municipality, department]
+    .map((part) => part.replace(/\s+/g, ' ').trim())
+    .filter(Boolean);
+  const unique: string[] = [];
+  for (const part of parts) {
+    const key = normalizeColombianName(part).toLowerCase();
+    if (!unique.some((seen) => normalizeColombianName(seen).toLowerCase() === key)) {
+      unique.push(part);
+    }
+  }
+  return unique.join(', ');
+}
+
+export function withBuildingAddressFromCadastral(evaluation: Evaluation): Evaluation {
+  const composed = formatCadastralAddress(evaluation);
+  if (!composed) return evaluation;
+  const street = cadastralStreet(evaluation);
+  const current = evaluation.building.address.trim();
+  if (current && current !== street && current !== composed) return evaluation;
+  if (current === composed) return evaluation;
+  return {
+    ...evaluation,
+    building: { ...evaluation.building, address: composed },
+  };
+}

@@ -103,6 +103,9 @@ export interface Evaluation {
     storiesBelowGrade: string;
     predominantUse: string;
     dimensions: string;
+    length: string;
+    width: string;
+    height: string;
     footprintArea: string;
     estimatedOccupants: string;
     units: string;
@@ -307,6 +310,9 @@ export function createEvaluation(
       storiesBelowGrade: '',
       predominantUse: '',
       dimensions: '',
+      length: '',
+      width: '',
+      height: '',
       footprintArea: '',
       estimatedOccupants: '',
       units: '',
@@ -462,6 +468,16 @@ export function normalizeEvaluation(raw: Evaluation): Evaluation {
       ...raw.building,
       nsrGroup: raw.building?.nsrGroup ?? '',
       storiesBelowGrade: raw.building?.storiesBelowGrade ?? '',
+      length: raw.building?.length ?? '',
+      width: raw.building?.width ?? '',
+      height: raw.building?.height ?? '',
+      dimensions: composeBuildingDimensions({
+        ...base.building,
+        ...raw.building,
+        length: raw.building?.length ?? '',
+        width: raw.building?.width ?? '',
+        height: raw.building?.height ?? '',
+      }),
     },
     structure: {
       ...base.structure,
@@ -526,6 +542,19 @@ export function normalizeEvaluation(raw: Evaluation): Evaluation {
       columns: raw.repairQuantities?.columns ?? [],
     },
   };
+}
+
+export function composeBuildingDimensions(building: {
+  length?: string;
+  width?: string;
+  height?: string;
+  dimensions?: string;
+}) {
+  const measures = [building.length, building.width, building.height]
+    .map((value) => value?.replace(/\s+/g, ' ').trim() ?? '')
+    .filter(Boolean);
+  if (measures.length) return `${measures.join(' × ')} m`;
+  return building.dimensions?.trim() ?? '';
 }
 
 export function applyDerivedHabitability(evaluation: Evaluation): Evaluation {

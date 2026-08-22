@@ -24,12 +24,18 @@ describe('bilingual report renderer', () => {
     const evaluation = createEvaluation('EQ-TEST');
     evaluation.building.address = '<Casa & Hogar>';
     evaluation.building.nsrGroup = 'group_i';
+    evaluation.building.length = '12';
+    evaluation.building.width = '8';
+    evaluation.building.height = '6';
     const spanish = renderReportHtml(evaluation, 'es');
     const english = renderReportHtml(evaluation, 'en');
     expect(spanish).toContain('Identificación catastral');
     expect(english).toContain('Cadastral identification');
     expect(spanish).toContain('Cantidades para reparación');
     expect(spanish).toContain('Área en planta');
+    expect(spanish).toContain('Largo (m)');
+    expect(spanish).toContain('Ancho (m)');
+    expect(spanish).toContain('Alto (m)');
     expect(spanish).toContain('Pisos bajo rasante');
     expect(spanish).toContain('Se informó a ocupantes');
     expect(spanish).toContain('Imprimir en PDF');

@@ -59,6 +59,18 @@ export const CONSTRUCTION_PERIODS = [
 ] as const;
 export type ConstructionPeriod = (typeof CONSTRUCTION_PERIODS)[number];
 
+export function periodFromConstructionYear(yearText: string): ConstructionPeriod | null {
+  const trimmed = yearText.trim();
+  if (!/^\d{4}$/.test(trimmed)) return null;
+  const year = Number(trimmed);
+  const maxYear = new Date().getFullYear() + 1;
+  if (year < 1500 || year > maxYear) return null;
+  if (year < 1984) return 'before_1984';
+  if (year < 1998) return '1984_1998';
+  if (year < 2010) return '1998_2010';
+  return 'from_2010';
+}
+
 export const GLOBAL_CONDITIONS = [
   'total_or_partial_collapse',
   'building_or_story_lean',

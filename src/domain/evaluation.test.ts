@@ -4,6 +4,7 @@ import {
   canDeleteEvaluation,
   canSaveEvaluation,
   classificationColor,
+  composeBuildingDimensions,
   createEvaluation,
   lastSectionIndex,
   normalizeEvaluation,
@@ -98,7 +99,7 @@ describe('evaluation domain', () => {
     const migrated = normalizeEvaluation({
       ...legacy,
       inspection: { type: 'complete', notInspectedReason: '', preliminaryClassification: '' },
-      building: { ...legacy.building, storiesBelowGrade: undefined },
+      building: { ...legacy.building, storiesBelowGrade: undefined, length: undefined, width: undefined, height: undefined },
       structure: { ...legacy.structure, irregularities: undefined },
       recommendations: {
         safetyMeasures: [],
@@ -109,6 +110,9 @@ describe('evaluation domain', () => {
     } as never);
     expect(migrated.inspection.occupantsNotified).toBe(false);
     expect(migrated.building.storiesBelowGrade).toBe('');
+    expect(migrated.building.length).toBe('');
+    expect(migrated.building.width).toBe('');
+    expect(migrated.building.height).toBe('');
     expect(migrated.structure.irregularities).toHaveLength(5);
     expect(migrated.recommendations.typicalRestrictions).toEqual([]);
     expect(migrated.recommendations.furtherActions).toEqual([]);
@@ -118,6 +122,18 @@ describe('evaluation domain', () => {
       water: false,
     });
     expect(migrated.recommendations.adjacentFallingHazard).toBe(false);
+  });
+
+  it('composes approximate dimensions from length, width, and height', () => {
+    expect(
+      composeBuildingDimensions({ length: '12', width: '8', height: '6', dimensions: 'old' }),
+    ).toBe('12 × 8 × 6 m');
+    expect(composeBuildingDimensions({ length: '10', width: '', height: '', dimensions: '' })).toBe(
+      '10 m',
+    );
+    expect(
+      composeBuildingDimensions({ length: '', width: '', height: '', dimensions: '12 x 8 x 3 m' }),
+    ).toBe('12 x 8 x 3 m');
   });
 
   it('allows submission but rejects every subsequent overwrite', () => {

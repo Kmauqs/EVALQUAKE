@@ -31,7 +31,7 @@ import {
 } from '@/domain/quantities';
 import { useI18n } from '@/i18n/I18nProvider';
 import { colors } from '@/theme';
-import { Button, Field, SelectRow, uiStyles, useChoiceWrap } from './ui';
+import { Button, Field, MultiSelectDropdown, SelectRow, uiStyles, useChoiceWrap } from './ui';
 
 interface Props {
   evaluation: Evaluation;
@@ -469,6 +469,9 @@ function MultiSelect<T extends string>({
   options: { value: T; label: string }[];
   onChange: (values: T[]) => void;
 }) {
+  if (options.length >= 4) {
+    return <MultiSelectDropdown label={label} values={values} options={options} onChange={onChange} />;
+  }
   const wide = useChoiceWrap();
   return (
     <View style={styles.multi}>

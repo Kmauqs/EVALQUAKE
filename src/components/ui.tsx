@@ -1,10 +1,11 @@
-import { BookOpen, Check, ChevronLeft, ChevronRight, Globe2, WifiOff } from 'lucide-react-native';
+import { BookOpen, Check, ChevronDown, ChevronLeft, ChevronRight, Globe2, WifiOff } from 'lucide-react-native';
 import { type Href, usePathname, useRouter } from 'expo-router';
-import React from 'react';
+import React, { useState } from 'react';
 import {
   ActivityIndicator,
   Image,
   Linking,
+  Modal,
   Platform,
   Pressable,
   ScrollView,
@@ -196,6 +197,8 @@ export function Field({
   );
 }
 
+const DROPDOWN_OPTION_THRESHOLD = 4;
+
 export function SelectRow<T extends string>({
   label,
   value,
@@ -207,6 +210,9 @@ export function SelectRow<T extends string>({
   options: readonly { value: T; label: string }[];
   onChange: (value: T) => void;
 }) {
+  if (options.length >= DROPDOWN_OPTION_THRESHOLD) {
+    return <SelectDropdown label={label} value={value} options={options} onChange={onChange} />;
+  }
   const wide = useChoiceWrap();
   return (
     <View style={styles.field}>
@@ -231,6 +237,166 @@ export function SelectRow<T extends string>({
           </Pressable>
         ))}
       </View>
+    </View>
+  );
+}
+
+export function SelectDropdown<T extends string>({
+  label,
+  value,
+  options,
+  onChange,
+}: {
+  label: string;
+  value: T | '';
+  options: readonly { value: T; label: string }[];
+  onChange: (value: T) => void;
+}) {
+  const { t } = useI18n();
+  const { height } = useWindowDimensions();
+  const [open, setOpen] = useState(false);
+  const selected = options.find((option) => option.value === value);
+
+  return (
+    <View style={styles.field}>
+      <Text style={styles.label}>{label}</Text>
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel={label}
+        onPress={() => setOpen(true)}
+        style={styles.dropdownTrigger}
+      >
+        <Text
+          style={[styles.dropdownValue, !selected && styles.dropdownPlaceholder]}
+          numberOfLines={3}
+        >
+          {selected?.label ?? t.selectOption}
+        </Text>
+        <ChevronDown size={18} color={colors.textMuted} />
+      </Pressable>
+      <Modal visible={open} transparent animationType="fade" onRequestClose={() => setOpen(false)}>
+        <View style={styles.dropdownOverlay}>
+          <Pressable style={StyleSheet.absoluteFill} onPress={() => setOpen(false)} />
+          <View style={[styles.dropdownSheet, { maxHeight: height * 0.78 }]}>
+            <Text style={styles.dropdownTitle}>{label}</Text>
+            <ScrollView
+              keyboardShouldPersistTaps="handled"
+              style={styles.dropdownList}
+              contentContainerStyle={styles.dropdownListContent}
+            >
+              {options.map((option) => {
+                const active = option.value === value;
+                return (
+                  <Pressable
+                    key={option.value}
+                    onPress={() => {
+                      onChange(option.value);
+                      setOpen(false);
+                    }}
+                    style={[styles.dropdownOption, active && styles.dropdownOptionActive]}
+                  >
+                    {active ? <Check size={16} color={colors.white} /> : null}
+                    <Text
+                      style={[
+                        styles.dropdownOptionText,
+                        active && styles.dropdownOptionTextActive,
+                      ]}
+                    >
+                      {option.label}
+                    </Text>
+                  </Pressable>
+                );
+              })}
+            </ScrollView>
+            <Pressable onPress={() => setOpen(false)} style={styles.dropdownCancel}>
+              <Text style={styles.dropdownCancelText}>{t.cancel}</Text>
+            </Pressable>
+          </View>
+        </View>
+      </Modal>
+    </View>
+  );
+}
+
+export function MultiSelectDropdown<T extends string>({
+  label,
+  values,
+  options,
+  onChange,
+}: {
+  label: string;
+  values: readonly T[];
+  options: readonly { value: T; label: string }[];
+  onChange: (values: T[]) => void;
+}) {
+  const { t } = useI18n();
+  const { height } = useWindowDimensions();
+  const [open, setOpen] = useState(false);
+  const selectedLabels = options
+    .filter((option) => values.includes(option.value))
+    .map((option) => option.label)
+    .join(', ');
+
+  return (
+    <View style={styles.field}>
+      <Text style={styles.label}>{label}</Text>
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel={label}
+        onPress={() => setOpen(true)}
+        style={styles.dropdownTrigger}
+      >
+        <Text
+          style={[styles.dropdownValue, !selectedLabels && styles.dropdownPlaceholder]}
+          numberOfLines={3}
+        >
+          {selectedLabels || t.selectOption}
+        </Text>
+        <ChevronDown size={18} color={colors.textMuted} />
+      </Pressable>
+      <Modal visible={open} transparent animationType="fade" onRequestClose={() => setOpen(false)}>
+        <View style={styles.dropdownOverlay}>
+          <Pressable style={StyleSheet.absoluteFill} onPress={() => setOpen(false)} />
+          <View style={[styles.dropdownSheet, { maxHeight: height * 0.78 }]}>
+            <Text style={styles.dropdownTitle}>{label}</Text>
+            <ScrollView
+              keyboardShouldPersistTaps="handled"
+              style={styles.dropdownList}
+              contentContainerStyle={styles.dropdownListContent}
+            >
+              {options.map((option) => {
+                const active = values.includes(option.value);
+                return (
+                  <Pressable
+                    key={option.value}
+                    onPress={() =>
+                      onChange(
+                        active
+                          ? values.filter((value) => value !== option.value)
+                          : [...values, option.value],
+                      )
+                    }
+                    style={[styles.dropdownOption, active && styles.dropdownOptionActive]}
+                  >
+                    {active ? <Check size={16} color={colors.white} /> : null}
+                    <Text
+                      style={[
+                        styles.dropdownOptionText,
+                        active && styles.dropdownOptionTextActive,
+                      ]}
+                    >
+                      {option.label}
+                    </Text>
+                  </Pressable>
+                );
+              })}
+            </ScrollView>
+            <Pressable onPress={() => setOpen(false)} style={styles.dropdownCancel}>
+              <Text style={styles.dropdownCancelText}>{t.close}</Text>
+            </Pressable>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -507,6 +673,54 @@ const styles = StyleSheet.create({
   choiceText: { color: colors.text, fontWeight: '600', flexShrink: 1, minWidth: 0 },
   choiceTextFill: { flex: 1 },
   choiceTextActive: { color: colors.white },
+  dropdownTrigger: {
+    minHeight: 47,
+    width: '100%',
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.white,
+    borderRadius: 10,
+    paddingHorizontal: 13,
+    paddingVertical: 10,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  dropdownValue: { color: colors.text, fontSize: 15, flex: 1, minWidth: 0 },
+  dropdownPlaceholder: { color: colors.textMuted },
+  dropdownOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(15, 23, 20, 0.45)',
+    justifyContent: 'center',
+    padding: 20,
+  },
+  dropdownSheet: {
+    backgroundColor: colors.white,
+    borderRadius: 16,
+    padding: 16,
+    gap: 12,
+    zIndex: 1,
+  },
+  dropdownTitle: { color: colors.text, fontSize: 15, fontWeight: '800' },
+  dropdownList: { flexGrow: 0 },
+  dropdownListContent: { gap: 6, paddingBottom: 4 },
+  dropdownOption: {
+    minHeight: 46,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: colors.white,
+  },
+  dropdownOptionActive: { backgroundColor: colors.primary, borderColor: colors.primary },
+  dropdownOptionText: { color: colors.text, fontWeight: '600', flex: 1, minWidth: 0 },
+  dropdownOptionTextActive: { color: colors.white },
+  dropdownCancel: { alignSelf: 'center', paddingVertical: 6, paddingHorizontal: 12 },
+  dropdownCancelText: { color: colors.primary, fontWeight: '800', fontSize: 14 },
   toggleRow: {
     minHeight: 55,
     paddingVertical: 7,
