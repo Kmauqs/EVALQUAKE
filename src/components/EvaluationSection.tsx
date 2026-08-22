@@ -1,6 +1,6 @@
 import { Camera, ImagePlus, LocateFixed, X } from 'lucide-react-native';
 import { type Href, useRouter } from 'expo-router';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import {
@@ -40,6 +40,8 @@ import {
 import { inspectionPointHints } from '@/guide/content';
 import { useI18n } from '@/i18n/I18nProvider';
 import { exportQuantitiesCsv } from '@/services/exportData';
+import { applyPlaceLookup } from '@/domain/placeLookup';
+import { lookupPlace } from '@/services/reverseGeocode';
 import { colors } from '@/theme';
 import { QuantitySurvey } from './QuantitySurvey';
 import { SignatureCapture } from './SignatureCapture';
@@ -84,60 +86,7 @@ export function EvaluationSection({
   switch (sectionKey) {
     case 'cadastral':
       return (
-        <FormGrid>
-          <Field
-            label={t.fields.department}
-            value={evaluation.identification.department}
-            onChangeText={(department) =>
-              update('identification', { ...evaluation.identification, department })
-            }
-          />
-          <Field
-            label={t.fields.municipality}
-            value={evaluation.identification.municipality}
-            onChangeText={(municipality) =>
-              update('identification', { ...evaluation.identification, municipality })
-            }
-          />
-          <Field
-            label={t.fields.commune}
-            value={evaluation.identification.commune}
-            onChangeText={(commune) => update('identification', { ...evaluation.identification, commune })}
-          />
-          <Field
-            label={t.fields.neighborhood}
-            value={evaluation.identification.neighborhood}
-            onChangeText={(neighborhood) =>
-              update('identification', { ...evaluation.identification, neighborhood })
-            }
-          />
-          <Field
-            label={t.fields.sector}
-            value={evaluation.identification.sector}
-            onChangeText={(sector) => update('identification', { ...evaluation.identification, sector })}
-          />
-          <Field
-            label={t.fields.cadastralCode}
-            value={evaluation.identification.cadastralCode}
-            onChangeText={(cadastralCode) =>
-              update('identification', { ...evaluation.identification, cadastralCode })
-            }
-          />
-          <Field
-            label={t.fields.propertyRegistration}
-            value={evaluation.identification.propertyRegistration}
-            onChangeText={(propertyRegistration) =>
-              update('identification', { ...evaluation.identification, propertyRegistration })
-            }
-          />
-          <CoordinateCapture
-            coordinates={evaluation.identification.coordinates}
-            onCaptureGps={onLocation}
-            onChange={(coordinates) =>
-              update('identification', { ...evaluation.identification, coordinates })
-            }
-          />
-        </FormGrid>
+        <CadastralSection evaluation={evaluation} onChange={onChange} onLocation={onLocation} />
       );
     case 'inspection':
       return (
@@ -1095,6 +1044,128 @@ export function EvaluationSection({
     default:
       return null;
   }
+}
+
+const lastCadastralLookups = new Map<string, string>();
+
+function CadastralSection({
+  evaluation,
+  onChange,
+  onLocation,
+}: {
+  evaluation: Evaluation;
+  onChange: (evaluation: Evaluation) => void;
+  onLocation: () => void;
+}) {
+  const { t } = useI18n();
+  const evaluationRef = useRef(evaluation);
+  const onChangeRef = useRef(onChange);
+  evaluationRef.current = evaluation;
+  onChangeRef.current = onChange;
+  const lastLookup = useRef(lastCadastralLookups.get(evaluation.id) ?? '');
+  const [lookup, setLookup] = useState<'idle' | 'loading' | 'ok' | 'error'>(
+    lastLookup.current ? 'ok' : 'idle',
+  );
+
+  useEffect(() => {
+    const coordinates = evaluation.identification.coordinates;
+    if (!coordinates) {
+      lastLookup.current = '';
+      lastCadastralLookups.delete(evaluation.id);
+      setLookup('idle');
+      return;
+    }
+    const key = `${coordinates.latitude.toFixed(5)},${coordinates.longitude.toFixed(5)}`;
+    if (lastLookup.current === key) return;
+    let cancelled = false;
+    const timer = setTimeout(() => {
+      lastLookup.current = key;
+      setLookup('loading');
+      void lookupPlace(coordinates)
+        .then((place) => {
+          if (cancelled) return;
+          if (!place) {
+            setLookup('error');
+            return;
+          }
+          lastCadastralLookups.set(evaluation.id, key);
+          setLookup('ok');
+          onChangeRef.current(applyPlaceLookup(evaluationRef.current, place));
+        })
+        .catch(() => {
+          if (!cancelled) setLookup('error');
+        });
+    }, 350);
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [evaluation.id, evaluation.identification.coordinates?.latitude, evaluation.identification.coordinates?.longitude]);
+
+  const patchIdentification = (patch: Partial<Evaluation['identification']>) =>
+    onChange({
+      ...evaluation,
+      identification: { ...evaluation.identification, ...patch },
+    });
+
+  const lookupMessage =
+    lookup === 'loading'
+      ? t.locationLookup
+      : lookup === 'error'
+        ? t.locationLookupFailed
+        : t.locationLookupHint;
+
+  return (
+    <FormGrid>
+      <CoordinateCapture
+        coordinates={evaluation.identification.coordinates}
+        onCaptureGps={onLocation}
+        onChange={(coordinates) => patchIdentification({ coordinates })}
+      />
+      <Text style={styles.hint}>{lookupMessage}</Text>
+      <Field
+        label={t.fields.department}
+        value={evaluation.identification.department}
+        onChangeText={(department) => patchIdentification({ department })}
+      />
+      <Field
+        label={t.fields.municipality}
+        value={evaluation.identification.municipality}
+        onChangeText={(municipality) => patchIdentification({ municipality })}
+      />
+      <Field
+        label={t.fields.commune}
+        value={evaluation.identification.commune}
+        onChangeText={(commune) => patchIdentification({ commune })}
+      />
+      <Field
+        label={t.fields.neighborhood}
+        value={evaluation.identification.neighborhood}
+        onChangeText={(neighborhood) => patchIdentification({ neighborhood })}
+      />
+      <Field
+        label={t.address}
+        value={evaluation.building.address}
+        onChangeText={(address) =>
+          onChange({
+            ...evaluation,
+            identification: { ...evaluation.identification, sector: address },
+            building: { ...evaluation.building, address },
+          })
+        }
+      />
+      <Field
+        label={t.fields.cadastralCode}
+        value={evaluation.identification.cadastralCode}
+        onChangeText={(cadastralCode) => patchIdentification({ cadastralCode })}
+      />
+      <Field
+        label={t.fields.propertyRegistration}
+        value={evaluation.identification.propertyRegistration}
+        onChangeText={(propertyRegistration) => patchIdentification({ propertyRegistration })}
+      />
+    </FormGrid>
+  );
 }
 
 function formatCoord(value?: number) {

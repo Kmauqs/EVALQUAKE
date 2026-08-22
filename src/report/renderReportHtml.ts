@@ -42,7 +42,7 @@ export function renderReportHtml(evaluation: Evaluation, language: Language) {
       row(t.fields.municipality, evaluation.identification.municipality) +
       row(t.fields.commune, evaluation.identification.commune) +
       row(t.fields.neighborhood, evaluation.identification.neighborhood) +
-      row(t.fields.sector, evaluation.identification.sector) +
+      row(t.address, evaluation.building.address || evaluation.identification.sector) +
       row(t.fields.cadastralCode, evaluation.identification.cadastralCode) +
       row(t.fields.propertyRegistration, evaluation.identification.propertyRegistration) +
       row(

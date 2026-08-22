@@ -22,7 +22,13 @@ La versión visible en la cabecera de la app sale de `src/version.ts`.
 
 ## [Unreleased]
 
-Cambios posteriores a 0.7.0 se listan aquí hasta el siguiente corte.
+Cambios posteriores a 0.8.0 se listan aquí hasta el siguiente corte.
+
+## [0.8.0] — 2026-08-22
+
+### Added
+
+- La ficha catastral captura GPS al inicio, usa Dirección en lugar de Sector y rellena departamento, municipio, comuna, barrio y dirección desde OpenStreetMap.
 
 ## [0.7.0] — 2026-08-21
 
