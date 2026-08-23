@@ -1,12 +1,19 @@
 # EVALQUAKE
 
-**Versión actual: [0.2.1](CHANGELOG.md)**
+**Versión actual: [0.14.1](CHANGELOG.md)**
 
 ![alt](https://github.com/Kmauqs/EVALQUAKE/blob/main/icon_512.png)
 
 Evaluación rápida de daños en edificaciones, bilingüe (español/inglés) y offline-first para Android, iOS y web. Sigue `ARCHITECTURE.md` y usa `icon_960.png` como icono, favicon, splash y base visual.
 
 Sitio de producción: [https://evalquake.web.app](https://evalquake.web.app)
+
+## Interfaz de usuario:
+<img src="https://github.com/Kmauqs/EVALQUAKE/blob/main/assets/readme/Screenshot_20260823_110020_Chrome.jpg" width="25%"> <img src="https://github.com/Kmauqs/EVALQUAKE/blob/main/assets/readme/Screenshot_20260823_110104_Chrome.jpg" width="25%"> <img src="https://github.com/Kmauqs/EVALQUAKE/blob/main/assets/readme/Screenshot_20260823_110113_Chrome.jpg" width="25%"> <img src="https://github.com/Kmauqs/EVALQUAKE/blob/main/assets/readme/Screenshot_20260823_110144_Chrome.jpg" width="25%"> <img src="https://github.com/Kmauqs/EVALQUAKE/blob/main/assets/readme/Screenshot_20260823_110153_Chrome.jpg" width="25%"> <img src="https://github.com/Kmauqs/EVALQUAKE/blob/main/assets/readme/Screenshot_20260823_110202_Chrome.jpg" width="25%"> <img src="https://github.com/Kmauqs/EVALQUAKE/blob/main/assets/readme/Screenshot_20260823_120550_Chrome.jpg" width="25%">
+
+## Panel de Coordinación y Administración
+![alt](https://github.com/Kmauqs/EVALQUAKE/blob/main/assets/readme/Coordination_2026-08-23%20120928.png)
+![alt](https://github.com/Kmauqs/EVALQUAKE/blob/main/assets/readme/Coordination_2026-08-23%20121009.png)
 
 ## Versionado
 
