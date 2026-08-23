@@ -132,6 +132,7 @@ iOS requiere cuenta Apple Developer. Tras el build, instalar y confirmar la vers
 | Sigue **Modo demostración** | El build no trajo `EXPO_PUBLIC_FIREBASE_*`. Revisar secrets de GitHub o exportar en local con `.env` y `USE_FIREBASE_EMULATORS=false`. |
 | Página **Firebase Hosting Setup Complete** | No deje `public/index.html` de plantilla Firebase: Expo lo copia a `dist` y tapa la app. Exportar de nuevo (`npm run export:web`) y desplegar Hosting. |
 | Cabecera con versión vieja | Hard refresh, o el push/export no se completó. |
+| PWA instalada con versión vieja | Hosting debe enviar `no-cache` en `/` (ver `firebase.json`). En el teléfono: borrar datos del sitio o reinstalar el acceso directo tras el deploy. |
 | Evaluador ve fichas ajenas en web | Cerrar sesión y volver a entrar; el almacén local ahora es por usuario. Borrar datos del sitio solo si persiste en el mismo navegador. |
 | Icono genérico al instalar PWA | Volver a exportar (`npm run export:web`) y desplegar Hosting; el manifest y los PNG deben estar en `dist/`. |
 | Cuenta nueva no puede evaluar | El admin debe aprobar rol y jurisdicción; el usuario pulsa **Comprobar acceso**. |

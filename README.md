@@ -1,6 +1,6 @@
 # EVALQUAKE
 
-**Versión actual: [0.15.0](CHANGELOG.md)**
+**Versión actual: [0.15.1](CHANGELOG.md)**
 
 EVALQUAKE es una aplicación para evaluar daños y habitabilidad de edificaciones después de un sismo. Está pensada para equipos de inspección en campo y para quienes coordinan o administran la respuesta desde un municipio, un departamento o el nivel nacional.
 
@@ -89,7 +89,7 @@ EVALQUAKE trata las inspecciones como información sensible: afectan decisiones 
 
 **Mapa y exportaciones.** Coordinación ubica las inspecciones en mapa y puede exportar listados o un resumen de lo que tiene filtrado en pantalla.
 
-**Infraestructura.** Los datos viven en un servicio en la nube (Firebase): autenticación, base de datos, archivos (fotos y PDF) y lógica de servidor (número consecutivo, PDF oficial, borrados moderados). El sitio público se publica en [evalquake.web.app](https://evalquake.web.app). El número de versión aparece en la cabecera de la app (`v0.15.0` y siguientes) para saber qué versión está en uso.
+**Infraestructura.** Los datos viven en un servicio en la nube (Firebase): autenticación, base de datos, archivos (fotos y PDF) y lógica de servidor (número consecutivo, PDF oficial, borrados moderados). El sitio público se publica en [evalquake.web.app](https://evalquake.web.app). El número de versión aparece en la cabecera de la app (`v0.15.1` y siguientes) para saber qué versión está en uso.
 
 **Idioma.** El selector EN / ES del encabezado cambia el idioma de la interfaz y se recuerda en el dispositivo.
 

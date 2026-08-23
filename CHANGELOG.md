@@ -22,7 +22,13 @@ La versión visible en la cabecera de la app sale de `src/version.ts`.
 
 ## [Unreleased]
 
-Cambios posteriores a 0.15.0 se listan aquí hasta el siguiente corte.
+Cambios posteriores a 0.15.1 se listan aquí hasta el siguiente corte.
+
+## [0.15.1] — 2026-08-23
+
+### Fixed
+
+- Firebase Hosting envía `Cache-Control: no-cache` en el arranque de la PWA (`/` y rutas SPA) para que la app instalada detecte builds nuevos; los bundles con hash en `/_expo/static/**` siguen con caché larga.
 
 ## [0.15.0] — 2026-08-23
 
