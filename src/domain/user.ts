@@ -15,3 +15,8 @@ export interface AppUser {
 }
 
 export const USER_ROLES: UserRole[] = ['evaluator', 'coordinator', 'admin'];
+
+/** Coordinators also capture field evaluations while keeping the coordination panel. */
+export function canAccessEvaluatorWorkspace(role: UserRole | null | undefined) {
+  return role === 'evaluator' || role === 'coordinator';
+}

@@ -8,7 +8,8 @@ export const es = {
   coordinator: 'Coordinación',
   admin: 'Administración',
   evaluatorDescription: 'Capture evaluaciones completas, incluso sin conexión.',
-  coordinatorDescription: 'Supervise el evento, el mapa y las clasificaciones.',
+  coordinatorDescription:
+    'Supervise el evento, el mapa y las clasificaciones, y también puede capturar evaluaciones en campo.',
   adminDescription: 'Apruebe cuentas, asigne roles y desactive usuarios.',
   enter: 'Ingresar',
   back: 'Atrás',
@@ -649,7 +650,8 @@ export const en = {
   coordinator: 'Coordination',
   admin: 'Administration',
   evaluatorDescription: 'Capture complete assessments, even while offline.',
-  coordinatorDescription: 'Monitor the event, map, and classifications.',
+  coordinatorDescription:
+    'Monitor the event, map, and classifications, and also capture field assessments.',
   adminDescription: 'Approve accounts, assign roles, and disable users.',
   enter: 'Enter',
   back: 'Back',
