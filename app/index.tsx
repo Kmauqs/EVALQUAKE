@@ -158,7 +158,7 @@ export default function WelcomeScreen() {
           <Text style={styles.kicker}>{configured ? user?.email : t.demoMode}</Text>
           <Text style={[styles.title, width < 780 && styles.titleNarrow]}>{t.tagline}</Text>
           <Text style={[styles.lead, width < 780 && styles.leadNarrow]}>
-            {t.demoDescription} {t.immutableNotice}
+            {t.homeLead}
           </Text>
         </View>
         <Image

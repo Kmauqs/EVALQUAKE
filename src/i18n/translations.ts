@@ -122,6 +122,8 @@ export const es = {
   immutableNotice: 'Una evaluación enviada no puede sobrescribirse. Las correcciones se registran en el historial.',
   demoMode: 'Modo demostración',
   demoDescription: 'Los datos permanecen en este dispositivo hasta configurar Firebase.',
+  homeLead:
+    'Basado en el Formulario Regional Homogenizado 2A (AIS) y el Manual de Campo para Inspección de Edificaciones Después de un Sismo, con listas de verificación armonizadas con el ATC-20 / ATC-20-2 (Applied Technology Council) — En cumplimiento de la NSR-10 y la reglamentación colombiana de gestión del riesgo',
   signIn: 'Iniciar sesión',
   signOut: 'Cerrar sesión',
   email: 'Correo electrónico',
@@ -764,6 +766,8 @@ export const en = {
   immutableNotice: 'A submitted assessment cannot be overwritten. Corrections are recorded in the audit trail.',
   demoMode: 'Demo mode',
   demoDescription: 'Data remains on this device until Firebase is configured.',
+  homeLead:
+    'Based on the Regional Homogenized Form 2A (AIS) and the Field Manual for Post-Earthquake Building Inspection, with checklists aligned to ATC-20 / ATC-20-2 (Applied Technology Council) — In compliance with NSR-10 and Colombian disaster-risk regulations',
   signIn: 'Sign in',
   signOut: 'Sign out',
   email: 'Email',
