@@ -30,7 +30,7 @@ La misma versión debe coincidir en:
 
 Al cerrar un conjunto de cambios: subir el número, anotar la bitácora y seguir [`DEPLOY.md`](DEPLOY.md).
 
-## Qué incluye 0.2.0
+## Qué incluye desde ver 0.2.0
 
 - Una app Expo Router + TypeScript para Android, iOS y web responsive.
 - Flujo resumible de 17 secciones (modelo 2B/ATC-20).
