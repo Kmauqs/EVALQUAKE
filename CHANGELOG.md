@@ -22,7 +22,13 @@ La versión visible en la cabecera de la app sale de `src/version.ts`.
 
 ## [Unreleased]
 
-Cambios posteriores a 0.12.0 se listan aquí hasta el siguiente corte.
+Cambios posteriores a 0.12.1 se listan aquí hasta el siguiente corte.
+
+## [0.12.1] — 2026-08-22
+
+### Fixed
+
+- El encabezado del informe (marca, título, consecutivo, fecha e identificador) se repite en cada página del PDF impreso.
 
 ## [0.12.0] — 2026-08-22
 

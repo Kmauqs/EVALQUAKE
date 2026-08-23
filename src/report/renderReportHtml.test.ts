@@ -54,6 +54,10 @@ describe('bilingual report renderer', () => {
       spanish.indexOf('ANEXO. MARCO NORMATIVO Y REFERENCIAS TÉCNICAS APLICABLES'),
     );
     expect(english).toContain('IMPORTANT WARNING.');
+    expect(spanish).toContain('<thead>');
+    expect(spanish.indexOf('<thead>')).toBeLessThan(spanish.indexOf('ADVERTENCIA IMPORTANTE.'));
+    expect(spanish).toContain('display:table-header-group');
+    expect(spanish).toContain('border-collapse:separate');
   });
 
   it('embeds signatures, sketches, photographs, captions, and coordinates', () => {
@@ -86,7 +90,10 @@ describe('bilingual report renderer', () => {
     expect(sketchPageIdx).toBeLessThan(photosIdx);
     expect(html).toContain('page-break-before:always');
     expect(html).toContain('page-break-inside:avoid');
-    expect(html).toContain('188mm');
+    expect(html).toContain('170mm');
+    expect(html).toContain('class="print-doc"');
+    expect(html).toContain('<thead>');
+    expect(html).toContain('display:table-header-group');
   });
 
   it('includes the equipment section for complete inspections of essential buildings', () => {

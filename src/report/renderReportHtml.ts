@@ -316,24 +316,37 @@ export function renderReportHtml(evaluation: Evaluation, language: Language) {
       .join('')}</div>`,
   };
 
+  const printRow = (html: string) => `<tr><td>${html}</td></tr>`;
   const content = sectionKeysFor(evaluation)
     .map((key, index) => {
       if (key === 'media') {
         return (
-          sketchPage +
-          titledSection(`${index + 1}. ${t.photoRecord}`, blocks.media)
+          printRow(sketchPage) +
+          printRow(titledSection(`${index + 1}. ${t.photoRecord}`, blocks.media))
         );
       }
-      return section(key, index, blocks[key]);
+      return printRow(section(key, index, blocks[key]));
     })
     .join('');
+
+  const banner = `<header><div class="mark">EQ</div><div><h1>EVALQUAKE</h1><div class="subtitle">${escape(
+    t.tagline,
+  )}</div></div><div class="meta"><strong>${
+    evaluation.officialNumber ? `N.º ${evaluation.officialNumber}` : escape(t.officialPending)
+  }</strong><br>${escape(new Date(evaluation.inspectedAt).toLocaleString(language))}<br>${escape(
+    evaluation.id,
+  )}</div></header>`;
 
   const documentHtml = `<!doctype html>
 <html lang="${language}"><head><meta charset="utf-8"><title>EVALQUAKE — ${escape(
     evaluation.building.address || evaluation.id,
   )}</title><style>
 @page{margin:12mm}*{box-sizing:border-box}body{font-family:Arial,sans-serif;color:#17251c;margin:0;font-size:11px;background:#f5f8f3;padding:18px}
-header{display:flex;align-items:center;border-bottom:4px solid #176235;padding-bottom:14px;margin-bottom:18px;background:#fff;padding:14px;border-radius:8px}
+.print-doc{width:100%;border-collapse:separate;border-spacing:0}
+.print-doc>thead{display:table-header-group}
+.print-doc>tbody{display:table-row-group}
+.print-doc>thead>tr>td,.print-doc>tbody>tr>td{padding:0;border:0;background:transparent;vertical-align:top;text-align:left;font-weight:400}
+header{display:flex;align-items:center;border-bottom:4px solid #176235;margin-bottom:18px;background:#fff;padding:14px;border-radius:8px}
 .mark{width:54px;height:54px;border-radius:50%;background:#176235;color:#fff;display:flex;align-items:center;justify-content:center;font-size:24px;font-weight:bold;margin-right:14px}
 h1{color:#176235;font-size:24px;margin:0}.subtitle{color:#637068;margin-top:4px}.meta{margin-left:auto;text-align:right}
 .preamble{border:1px solid #d9e2d8;border-radius:8px;margin:0 0 11px;background:#fff;padding:12px 14px}
@@ -361,15 +374,13 @@ h2{background:#eef3ec;color:#0e4525;font-size:13px;margin:0;padding:9px 12px}.ro
 .sketch-frame img{max-width:100%;max-height:min(70vh,240mm);width:auto;height:auto;object-fit:contain}
 .photos{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;padding:12px}.photos figure{margin:0;border:1px solid #d9e2d8;padding:6px;break-inside:avoid}.photos img{width:100%;height:180px;object-fit:contain}.photos figcaption{font-size:9px;color:#637068;margin-top:5px}
 @media screen{.sketch-page{min-height:70vh}}
-@media print{body{padding:0;background:#fff}section.sketch-page{break-before:page;break-after:page;page-break-before:always;page-break-after:always;page-break-inside:avoid;break-inside:avoid;min-height:0;height:auto;margin:0;border-radius:0;overflow:visible;display:block}.sketch-frame{display:block;padding:10px 12px 14px}.sketch-frame img{display:block;width:100%;height:188mm;max-width:100%;max-height:188mm;object-fit:contain;page-break-inside:avoid}}
+@media print{body{padding:0;background:#fff}.print-doc>thead{display:table-header-group}header{padding:8px 10px;margin-bottom:8px;border-radius:0}.mark{width:36px;height:36px;font-size:16px;margin-right:10px}h1{font-size:16px}.subtitle{font-size:10px}.meta{font-size:10px}section.sketch-page{break-before:page;break-after:page;page-break-before:always;page-break-after:always;page-break-inside:avoid;break-inside:avoid;min-height:0;height:auto;margin:0;border-radius:0;overflow:visible;display:block}.sketch-frame{display:block;padding:10px 12px 14px}.sketch-frame img{display:block;width:100%;height:170mm;max-width:100%;max-height:170mm;object-fit:contain;page-break-inside:avoid}}
 footer{text-align:center;color:#637068;margin-top:15px}
-</style></head><body><header><div class="mark">EQ</div><div><h1>EVALQUAKE</h1><div class="subtitle">${escape(
-    t.tagline,
-  )}</div></div><div class="meta"><strong>${
-    evaluation.officialNumber ? `N.º ${evaluation.officialNumber}` : escape(t.officialPending)
-  }</strong><br>${escape(new Date(evaluation.inspectedAt).toLocaleString(language))}<br>${escape(
-    evaluation.id,
-  )}</div></header>${renderReportPreambleHtml(language)}${content}${renderReportAnnexHtml()}<footer>${escape(t.immutableNotice)}</footer></body></html>`;
+</style></head><body><table class="print-doc"><thead><tr><td>${banner}</td></tr></thead><tbody>${printRow(
+    renderReportPreambleHtml(language),
+  )}${content}${printRow(renderReportAnnexHtml())}${printRow(
+    `<footer>${escape(t.immutableNotice)}</footer>`,
+  )}</tbody></table></body></html>`;
 
   return wrapPrintableHtml(documentHtml, printLabel(t));
 }
