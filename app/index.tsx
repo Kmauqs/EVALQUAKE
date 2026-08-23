@@ -5,6 +5,7 @@ import { ActivityIndicator, Alert, Image, Linking, Platform, Pressable, StyleShe
 
 import { authErrorMessage, useAuth } from '@/auth/AuthProvider';
 import { AppShell, Button, Card, Field, OfflinePill, ToggleRow } from '@/components/ui';
+import { canAccessEvaluatorWorkspace } from '@/domain/user';
 import { useI18n } from '@/i18n/I18nProvider';
 import { colors } from '@/theme';
 
@@ -167,7 +168,7 @@ export default function WelcomeScreen() {
       </View>
 
       <View style={[styles.roles, width < 780 && styles.rolesNarrow]}>
-        {(role === 'evaluator' || !configured) && (
+        {(canAccessEvaluatorWorkspace(role) || !configured) && (
           <Card style={styles.roleCard}>
             <View style={styles.icon}>
               <ClipboardCheck color={colors.primary} size={28} />

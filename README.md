@@ -1,6 +1,6 @@
 # EVALQUAKE
 
-**Versión actual: [0.14.1](CHANGELOG.md)**
+**Versión actual: [0.15.0](CHANGELOG.md)**
 
 EVALQUAKE es una aplicación para evaluar daños y habitabilidad de edificaciones después de un sismo. Está pensada para equipos de inspección en campo y para quienes coordinan o administran la respuesta desde un municipio, un departamento o el nivel nacional.
 
@@ -34,6 +34,7 @@ Después de un terremoto, los evaluadores visitan viviendas y edificios, registr
 
 ### Coordinación
 
+- Puede usar también el flujo de **Evaluador**: crear y completar inspecciones propias en campo, con la misma experiencia offline, fotos, informe y pancarta.
 - Ver las inspecciones de su jurisdicción (o del evento completo si tiene alcance nacional), con el nombre o correo de quien las diligenció.
 - Filtrar por nivel de daño y por evaluador.
 - Consultar el mapa con marcadores según habitabilidad (vista de calle o satélite).
@@ -62,7 +63,7 @@ Sin esa aprobación no puede evaluar ni ver el panel de coordinación. El primer
 
 EVALQUAKE trata las inspecciones como información sensible: afectan decisiones sobre ocupación de viviendas y pueden tener valor de auditoría.
 
-**Quién ve qué.** Cada evaluador solo ve lo suyo y lo que le compartieron. Coordinación y administración ven el conjunto de su ámbito, no “todo el mundo por defecto”. En un mismo computador o navegador, si varias personas inician sesión, cada una ve solo sus datos: no se mezclan las fichas locales de una cuenta con las de otra.
+**Quién ve qué.** Cada evaluador solo ve lo suyo y lo que le compartieron. Quien tiene rol de coordinación puede evaluar en campo (y entonces ve sus fichas propias como evaluador) y, en el panel de coordinación, ve el conjunto de su ámbito. Administración ve el conjunto de su ámbito. En un mismo computador o navegador, si varias personas inician sesión, cada una ve solo sus datos: no se mezclan las fichas locales de una cuenta con las de otra.
 
 **Quién puede borrar.** Los evaluadores solo borran sus borradores. Coordinación puede limpiar borradores ajenos (por ejemplo, pruebas o duplicados). Administración puede borrar cualquier ficha, pero con aviso y dejando constancia en un registro que solo ella consulta.
 
@@ -88,7 +89,7 @@ EVALQUAKE trata las inspecciones como información sensible: afectan decisiones 
 
 **Mapa y exportaciones.** Coordinación ubica las inspecciones en mapa y puede exportar listados o un resumen de lo que tiene filtrado en pantalla.
 
-**Infraestructura.** Los datos viven en un servicio en la nube (Firebase): autenticación, base de datos, archivos (fotos y PDF) y lógica de servidor (número consecutivo, PDF oficial, borrados moderados). El sitio público se publica en [evalquake.web.app](https://evalquake.web.app). El número de versión aparece en la cabecera de la app (`v0.14.1` y siguientes) para saber qué versión está en uso.
+**Infraestructura.** Los datos viven en un servicio en la nube (Firebase): autenticación, base de datos, archivos (fotos y PDF) y lógica de servidor (número consecutivo, PDF oficial, borrados moderados). El sitio público se publica en [evalquake.web.app](https://evalquake.web.app). El número de versión aparece en la cabecera de la app (`v0.15.0` y siguientes) para saber qué versión está en uso.
 
 **Idioma.** El selector EN / ES del encabezado cambia el idioma de la interfaz y se recuerda en el dispositivo.
 

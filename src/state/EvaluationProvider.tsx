@@ -20,6 +20,7 @@ import {
   saveLocalEvaluation,
   setLocalStoreUser,
 } from '@/services/localStore';
+import { canAccessEvaluatorWorkspace } from '@/domain/user';
 
 interface EvaluationState {
   evaluations: Evaluation[];
@@ -78,7 +79,7 @@ export function EvaluationProvider({ children }: React.PropsWithChildren) {
     if (configured && authLoading) return;
     await setLocalStoreUser(uid);
     const records = await listLocalEvaluations();
-    if (configured && role === 'evaluator') {
+    if (configured && canAccessEvaluatorWorkspace(role)) {
       setEvaluations(mergeEvaluatorList(remoteMineRef.current, records, uid));
     } else {
       setEvaluations(
@@ -115,7 +116,7 @@ export function EvaluationProvider({ children }: React.PropsWithChildren) {
   }, [authLoading, refresh, configured, user, runSync]);
 
   useEffect(() => {
-    if (!configured || !user || role === 'coordinator' || role === 'admin') {
+    if (!configured || !user || role === 'admin') {
       remoteMineRef.current = [];
       return;
     }
@@ -175,7 +176,9 @@ export function EvaluationProvider({ children }: React.PropsWithChildren) {
       await saveLocalEvaluation(next);
       setEvaluations((records) => {
         const merged = [next, ...records.filter((item) => item.id !== next.id)];
-        return role === 'evaluator' ? merged.filter((item) => isEvaluatorVisible(item, uid)) : merged;
+        return canAccessEvaluatorWorkspace(role)
+          ? merged.filter((item) => isEvaluatorVisible(item, uid))
+          : merged;
       });
       shouldSync = configured && next.status === 'submitted';
     });

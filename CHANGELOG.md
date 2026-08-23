@@ -22,12 +22,19 @@ La versión visible en la cabecera de la app sale de `src/version.ts`.
 
 ## [Unreleased]
 
-Cambios posteriores a 0.14.1 se listan aquí hasta el siguiente corte.
+Cambios posteriores a 0.15.0 se listan aquí hasta el siguiente corte.
+
+## [0.15.0] — 2026-08-23
+
+### Added
+
+- Los usuarios con rol **coordinator** también pueden usar el flujo de evaluador: crear y completar inspecciones propias, además del panel de coordinación para ver el avance general.
+- Suscripción remota a las fichas propias/compartidas también para coordinación, para que el apoyo en campo se sincronice entre dispositivos.
 
 ### Changed
 
-- `README.md` reescrito en lenguaje natural para personal no técnico: funcionalidad por rol, seguridad y aspectos técnicos resumidos.
-- Documentación técnica (`DEPLOY.md`, `ARCHITECTURE.md`): visibilidad por rol, compartir inspector de apoyo, moderación y registro de acciones, almacén local web por usuario, PWA e iconos de instalación.
+- Descripción del rol de coordinación (ES/EN) y README: deja explícito que también captura evaluaciones en campo.
+- Al cargar fotografías (cámara o galería) se redimensionan (lado mayor 1280 px) y se comprimen a JPEG (~65 %) antes de guardarlas, para reducir el uso de Firebase Storage y el peso de los PDF de informe. En web, si falla el compresor nativo, se usa un respaldo por canvas (antes el `base64` del selector se guardaba sin comprimir).
 
 ## [0.14.1] — 2026-08-23
 

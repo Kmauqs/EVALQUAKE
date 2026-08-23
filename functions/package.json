@@ -1,6 +1,6 @@
 {
   "name": "evalquake-functions",
-  "version": "0.14.1",
+  "version": "0.15.0",
   "private": true,
   "main": "lib/functions/src/index.js",
   "engines": {

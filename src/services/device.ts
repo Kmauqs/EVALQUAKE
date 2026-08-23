@@ -43,12 +43,12 @@ export async function pickDamagePhotos(
     source === 'camera'
       ? await ImagePicker.launchCameraAsync({
           mediaTypes: ['images'],
-          quality: 0.8,
+          quality: 0.7,
           base64: Platform.OS === 'web',
         })
       : await ImagePicker.launchImageLibraryAsync({
           mediaTypes: ['images'],
-          quality: 0.8,
+          quality: 0.7,
           allowsMultipleSelection: allowMultiple,
           selectionLimit: allowMultiple ? 20 : 1,
           base64: Platform.OS === 'web',
