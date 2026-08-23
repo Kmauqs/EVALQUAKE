@@ -75,6 +75,8 @@ describe('bilingual report renderer', () => {
     expect(signatureIdx).toBeLessThan(sketchPageIdx);
     expect(sketchPageIdx).toBeLessThan(photosIdx);
     expect(html).toContain('page-break-before:always');
+    expect(html).toContain('page-break-inside:avoid');
+    expect(html).toContain('188mm');
   });
 
   it('includes the equipment section for complete inspections of essential buildings', () => {

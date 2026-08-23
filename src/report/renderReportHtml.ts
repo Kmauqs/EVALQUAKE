@@ -331,7 +331,7 @@ export function renderReportHtml(evaluation: Evaluation, language: Language) {
 <html lang="${language}"><head><meta charset="utf-8"><title>EVALQUAKE — ${escape(
     evaluation.building.address || evaluation.id,
   )}</title><style>
-@page{size:A4;margin:15mm}*{box-sizing:border-box}body{font-family:Arial,sans-serif;color:#17251c;margin:0;font-size:11px;background:#f5f8f3;padding:18px}
+@page{margin:12mm}*{box-sizing:border-box}body{font-family:Arial,sans-serif;color:#17251c;margin:0;font-size:11px;background:#f5f8f3;padding:18px}
 header{display:flex;align-items:center;border-bottom:4px solid #176235;padding-bottom:14px;margin-bottom:18px;background:#fff;padding:14px;border-radius:8px}
 .mark{width:54px;height:54px;border-radius:50%;background:#176235;color:#fff;display:flex;align-items:center;justify-content:center;font-size:24px;font-weight:bold;margin-right:14px}
 h1{color:#176235;font-size:24px;margin:0}.subtitle{color:#637068;margin-top:4px}.meta{margin-left:auto;text-align:right}
@@ -345,12 +345,13 @@ h2{background:#eef3ec;color:#0e4525;font-size:13px;margin:0;padding:9px 12px}.ro
 .signature-field strong{display:block;color:#637068;margin-bottom:8px}
 .signature-field img{display:block;width:100%;max-height:90px;object-fit:contain;background:#f5f8f3}
 .signature-field .blank{min-height:72px;border:1px dashed #d9e2d8;background:#f5f8f3}
-.sketch-page{break-inside:auto;break-before:page;break-after:page;page-break-before:always;page-break-after:always;min-height:calc(297mm - 30mm);display:flex;flex-direction:column}
+.sketch-page{break-before:page;page-break-before:always;display:flex;flex-direction:column;overflow:visible}
 .sketch-page h2{flex-shrink:0}
-.sketch-frame{flex:1;display:flex;align-items:center;justify-content:center;padding:12px;min-height:0}
-.sketch-frame img{max-width:100%;max-height:100%;width:auto;height:auto;object-fit:contain}
+.sketch-frame{flex:1;display:flex;align-items:center;justify-content:center;padding:12px}
+.sketch-frame img{max-width:100%;max-height:min(70vh,240mm);width:auto;height:auto;object-fit:contain}
 .photos{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;padding:12px}.photos figure{margin:0;border:1px solid #d9e2d8;padding:6px;break-inside:avoid}.photos img{width:100%;height:180px;object-fit:contain}.photos figcaption{font-size:9px;color:#637068;margin-top:5px}
-@media print{section.sketch-page{height:100vh;min-height:0;margin:0;border-radius:0}}
+@media screen{.sketch-page{min-height:70vh}}
+@media print{body{padding:0;background:#fff}section.sketch-page{break-before:page;break-after:page;page-break-before:always;page-break-after:always;page-break-inside:avoid;break-inside:avoid;min-height:0;height:auto;margin:0;border-radius:0;overflow:visible;display:block}.sketch-frame{display:block;padding:10px 12px 14px}.sketch-frame img{display:block;width:100%;height:188mm;max-width:100%;max-height:188mm;object-fit:contain;page-break-inside:avoid}}
 footer{text-align:center;color:#637068;margin-top:15px}
 </style></head><body><header><div class="mark">EQ</div><div><h1>EVALQUAKE</h1><div class="subtitle">${escape(
     t.tagline,

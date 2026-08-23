@@ -22,7 +22,13 @@ La versión visible en la cabecera de la app sale de `src/version.ts`.
 
 ## [Unreleased]
 
-Cambios posteriores a 0.11.6 se listan aquí hasta el siguiente corte.
+Cambios posteriores a 0.11.7 se listan aquí hasta el siguiente corte.
+
+## [0.11.7] — 2026-08-22
+
+### Fixed
+
+- Al imprimir el informe en PDF, el croquis cabe en una sola página junto con su título y ya no se recorta.
 
 ## [0.11.6] — 2026-08-22
 
