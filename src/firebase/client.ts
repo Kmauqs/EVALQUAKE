@@ -1,9 +1,12 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { getApp, getApps, initializeApp, type FirebaseApp } from 'firebase/app';
 import {
+  browserLocalPersistence,
   connectAuthEmulator,
   getAuth,
   initializeAuth,
   type Auth,
+  type Persistence,
 } from 'firebase/auth';
 import {
   connectFirestoreEmulator,
@@ -49,6 +52,27 @@ interface FirebaseServices {
 let services: FirebaseServices | null = null;
 let emulatorsConnected = false;
 
+function createAuth(app: FirebaseApp): Auth {
+  try {
+    if (Platform.OS === 'web') {
+      return initializeAuth(app, { persistence: browserLocalPersistence });
+    }
+    const reactNativePersistence = (
+      // Native Firebase Auth typings omit this helper in the web export used by tsc.
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      require('firebase/auth') as {
+        getReactNativePersistence?: (storage: typeof AsyncStorage) => Persistence;
+      }
+    ).getReactNativePersistence;
+    if (reactNativePersistence) {
+      return initializeAuth(app, { persistence: reactNativePersistence(AsyncStorage) });
+    }
+    return initializeAuth(app);
+  } catch {
+    return getAuth(app);
+  }
+}
+
 export function getFirebaseServices(): FirebaseServices | null {
   if (!firebaseConfigured) return null;
   if (services) return services;
@@ -66,12 +90,7 @@ export function getFirebaseServices(): FirebaseServices | null {
     db = getFirestore(app);
   }
 
-  let auth: Auth;
-  try {
-    auth = initializeAuth(app);
-  } catch {
-    auth = getAuth(app);
-  }
+  const auth = createAuth(app);
   const storage = getStorage(app);
   const functions = getFunctions(app, 'us-central1');
 
