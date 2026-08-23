@@ -22,7 +22,13 @@ La versión visible en la cabecera de la app sale de `src/version.ts`.
 
 ## [Unreleased]
 
-Cambios posteriores a 0.12.1 se listan aquí hasta el siguiente corte.
+Cambios posteriores a 0.12.2 se listan aquí hasta el siguiente corte.
+
+## [0.12.2] — 2026-08-23
+
+### Fixed
+
+- Las inspecciones usan las jurisdicciones reales de la cuenta (municipio, departamento o Nacional) en lugar del marcador interno `jurisdiction-demo`, para que el panel de coordinación vea el evento completo.
 
 ## [0.12.1] — 2026-08-22
 

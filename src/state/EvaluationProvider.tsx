@@ -2,6 +2,7 @@ import React, { createContext, useCallback, useContext, useEffect, useMemo, useS
 
 import { useAuth } from '@/auth/AuthProvider';
 import { canDeleteEvaluation, canSaveEvaluation, createEvaluation, type Evaluation } from '@/domain/evaluation';
+import { resolveEvaluationJurisdiction, hasNationalScope } from '@/domain/jurisdiction';
 import { subscribeUserEvaluations } from '@/firebase/repository';
 import { syncOutbox } from '@/firebase/sync';
 import {
@@ -65,37 +66,59 @@ export function EvaluationProvider({ children }: React.PropsWithChildren) {
 
   useEffect(() => {
     if (!configured || !user) return;
-    return subscribeUserEvaluations(user.uid, jurisdictionIds, (remoteRecords) => {
-      void Promise.all(
-        remoteRecords
-          .filter(
-            (record) =>
-              record.status === 'synced' ||
-              record.officialNumber != null ||
-              Boolean(record.canonicalPdfStoragePath),
-          )
-          .map((record) => saveLocalEvaluation(record, false)),
-      ).then(refresh);
-    });
+    return subscribeUserEvaluations(
+      user.uid,
+      jurisdictionIds,
+      (remoteRecords) => {
+        void Promise.all(
+          remoteRecords
+            .filter(
+              (record) =>
+                record.status === 'synced' ||
+                record.officialNumber != null ||
+                Boolean(record.canonicalPdfStoragePath),
+            )
+            .map((record) => saveLocalEvaluation(record, false)),
+        ).then(refresh);
+      },
+      undefined,
+      { allMine: hasNationalScope(jurisdictionIds) },
+    );
   }, [configured, jurisdictionIds, refresh, user]);
 
   const save = useCallback(async (evaluation: Evaluation) => {
+    let shouldSync = false;
     await serializeWrite(async () => {
       const existing = await getLocalEvaluation(evaluation.id);
       if (!canSaveEvaluation(existing, evaluation)) {
         throw new Error('Submitted evaluations are immutable');
       }
-      const next = { ...evaluation, updatedAt: new Date().toISOString() };
+      const next = {
+        ...evaluation,
+        jurisdictionId: resolveEvaluationJurisdiction(
+          jurisdictionIds,
+          evaluation.identification,
+          evaluation.jurisdictionId,
+        ),
+        updatedAt: new Date().toISOString(),
+      };
       await saveLocalEvaluation(next);
       setEvaluations((records) => [next, ...records.filter((item) => item.id !== next.id)]);
+      shouldSync = configured && next.status === 'submitted';
     });
-  }, []);
+    if (shouldSync) void syncOutbox().then(refresh);
+  }, [configured, jurisdictionIds, refresh]);
 
   const create = useCallback(async () => {
-    const next = createEvaluation(undefined, uid);
+    const next = createEvaluation(
+      undefined,
+      uid,
+      undefined,
+      resolveEvaluationJurisdiction(jurisdictionIds),
+    );
     await save(next);
     return next;
-  }, [save, uid]);
+  }, [jurisdictionIds, save, uid]);
 
   const get = useCallback(async (id: string) => getLocalEvaluation(id), []);
 

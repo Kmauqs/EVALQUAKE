@@ -74,7 +74,7 @@ El primer administrador no puede autoaprobarse. Desde `functions/`:
 
 ```powershell
 $env:GOOGLE_APPLICATION_CREDENTIALS="RUTA\al-adminsdk.json"
-node scripts/set-user-role.mjs user@domain.com admin jurisdiction-demo
+node scripts/set-user-role.mjs user@domain.com admin Nacional
 ```
 
 Claims:
@@ -82,11 +82,11 @@ Claims:
 ```json
 {
   "role": "evaluator",
-  "jurisdictionIds": ["jurisdiction-demo"]
+  "jurisdictionIds": ["Nacional", "Cali", "Armenia"]
 }
 ```
 
-Roles: `evaluator`, `coordinator`, `admin`. Las reglas de Firestore limitan lecturas/escrituras a las jurisdicciones del token. Una evaluación `submitted` ya no se edita ni borra desde el cliente. Los evaluadores sí pueden eliminar borradores incompletos.
+Roles: `evaluator`, `coordinator`, `admin`. Las reglas de Firestore limitan lecturas/escrituras a las jurisdicciones del token. La etiqueta `Nacional` da visibilidad de todas las inspecciones del evento en el panel de coordinación. Una evaluación `submitted` ya no se edita ni borra desde el cliente. Los evaluadores sí pueden eliminar borradores incompletos.
 
 ## Despliegue de producción
 

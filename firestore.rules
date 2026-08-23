@@ -14,9 +14,16 @@ service cloud.firestore {
       return request.auth.token.jurisdictionIds;
     }
 
+    function hasNationalScope() {
+      return signedIn() && (
+        role() == 'admin' ||
+        (jurisdictions() is list && 'Nacional' in jurisdictions())
+      );
+    }
+
     function canAccessJurisdiction(jurisdictionId) {
       return signedIn() &&
-        (role() == 'admin' || jurisdictionId in jurisdictions());
+        (hasNationalScope() || (jurisdictions() is list && jurisdictionId in jurisdictions()));
     }
 
     match /users/{userId} {
@@ -44,6 +51,7 @@ service cloud.firestore {
         && request.resource.data.createdByUserId == request.auth.uid
         && request.resource.data.officialNumber == null;
       allow update: if canAccessJurisdiction(resource.data.jurisdictionId)
+        && canAccessJurisdiction(request.resource.data.jurisdictionId)
         && resource.data.status == 'draft'
         && (
           request.auth.uid == resource.data.createdByUserId
@@ -51,7 +59,6 @@ service cloud.firestore {
         )
         && request.resource.data.id == resource.data.id
         && request.resource.data.createdByUserId == resource.data.createdByUserId
-        && request.resource.data.jurisdictionId == resource.data.jurisdictionId
         && request.resource.data.officialNumber == resource.data.officialNumber
         && request.resource.data.status in ['draft', 'submitted'];
       allow delete: if canAccessJurisdiction(resource.data.jurisdictionId)

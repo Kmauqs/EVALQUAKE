@@ -7,6 +7,7 @@ import { EvaluationMap } from '@/components/EvaluationMap';
 import { AppShell, Button, Card, ClassificationBadge } from '@/components/ui';
 import { useAuth } from '@/auth/AuthProvider';
 import type { Evaluation, Habitability } from '@/domain/evaluation';
+import { hasNationalScope } from '@/domain/jurisdiction';
 import { demoEvaluations } from '@/domain/fixtures';
 import { subscribeRemoteEvaluations } from '@/firebase/repository';
 import { useI18n } from '@/i18n/I18nProvider';
@@ -17,7 +18,7 @@ import { colors } from '@/theme';
 
 export default function CoordinatorDashboard() {
   const { t, language } = useI18n();
-  const { configured, jurisdictionIds } = useAuth();
+  const { configured, jurisdictionIds, role } = useAuth();
   const { evaluations: local } = useEvaluations();
   const router = useRouter();
   const goBack = useSafeBack('/');
@@ -29,9 +30,15 @@ export default function CoordinatorDashboard() {
   useEffect(
     () =>
       configured
-        ? subscribeRemoteEvaluations(jurisdictionIds, 'event-2026', setRemote)
+        ? subscribeRemoteEvaluations(
+            jurisdictionIds,
+            'event-2026',
+            setRemote,
+            undefined,
+            { allEvent: role === 'admin' || hasNationalScope(jurisdictionIds) },
+          )
         : () => undefined,
-    [configured, jurisdictionIds],
+    [configured, jurisdictionIds, role],
   );
   const evaluations = useMemo(
     () =>

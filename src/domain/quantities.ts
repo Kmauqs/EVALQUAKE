@@ -1,4 +1,4 @@
-import type { Dictionary } from '@/i18n/translations';
+import type { Dictionary } from '../i18n/translations';
 
 import type { Evaluation } from './evaluation';
 import type {

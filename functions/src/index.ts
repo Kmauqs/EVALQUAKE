@@ -183,14 +183,19 @@ export const exportEvaluations = onCall(
       throw new HttpsError('invalid-argument', 'eventId and jurisdictionId are required.');
     }
     const allowed = (request.auth.token.jurisdictionIds as string[] | undefined) ?? [];
-    if (role !== 'admin' && !allowed.includes(jurisdictionId)) {
+    const nationalScope =
+      role === 'admin' || allowed.some((id) => id.trim().toLowerCase() === 'nacional');
+    if (role !== 'admin' && !allowed.includes(jurisdictionId) && !nationalScope) {
       throw new HttpsError('permission-denied', 'Jurisdiction access denied.');
     }
 
-    const snapshot = await db
-      .collection('evaluations')
-      .where('eventId', '==', eventId)
-      .where('jurisdictionId', '==', jurisdictionId)
+    const snapshot = await (nationalScope && jurisdictionId.trim().toLowerCase() === 'nacional'
+      ? db.collection('evaluations').where('eventId', '==', eventId)
+      : db
+          .collection('evaluations')
+          .where('eventId', '==', eventId)
+          .where('jurisdictionId', '==', jurisdictionId)
+    )
       .orderBy('updatedAt', 'desc')
       .limit(5000)
       .get();

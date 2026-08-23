@@ -111,14 +111,20 @@ export async function pullEvaluation(id: string): Promise<Evaluation | null> {
 export async function listRemoteEvaluations(
   jurisdictionIds: string[],
   eventId: string,
+  options?: { allEvent?: boolean },
 ): Promise<Evaluation[]> {
   const services = getFirebaseServices();
-  if (!services || jurisdictionIds.length === 0) return [];
+  const allEvent = options?.allEvent === true;
+  if (!services || (!allEvent && jurisdictionIds.length === 0)) return [];
   const snapshot = await getDocs(
     query(
       collection(services.db, 'evaluations'),
-      where('eventId', '==', eventId),
-      where('jurisdictionId', 'in', jurisdictionIds.slice(0, 10)),
+      ...(allEvent
+        ? [where('eventId', '==', eventId)]
+        : [
+            where('eventId', '==', eventId),
+            where('jurisdictionId', 'in', jurisdictionIds.slice(0, 10)),
+          ]),
       orderBy('updatedAt', 'desc'),
       limit(500),
     ),
@@ -139,17 +145,23 @@ export function subscribeRemoteEvaluations(
   eventId: string,
   onChange: (evaluations: Evaluation[]) => void,
   onError?: (error: Error) => void,
+  options?: { allEvent?: boolean },
 ) {
   const services = getFirebaseServices();
-  if (!services || jurisdictionIds.length === 0) {
+  const allEvent = options?.allEvent === true;
+  if (!services || (!allEvent && jurisdictionIds.length === 0)) {
     onChange([]);
     return () => undefined;
   }
   return onSnapshot(
     query(
       collection(services.db, 'evaluations'),
-      where('eventId', '==', eventId),
-      where('jurisdictionId', 'in', jurisdictionIds.slice(0, 10)),
+      ...(allEvent
+        ? [where('eventId', '==', eventId)]
+        : [
+            where('eventId', '==', eventId),
+            where('jurisdictionId', 'in', jurisdictionIds.slice(0, 10)),
+          ]),
       orderBy('updatedAt', 'desc'),
       limit(500),
     ),
@@ -164,17 +176,23 @@ export function subscribeUserEvaluations(
   jurisdictionIds: string[],
   onChange: (evaluations: Evaluation[]) => void,
   onError?: (error: Error) => void,
+  options?: { allMine?: boolean },
 ) {
   const services = getFirebaseServices();
-  if (!services || jurisdictionIds.length === 0) {
+  const allMine = options?.allMine === true;
+  if (!services || (!allMine && jurisdictionIds.length === 0)) {
     onChange([]);
     return () => undefined;
   }
   return onSnapshot(
     query(
       collection(services.db, 'evaluations'),
-      where('createdByUserId', '==', userId),
-      where('jurisdictionId', 'in', jurisdictionIds.slice(0, 10)),
+      ...(allMine
+        ? [where('createdByUserId', '==', userId)]
+        : [
+            where('createdByUserId', '==', userId),
+            where('jurisdictionId', 'in', jurisdictionIds.slice(0, 10)),
+          ]),
       orderBy('updatedAt', 'desc'),
       limit(500),
     ),

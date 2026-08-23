@@ -283,12 +283,13 @@ export function createEvaluation(
   id = cryptoRandomId(),
   createdByUserId = 'demo-evaluator',
   deviceId = 'demo-device',
+  jurisdictionId = 'jurisdiction-demo',
 ): Evaluation {
   const now = new Date().toISOString();
   return {
     id,
     eventId: 'event-2026',
-    jurisdictionId: 'jurisdiction-demo',
+    jurisdictionId,
     status: 'draft',
     syncState: 'local',
     officialNumber: null,

@@ -13,8 +13,14 @@ service firebase.storage {
         && (
           request.auth.token.role == 'admin'
           || (
-            request.resource.metadata.jurisdictionId in request.auth.token.jurisdictionIds
-            && request.resource.metadata.createdByUserId == request.auth.uid
+            request.resource.metadata.createdByUserId == request.auth.uid
+            && (
+              request.auth.token.jurisdictionIds is list
+              && (
+                'Nacional' in request.auth.token.jurisdictionIds
+                || request.resource.metadata.jurisdictionId in request.auth.token.jurisdictionIds
+              )
+            )
           )
         );
     }
@@ -25,7 +31,13 @@ service firebase.storage {
       ).data;
       return signedIn() && (
         request.auth.token.role == 'admin'
-        || evaluation.jurisdictionId in request.auth.token.jurisdictionIds
+        || (
+          request.auth.token.jurisdictionIds is list
+          && (
+            'Nacional' in request.auth.token.jurisdictionIds
+            || evaluation.jurisdictionId in request.auth.token.jurisdictionIds
+          )
+        )
       );
     }
 

@@ -115,9 +115,7 @@ function UserCard({
 }) {
   const { t } = useI18n();
   const [role, setRole] = useState<UserRole>(user.role ?? 'evaluator');
-  const [jurisdictions, setJurisdictions] = useState(
-    user.jurisdictionIds.join(', ') || 'jurisdiction-demo',
-  );
+  const [jurisdictions, setJurisdictions] = useState(user.jurisdictionIds.join(', '));
 
   const save = async () => {
     onBusy(user.id);
@@ -167,7 +165,7 @@ function UserCard({
         label={t.jurisdictions}
         value={jurisdictions}
         onChangeText={setJurisdictions}
-        placeholder="jurisdiction-demo"
+        placeholder="Nacional, Armenia, Cali"
       />
       <View style={styles.userActions}>
         <Button loading={busy} onPress={() => void save()} style={styles.userButton}>

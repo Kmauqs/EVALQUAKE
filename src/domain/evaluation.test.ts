@@ -25,6 +25,7 @@ describe('evaluation domain', () => {
     expect(evaluation.structure.irregularities).toHaveLength(5);
     expect(evaluation.createdByUserId).toBe('firebase-user-1');
     expect(evaluation.deviceId).toBe('device-1');
+    expect(evaluation.jurisdictionId).toBe('jurisdiction-demo');
     expect(evaluation.repairQuantities.walls).toEqual([]);
     expect(sectionCountFor(evaluation)).toBe(17);
   });

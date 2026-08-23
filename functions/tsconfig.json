@@ -13,8 +13,11 @@
   },
   "include": [
     "src/**/*.ts",
-    "../src/domain/evaluation.ts",
+    "../src/domain/**/*.ts",
     "../src/i18n/translations.ts",
-    "../src/report/renderReportHtml.ts"
+    "../src/report/**/*.ts"
+  ],
+  "exclude": [
+    "../src/**/*.test.ts"
   ]
 }
