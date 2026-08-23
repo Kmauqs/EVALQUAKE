@@ -7,7 +7,8 @@ Siga estos pasos **cada vez** que un cambio deba llegar a producción (web y/o m
 | Qué tocó | Hay que publicar |
 |---|---|
 | UI, i18n, flujo en `app/` o `src/` (salvo Functions) | **Web** (Hosting). Móvil solo si hay APK/IPA en uso. |
-| `functions/` | **Cloud Functions** |
+| `public/manifest.json`, `app/+html.tsx`, iconos PWA | **Web** (Hosting). `export:web` regenera iconos con `copy-pwa-icons.js`. |
+| `functions/` | **Cloud Functions** (p. ej. `finalizeEvaluation`, `moderateDeleteEvaluation`) |
 | `firestore.rules`, `firestore.indexes.json` | **Firestore** (reglas y/o índices) |
 | `storage.rules` | **Storage** |
 | Varios de los anteriores | Backend correspondiente **y** web |
@@ -87,7 +88,7 @@ npm run export:web
 npx firebase deploy --only hosting
 ```
 
-`export:web` copia las figuras de la guía a `public/media` y luego genera `dist`. **Primero exportar, después desplegar.** Si se despliega un `dist` viejo, la cabecera seguirá en la versión anterior.
+`export:web` copia las figuras de la guía a `public/media`, genera iconos PWA en `public/` (`copy-pwa-icons.js`) y luego produce `dist`. **Primero exportar, después desplegar.** Si se despliega un `dist` viejo, la cabecera seguirá en la versión anterior.
 
 `.env` local alimenta el export. **No** deje `EXPO_PUBLIC_USE_FIREBASE_EMULATORS=true` en ese build: el sitio intentaría hablar con `127.0.0.1`.
 
@@ -97,7 +98,9 @@ npx firebase deploy --only hosting
 2. La cabecera debe mostrar la versión nueva (`vX.Y.Z`).
 3. No debe decir **Modo demostración**.
 4. Probar lo cambiado (login, registro, evaluación, fotos, admin, etc.).
-5. En GitHub → Actions, el workflow de Hosting debe estar en verde.
+5. Si hubo cambios de visibilidad o moderación: evaluador solo ve propias/compartidas; coordinación puede borrar borradores; administración ve el registro en `/(admin)/logs`.
+6. Si hubo cambios PWA: comprobar que “Agregar a pantalla de inicio” muestra el ícono de EVALQUAKE.
+7. En GitHub → Actions, el workflow de Hosting debe estar en verde.
 
 ## 8. Móvil (solo si hay app instalada o tienda)
 
@@ -129,6 +132,8 @@ iOS requiere cuenta Apple Developer. Tras el build, instalar y confirmar la vers
 | Sigue **Modo demostración** | El build no trajo `EXPO_PUBLIC_FIREBASE_*`. Revisar secrets de GitHub o exportar en local con `.env` y `USE_FIREBASE_EMULATORS=false`. |
 | Página **Firebase Hosting Setup Complete** | No deje `public/index.html` de plantilla Firebase: Expo lo copia a `dist` y tapa la app. Exportar de nuevo (`npm run export:web`) y desplegar Hosting. |
 | Cabecera con versión vieja | Hard refresh, o el push/export no se completó. |
+| Evaluador ve fichas ajenas en web | Cerrar sesión y volver a entrar; el almacén local ahora es por usuario. Borrar datos del sitio solo si persiste en el mismo navegador. |
+| Icono genérico al instalar PWA | Volver a exportar (`npm run export:web`) y desplegar Hosting; el manifest y los PNG deben estar en `dist/`. |
 | Cuenta nueva no puede evaluar | El admin debe aprobar rol y jurisdicción; el usuario pulsa **Comprobar acceso**. |
 | Functions no aplica el cambio | No basta el push: `firebase deploy --only functions`. |
 | `set-user-role.mjs` no encontrado | Ejecutar desde `functions\`: `node scripts/set-user-role.mjs ...` |

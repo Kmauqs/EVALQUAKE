@@ -31,8 +31,12 @@ Al cerrar un conjunto de cambios: subir el número, anotar la bitácora y seguir
 - GPS, cámara/galería (varias fotos, persistentes), croquis por imagen y firma en modal fijo.
 - Informe HTML bilingüe con leyenda legal, anexo normativo, croquis en página propia y encabezado en cada página del PDF impreso. Pancarta ATC-20 de ocupación.
 - Envío inmutable: una evaluación enviada no se sobrescribe. El servidor asigna consecutivo oficial y guarda el PDF canónico.
-- Panel de coordinación: filtros, mapa OSM (u opcionalmente Tracestrack) con vista satelital y marcadores por habitabilidad, detalle y exportaciones CSV/JSON.
+- Panel de coordinación: filtros por daño global y evaluador, mapa OSM (u opcionalmente Tracestrack) con vista satelital y marcadores por habitabilidad, detalle, exportaciones CSV/JSON y reporte resumen HTML del conjunto filtrado.
+- Visibilidad por rol: el evaluador solo ve sus fichas y las compartidas como inspector de apoyo; coordinación y administración ven todas, con la cuenta del evaluador en cada fila.
+- Compartir inspección: el evaluador puede invitar a otro evaluador a colaborar en un borrador (inspector de apoyo).
+- Moderación: coordinación puede eliminar borradores ajenos (depuración); administración puede eliminar cualquier ficha, incluso enviada. Cada borrado pide confirmación y queda en un registro visible solo para administración (`/(admin)/logs`).
 - Autenticación por correo: el usuario crea su cuenta y un **admin** la aprueba, asigna rol y jurisdicción. Roles `evaluator`, `coordinator` y `admin`.
+- PWA web: manifest e iconos para instalar el acceso directo en móvil o escritorio con el ícono de EVALQUAKE.
 - Logotipos de apoyo (Grupo Terra y Gtek) en el pie de las pantallas.
 
 Sin variables Firebase el cliente arranca en **modo demostración** (datos ficticios, solo en el dispositivo).
@@ -46,7 +50,7 @@ npm install
 npm start
 ```
 
-Luego `a` (Android), `i` (iOS, macOS/Xcode) o `w` (web). En web, `npm start` no copia las figuras de la guía; use `npm run web` o `npm run export:web`. El control `EN` / `ES` del encabezado cambia el idioma y se guarda en el dispositivo.
+Luego `a` (Android), `i` (iOS, macOS/Xcode) o `w` (web). En web, `npm start` no copia las figuras de la guía ni los iconos PWA; use `npm run web` o `npm run export:web`. El control `EN` / `ES` del encabezado cambia el idioma y se guarda en el dispositivo.
 
 ## Firebase (desarrollo)
 
@@ -86,7 +90,15 @@ Claims:
 }
 ```
 
-Roles: `evaluator`, `coordinator`, `admin`. Las reglas de Firestore limitan lecturas/escrituras a las jurisdicciones del token. La etiqueta `Nacional` da visibilidad de todas las inspecciones del evento en el panel de coordinación. Una evaluación `submitted` ya no se edita ni borra desde el cliente. Los evaluadores sí pueden eliminar borradores incompletos.
+Roles: `evaluator`, `coordinator`, `admin`. Las reglas de Firestore limitan lecturas/escrituras a las jurisdicciones del token. La etiqueta `Nacional` da visibilidad de todas las inspecciones del evento en el panel de coordinación.
+
+| Rol | Qué ve | Borrado |
+|---|---|---|
+| Evaluador | Propias + compartidas como inspector de apoyo | Solo sus borradores |
+| Coordinación | Todas (con cuenta del evaluador) | Borradores de cualquier evaluador |
+| Administración | Todas + registro de acciones | Cualquier ficha (incluidas enviadas) |
+
+Una evaluación `submitted` ya no se edita desde el cliente. En web, el almacén local del navegador queda aislado por usuario (`evalquake.evaluations.{uid}`) para que varias cuentas en el mismo dispositivo no mezclen fichas.
 
 ## Despliegue de producción
 
@@ -100,7 +112,9 @@ GitHub Actions publica **solo** Hosting y necesita estos secrets: `EXPO_PUBLIC_F
 
 ## Sincronización offline
 
-En React Native el SDK JS de Firebase no persiste Firestore en disco. Móvil usa SQLite + outbox; web usa persistencia del navegador. Ciclo al arrancar y cada 30 s: guardar en local → encolar → subir fotos → escribir Firestore → quitar de la cola solo si el remoto confirma.
+En React Native el SDK JS de Firebase no persiste Firestore en disco. Móvil usa SQLite + outbox; web usa persistencia del navegador **por usuario** (clave `evalquake.evaluations.{uid}`). Ciclo al arrancar y cada 30 s: guardar en local → encolar → subir fotos → escribir Firestore → quitar de la cola solo si el remoto confirma.
+
+Los evaluadores fusionan en pantalla solo fichas propias o compartidas (`sharedWithUserIds`); coordinación y administración cargan el conjunto completo de su jurisdicción.
 
 ## Informes y pancartas
 
@@ -112,6 +126,12 @@ En React Native el SDK JS de Firebase no persiste Firestore en disco. Móvil usa
 - Servidor: `finalizeEvaluation` asigna consecutivo y guarda el PDF canónico en Storage (Puppeteer sobre el mismo HTML).
 
 El informe local muestra el UUID y “consecutivo pendiente” hasta el envío.
+
+## PWA (web)
+
+Al exportar o arrancar en web, `scripts/copy-pwa-icons.js` genera en `public/` los iconos a partir de `icon_960.png` (192, 512, Apple Touch, favicon). `app/+html.tsx` enlaza el manifest y los metadatos de instalación; `public/manifest.json` define nombre, colores y modo `standalone`.
+
+Para probar la instalación: abrir la web en Chrome o Safari → “Agregar a pantalla de inicio” / “Instalar app”. Tras desplegar, hacer hard refresh (`Ctrl+F5`) para cargar el manifest nuevo.
 
 ## Verificación
 

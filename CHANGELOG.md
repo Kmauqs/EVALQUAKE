@@ -24,6 +24,10 @@ La versión visible en la cabecera de la app sale de `src/version.ts`.
 
 Cambios posteriores a 0.14.1 se listan aquí hasta el siguiente corte.
 
+### Changed
+
+- Documentación del proyecto (`README.md`, `DEPLOY.md`, `ARCHITECTURE.md`): visibilidad por rol, compartir inspector de apoyo, moderación y registro de acciones, almacén local web por usuario, PWA e iconos de instalación.
+
 ## [0.14.1] — 2026-08-23
 
 ### Added

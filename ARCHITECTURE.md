@@ -19,9 +19,11 @@
 - Generación de un PDF del reporte **inmediatamente**, sin conexión.
 - Sincronización en segundo plano cuando el dispositivo recupera señal; sin pérdida de datos ni bloqueo de la app mientras tanto.
 - Panel web para coordinadores: lista y mapa de todas las evaluaciones de un evento/jurisdicción, filtrable por clasificación (verde/amarillo/rojo/negro), acceso al PDF y a los datos crudos, exportación masiva.
-- Roles: Evaluador (captura), Coordinador/Supervisor (consolidación, reasignación), Administrador (usuarios, jurisdicciones, eventos).
+- Roles: Evaluador (captura), Coordinador/Supervisor (consolidación, exportación, borrado de borradores ajenos), Administrador (usuarios, jurisdicciones, borrado de cualquier ficha, registro de acciones).
+- Visibilidad: el evaluador solo ve evaluaciones propias o compartidas como inspector de apoyo; coordinación y administración ven el conjunto de su jurisdicción.
+- Compartir borrador con otro evaluador (`sharedWithUserIds`) para colaboración en campo.
 - Numeración consecutiva oficial del informe, asignada sin colisiones aunque varios evaluadores trabajen offline en simultáneo.
-- Trazabilidad: una evaluación ya enviada no se sobre-escribe; las correcciones quedan como historial.
+- Trazabilidad: una evaluación ya enviada no se sobre-escribe; las correcciones quedan como historial. Los borrados moderados quedan en `actionLogs`.
 
 ### 1.2 No funcionales
 - **Offline-first** con sincronización eventual y resolución de conflictos simple (en la práctica, cada edificación la visita un solo equipo, así que el conflicto real es raro — la arquitectura debe explotar esto, no resolver conflictos complejos de escritura concurrente).
@@ -29,7 +31,7 @@
 - Mantenible por una sola persona: mínimo código de infraestructura propio, máximo aprovechamiento de servicios administrados.
 - Datos críticos de seguridad de vidas: durabilidad y auditoría por encima de la optimización de costos.
 - Ancho de banda limitado en la etapa de recuperación (redes saturadas/degradadas) → las fotos deben comprimirse en el dispositivo antes de subir.
-- Debe funcionar en Android (mayoría de evaluadores voluntarios/gobierno), iOS y navegador de escritorio (panel de coordinación).
+- Debe funcionar en Android (mayoría de evaluadores voluntarios/gobierno), iOS y navegador de escritorio (panel de coordinación), instalable como PWA en web.
 
 ### 1.3 Restricciones
 - Un solo desarrollador → un solo lenguaje (TypeScript) de punta a punta si es posible.
@@ -67,12 +69,14 @@
 │  Firestore            Cloud Storage         Cloud Functions           │
 │  (evaluations,        (fotos, croquis,      · asigna consecutivo      │
 │   users, events,       firma, PDF            (transacción atómica)    │
-│   jurisdictions)        canónico)            · genera PDF canónico    │
-│                                               (mismo HTML template,    │
-│  Firebase Auth                                Puppeteer)              │
-│  (evaluador/coord.,                          · notifica clasificación │
-│   custom claims por                           roja/negra              │
-│   jurisdicción)                              · exportación masiva     │
+│   jurisdictions,        canónico)            · genera PDF canónico    │
+│   actionLogs)                                 (mismo HTML template,    │
+│                                               Puppeteer)              │
+│  Firebase Auth                               · moderateDeleteEvaluation│
+│  (evaluador/coord.,                          (coordinador/admin)     │
+│   custom claims por                          · notifica clasificación │
+│   jurisdicción)                              roja/negra              │
+│                                              · exportación masiva     │
 │                                                                        │
 │  Firebase Hosting → sirve el build web del panel                      │
 └──────────────────────────────────────────────────────────────────────┘
@@ -132,12 +136,29 @@ evaluations/{evaluationId}          // id = UUID generado en el dispositivo
   croquisStoragePath, firmaStoragePath
   pdfCanonicoStoragePath: string | null
   # Metadatos de sincronización / auditoría
-  createdByUserId, deviceId, createdAt, updatedAt, syncedAt
+  createdByUserId, createdByEmail, sharedWithUserIds[], deviceId
+  createdAt, updatedAt, syncedAt
   auditLog subcollection: correcciones posteriores a "enviada"
 
+actionLogs/{logId}                    // solo lectura admin; escritura vía Function
+  action: "delete_evaluation"
+  actorUid, actorEmail, actorRole
+  evaluationId, evaluationStatus, officialNumber, address
+  ownerUid, ownerEmail, purpose, at
+
 users/{userId}
-  nombre, rol: "evaluador"|"coordinador"|"admin", jurisdictionIds[], matricula
+  nombre, rol: "evaluator"|"coordinator"|"admin", jurisdictionIds[], matricula, email
 ```
+
+**Reglas de visibilidad y borrado (Firestore + cliente):**
+
+- **Lectura:** propietario (`createdByUserId`), inspector de apoyo (`sharedWithUserIds`), o rol coordinador/admin con jurisdicción compatible.
+- **Escritura del evaluador:** solo borradores propios; puede compartir añadiendo UIDs a `sharedWithUserIds`.
+- **Borrado evaluador:** solo borradores propios.
+- **Borrado coordinador:** borradores de cualquier evaluador (vía callable `moderateDeleteEvaluation`).
+- **Borrado admin:** cualquier evaluación, incluidas enviadas (misma Function; queda en `actionLogs`).
+
+**Almacén local web:** IndexedDB/localStorage bajo clave `evalquake.evaluations.{uid}` para evitar que varias cuentas en el mismo navegador vean el mismo caché. Al migrar, se filtran registros con `isEvaluatorVisible()`.
 
 **Regla clave de diseño:** una vez `status = "enviada"`, el documento **no se edita** — las correcciones se agregan como entradas en `auditLog` y el PDF se regenera a partir del estado más reciente. Esto evita tener que resolver conflictos de escritura concurrente (que en este dominio son raros pero catastróficos si se pierden) y deja un rastro auditable, apropiado para un documento con valor legal/de seguridad.
 
@@ -149,7 +170,7 @@ users/{userId}
 
 Se comparte **una sola función** `renderReportHtml(evaluation): string` (TypeScript puro, sin dependencias de plataforma) que convierte el JSON de la evaluación en HTML/CSS con las 17 secciones. Esa función se usa en dos lugares:
 
-1. **En el dispositivo, offline:** `expo-print` toma ese HTML y lo convierte a PDF usando el motor de renderizado nativo (WebView) — funciona sin conexión y sin servidor. El evaluador puede ver/compartir/imprimir el PDF inmediatamente después de terminar la inspección.
+1. **En el dispositivo, offline:** el HTML se abre en el navegador o WebView y el usuario imprime a PDF (`window.print` / diálogo del sistema en web; `expo-print` en nativo). Funciona sin conexión.
 2. **En el servidor, al sincronizar:** una Cloud Function toma el mismo HTML (con el consecutivo oficial ya asignado) y lo convierte a PDF con Puppeteer, almacenándolo en Cloud Storage como el PDF canónico que ve el panel de coordinación y que se usa en exportaciones masivas.
 
 Mantener un único generador de HTML (en vez de dos implementaciones de PDF) es lo que hace viable esta dualidad para un solo desarrollador: cualquier cambio de layout se hace en un solo lugar y automáticamente aplica en ambos flujos.
@@ -180,8 +201,8 @@ Mantener un único generador de HTML (en vez de dos implementaciones de PDF) es 
 
 ## 7. Stack resumido
 
-- **Frontend (móvil + web):** Expo (React Native + React Native Web), TypeScript, Expo Router.
-- **PDF:** `expo-print` (cliente, offline) + Puppeteer en Cloud Functions (servidor, canónico) sobre un único generador de HTML compartido.
+- **Frontend (móvil + web):** Expo (React Native + React Native Web), TypeScript, Expo Router. Web exportable como PWA (`manifest.json`, iconos en `public/`, metadatos en `app/+html.tsx`).
+- **PDF / informes:** generador HTML compartido (`renderReportHtml`, `renderPlacardHtml`); impresión local en cliente; Puppeteer en Cloud Functions para PDF canónico.
 - **Backend:** Firebase — Firestore (datos), Cloud Storage (fotos/PDFs), Firebase Auth (usuarios + custom claims por jurisdicción), Cloud Functions (consecutivo, PDF canónico, notificaciones, exportación masiva), Firebase Hosting (build web).
 - **Mapa (panel coordinador):** MapLibre GL JS o Google Maps JS SDK, alimentado directamente por consultas en vivo a Firestore.
 - **Monitoreo:** Firebase Crashlytics (móvil) + Cloud Monitoring/Logging (Functions), con alerta específica sobre fallos de generación de PDF canónico.
