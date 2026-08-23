@@ -27,7 +27,11 @@ service cloud.firestore {
     }
 
     match /users/{userId} {
-      allow read: if signedIn() && (request.auth.uid == userId || role() == 'admin');
+      allow read: if signedIn() && (
+        request.auth.uid == userId
+        || role() in ['admin', 'coordinator']
+        || (role() == 'evaluator' && resource.data.role == 'evaluator')
+      );
       allow write: if false;
     }
 
@@ -42,31 +46,70 @@ service cloud.firestore {
     }
 
     match /evaluations/{evaluationId} {
-      allow read: if canAccessJurisdiction(resource.data.jurisdictionId)
-        && (
-          request.auth.uid == resource.data.createdByUserId
-          || role() in ['coordinator', 'admin']
-        );
+      function evaluationReadable() {
+        return request.auth.uid == resource.data.createdByUserId
+          || (
+            resource.data.sharedWithUserIds is list
+            && request.auth.uid in resource.data.sharedWithUserIds
+          )
+          || role() in ['coordinator', 'admin'];
+      }
+
+      allow get: if signedIn() && (resource == null || evaluationReadable());
+      allow list: if evaluationReadable();
       allow create: if canAccessJurisdiction(request.resource.data.jurisdictionId)
         && request.resource.data.createdByUserId == request.auth.uid
         && request.resource.data.officialNumber == null;
-      allow update: if canAccessJurisdiction(resource.data.jurisdictionId)
-        && canAccessJurisdiction(request.resource.data.jurisdictionId)
-        && resource.data.status == 'draft'
-        && (
-          request.auth.uid == resource.data.createdByUserId
-          || role() in ['coordinator', 'admin']
-        )
+      allow update: if signedIn()
         && request.resource.data.id == resource.data.id
         && request.resource.data.createdByUserId == resource.data.createdByUserId
-        && request.resource.data.officialNumber == resource.data.officialNumber
-        && request.resource.data.status in ['draft', 'submitted'];
-      allow delete: if canAccessJurisdiction(resource.data.jurisdictionId)
-        && request.auth.uid == resource.data.createdByUserId
-        && resource.data.status == 'draft'
-        && resource.data.officialNumber == null
-        && (resource.data.signatureUri == null || resource.data.signatureUri == '')
-        && (resource.data.canonicalPdfStoragePath == null || resource.data.canonicalPdfStoragePath == '');
+        && (
+          (
+            resource.data.status == 'draft'
+            && (
+              request.auth.uid == resource.data.createdByUserId
+              || role() in ['coordinator', 'admin']
+            )
+            && canAccessJurisdiction(resource.data.jurisdictionId)
+            && canAccessJurisdiction(request.resource.data.jurisdictionId)
+            && request.resource.data.officialNumber == resource.data.officialNumber
+            && request.resource.data.status in ['draft', 'submitted']
+          )
+          || (
+            resource.data.status == 'draft'
+            && resource.data.sharedWithUserIds is list
+            && request.auth.uid in resource.data.sharedWithUserIds
+            && request.resource.data.sharedWithUserIds == resource.data.sharedWithUserIds
+            && request.resource.data.jurisdictionId == resource.data.jurisdictionId
+            && request.resource.data.officialNumber == resource.data.officialNumber
+            && request.resource.data.status == 'draft'
+          )
+          || (
+            request.auth.uid == resource.data.createdByUserId
+            && resource.data.officialNumber == null
+            && (resource.data.canonicalPdfStoragePath == null || resource.data.canonicalPdfStoragePath == '')
+            && resource.data.status in ['submitted', 'synced']
+            && request.resource.data.status in ['submitted', 'synced']
+            && request.resource.data.officialNumber == null
+            && canAccessJurisdiction(request.resource.data.jurisdictionId)
+          )
+        );
+      allow delete: if (
+        (
+          request.auth.uid == resource.data.createdByUserId
+          && resource.data.status == 'draft'
+          && resource.data.officialNumber == null
+          && (resource.data.signatureUri == null || resource.data.signatureUri == '')
+          && (resource.data.canonicalPdfStoragePath == null || resource.data.canonicalPdfStoragePath == '')
+        )
+        || (
+          role() == 'coordinator'
+          && resource.data.status == 'draft'
+          && resource.data.officialNumber == null
+          && (resource.data.canonicalPdfStoragePath == null || resource.data.canonicalPdfStoragePath == '')
+        )
+        || role() == 'admin'
+      );
 
       match /auditLog/{entryId} {
         allow read: if canAccessJurisdiction(
@@ -81,6 +124,14 @@ service cloud.firestore {
           && request.resource.data.changedBy == request.auth.uid;
         allow update, delete: if false;
       }
+    }
+
+    match /actionLogs/{logId} {
+      allow read: if signedIn() && role() == 'admin';
+      allow create: if signedIn() && role() in ['coordinator', 'admin']
+        && request.resource.data.actorUid == request.auth.uid
+        && request.resource.data.action is string;
+      allow update, delete: if false;
     }
 
     match /counters/{counterId} {

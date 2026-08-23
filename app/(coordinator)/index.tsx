@@ -1,18 +1,20 @@
 import { useRouter } from 'expo-router';
-import { ArrowLeft, Download, FileJson, Search } from 'lucide-react-native';
+import { ArrowLeft, Download, FileJson, FileText, Search, Trash2 } from 'lucide-react-native';
 import React, { useEffect, useMemo, useState } from 'react';
 import { Pressable, StyleSheet, Text, TextInput, View, useWindowDimensions } from 'react-native';
 
 import { EvaluationMap } from '@/components/EvaluationMap';
 import { AppShell, Button, Card, ClassificationBadge } from '@/components/ui';
 import { useAuth } from '@/auth/AuthProvider';
-import type { Evaluation, Habitability } from '@/domain/evaluation';
+import { evaluatorAccountLabel, canModerateDelete, type Evaluation, type Habitability } from '@/domain/evaluation';
 import { hasNationalScope } from '@/domain/jurisdiction';
 import { demoEvaluations } from '@/domain/fixtures';
 import { subscribeRemoteEvaluations } from '@/firebase/repository';
+import { subscribeUsers } from '@/firebase/users';
 import { useI18n } from '@/i18n/I18nProvider';
 import { useSafeBack } from '@/navigation/useSafeBack';
-import { exportCsv, exportJson, exportQuantitiesCsv } from '@/services/exportData';
+import { exportCsv, exportJson, exportQuantitiesCsv, exportSummaryHtml } from '@/services/exportData';
+import { requestModerateDelete } from '@/services/moderateDelete';
 import { useEvaluations } from '@/state/EvaluationProvider';
 import { colors } from '@/theme';
 
@@ -26,20 +28,31 @@ export default function CoordinatorDashboard() {
   const narrow = width < 700;
   const [query, setQuery] = useState('');
   const [filter, setFilter] = useState<Habitability | 'all'>('all');
+  const [evaluatorFilter, setEvaluatorFilter] = useState('all');
   const [remote, setRemote] = useState<Evaluation[]>([]);
+  const [accountByUid, setAccountByUid] = useState<Record<string, string>>({});
   useEffect(
     () =>
       configured
-        ? subscribeRemoteEvaluations(
-            jurisdictionIds,
-            'event-2026',
-            setRemote,
-            undefined,
-            { allEvent: role === 'admin' || hasNationalScope(jurisdictionIds) },
-          )
+        ? subscribeRemoteEvaluations(jurisdictionIds, 'event-2026', setRemote, undefined, {
+            allEvent: role === 'admin' || role === 'coordinator' || hasNationalScope(jurisdictionIds),
+          })
         : () => undefined,
     [configured, jurisdictionIds, role],
   );
+  useEffect(
+    () =>
+      configured
+        ? subscribeUsers((users) => {
+            setAccountByUid(
+              Object.fromEntries(users.map((user) => [user.id, user.email || user.displayName || user.id])),
+            );
+          })
+        : () => undefined,
+    [configured],
+  );
+  const accountLabel = (evaluation: Evaluation) =>
+    evaluation.createdByEmail.trim() || accountByUid[evaluation.createdByUserId] || evaluatorAccountLabel(evaluation);
   const evaluations = useMemo(
     () =>
       configured
@@ -50,15 +63,30 @@ export default function CoordinatorDashboard() {
           ],
     [configured, local, remote],
   );
+  const evaluatorOptions = useMemo(() => {
+    const byKey = new Map<string, string>();
+    for (const evaluation of evaluations) {
+      const key = evaluation.createdByUserId || accountLabel(evaluation);
+      if (!byKey.has(key)) byKey.set(key, accountLabel(evaluation));
+    }
+    return [...byKey.entries()].sort((left, right) => left[1].localeCompare(right[1]));
+  }, [accountByUid, evaluations]);
   const filtered = evaluations.filter((evaluation) => {
     const haystack = [
       evaluation.building.address,
       evaluation.identification.neighborhood,
       evaluation.inspectors[0]?.name,
+      accountLabel(evaluation),
     ]
       .join(' ')
       .toLowerCase();
-    return (filter === 'all' || evaluation.habitability === filter) && haystack.includes(query.toLowerCase());
+    const matchesEvaluator =
+      evaluatorFilter === 'all' || evaluation.createdByUserId === evaluatorFilter;
+    return (
+      (filter === 'all' || evaluation.habitability === filter) &&
+      matchesEvaluator &&
+      haystack.includes(query.toLowerCase())
+    );
   });
   const classifications: Habitability[] = ['habitable', 'restricted', 'unsafe', 'collapsed'];
 
@@ -89,6 +117,26 @@ export default function CoordinatorDashboard() {
             style={narrow ? styles.exportButtonNarrow : undefined}
           >
             {t.exportQuantitiesCsv}
+          </Button>
+          <Button
+            variant="secondary"
+            icon={<FileText size={17} color={colors.primary} />}
+            onPress={() =>
+              void exportSummaryHtml(
+                filtered,
+                {
+                  damage: filter,
+                  evaluator:
+                    evaluatorFilter === 'all'
+                      ? 'all'
+                      : evaluatorOptions.find(([id]) => id === evaluatorFilter)?.[1] ?? evaluatorFilter,
+                },
+                language,
+              )
+            }
+            style={narrow ? styles.exportButtonNarrow : undefined}
+          >
+            {t.exportSummary}
           </Button>
           <Button
             variant="secondary"
@@ -129,18 +177,45 @@ export default function CoordinatorDashboard() {
             style={styles.searchInput}
           />
         </View>
-        <View style={styles.filterChips}>
-          {(['all', ...classifications] as const).map((value) => (
+        <View style={styles.filterGroup}>
+          <Text style={styles.filterLabel}>{t.filterByDamage}</Text>
+          <View style={styles.filterChips}>
+            {(['all', ...classifications] as const).map((value) => (
+              <Pressable
+                key={value}
+                onPress={() => setFilter(value)}
+                style={[styles.filterChip, filter === value && styles.filterChipActive]}
+              >
+                <Text style={[styles.filterText, filter === value && styles.filterTextActive]}>
+                  {value === 'all' ? t.allDamage : t[value]}
+                </Text>
+              </Pressable>
+            ))}
+          </View>
+        </View>
+        <View style={styles.filterGroup}>
+          <Text style={styles.filterLabel}>{t.filterByEvaluator}</Text>
+          <View style={styles.filterChips}>
             <Pressable
-              key={value}
-              onPress={() => setFilter(value)}
-              style={[styles.filterChip, filter === value && styles.filterChipActive]}
+              onPress={() => setEvaluatorFilter('all')}
+              style={[styles.filterChip, evaluatorFilter === 'all' && styles.filterChipActive]}
             >
-              <Text style={[styles.filterText, filter === value && styles.filterTextActive]}>
-                {value === 'all' ? t.all : t[value]}
+              <Text style={[styles.filterText, evaluatorFilter === 'all' && styles.filterTextActive]}>
+                {t.allEvaluators}
               </Text>
             </Pressable>
-          ))}
+            {evaluatorOptions.map(([id, label]) => (
+              <Pressable
+                key={id}
+                onPress={() => setEvaluatorFilter(id)}
+                style={[styles.filterChip, evaluatorFilter === id && styles.filterChipActive]}
+              >
+                <Text style={[styles.filterText, evaluatorFilter === id && styles.filterTextActive]} numberOfLines={1}>
+                  {label}
+                </Text>
+              </Pressable>
+            ))}
+          </View>
         </View>
       </View>
 
@@ -156,11 +231,8 @@ export default function CoordinatorDashboard() {
           <Text style={styles.sectionTitle}>{t.recentEvaluations}</Text>
           <View style={styles.list}>
             {filtered.map((evaluation) => (
-              <Pressable
-                key={evaluation.id}
-                onPress={() => router.push(`/(coordinator)/evaluation/${evaluation.id}`)}
-              >
-                <Card style={styles.row}>
+              <Card key={evaluation.id} style={styles.row}>
+                <Pressable onPress={() => router.push(`/(coordinator)/evaluation/${evaluation.id}`)}>
                   <View style={styles.rowTop}>
                     <Text style={styles.rowNumber}>
                       {evaluation.officialNumber ? `#${evaluation.officialNumber}` : t.officialPending}
@@ -169,13 +241,31 @@ export default function CoordinatorDashboard() {
                   </View>
                   <Text style={styles.rowAddress}>{evaluation.building.address}</Text>
                   <Text style={styles.rowMeta}>
+                    {t.evaluatorAccount}: {accountLabel(evaluation)}
+                  </Text>
+                  <Text style={styles.rowMeta}>
                     {evaluation.identification.neighborhood} · {evaluation.inspectors[0]?.name}
                   </Text>
                   <Text style={styles.rowDate}>
                     {new Date(evaluation.updatedAt).toLocaleString(language)}
                   </Text>
-                </Card>
-              </Pressable>
+                </Pressable>
+                {canModerateDelete(evaluation, role) ? (
+                  <Pressable
+                    accessibilityRole="button"
+                    accessibilityLabel={t.deleteEvaluation}
+                    hitSlop={8}
+                    onPress={() =>
+                      requestModerateDelete(evaluation, role, t, () =>
+                        setRemote((records) => records.filter((item) => item.id !== evaluation.id)),
+                      )
+                    }
+                    style={styles.deleteButton}
+                  >
+                    <Trash2 size={16} color={colors.danger} />
+                  </Pressable>
+                ) : null}
+              </Card>
             ))}
           </View>
         </View>
@@ -201,9 +291,11 @@ const styles = StyleSheet.create({
   statCard: { minWidth: 140, flex: 1, minHeight: 100, justifyContent: 'center', gap: 8 },
   statValue: { color: colors.text, fontSize: 26, fontWeight: '900' },
   statLabel: { color: colors.textMuted, fontWeight: '700' },
-  filters: { marginTop: 18, flexDirection: 'row', flexWrap: 'wrap', gap: 12, alignItems: 'center' },
+  filters: { marginTop: 18, flexDirection: 'row', flexWrap: 'wrap', gap: 12, alignItems: 'flex-start' },
   search: { flexGrow: 1, flexBasis: 240, minWidth: 0, maxWidth: '100%', height: 48, backgroundColor: colors.white, borderWidth: 1, borderColor: colors.border, borderRadius: 12, flexDirection: 'row', alignItems: 'center', paddingHorizontal: 14, gap: 8 },
   searchInput: { flex: 1, color: colors.text, height: '100%' },
+  filterGroup: { gap: 6, flexGrow: 1, minWidth: 220 },
+  filterLabel: { color: colors.textMuted, fontWeight: '800', fontSize: 11, textTransform: 'uppercase' },
   filterChips: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
   filterChip: { paddingHorizontal: 12, paddingVertical: 9, borderRadius: 999, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.white },
   filterChipActive: { backgroundColor: colors.primary, borderColor: colors.primary },
@@ -215,10 +307,23 @@ const styles = StyleSheet.create({
   listColumn: { flex: 1, minWidth: 0 },
   sectionTitle: { color: colors.text, fontSize: 18, fontWeight: '900', marginBottom: 10 },
   list: { gap: 9 },
-  row: { padding: 15 },
+  row: { padding: 15, paddingBottom: 52 },
   rowTop: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8 },
   rowNumber: { color: colors.primary, fontWeight: '900', fontSize: 12, flex: 1, minWidth: 0, flexShrink: 1 },
   rowAddress: { color: colors.text, fontWeight: '800', marginTop: 10 },
   rowMeta: { color: colors.textMuted, fontSize: 12, marginTop: 5 },
   rowDate: { color: colors.textMuted, fontSize: 10, marginTop: 8 },
+  deleteButton: {
+    position: 'absolute',
+    right: 12,
+    bottom: 12,
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: colors.border,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.white,
+  },
 });

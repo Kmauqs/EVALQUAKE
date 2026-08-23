@@ -17,6 +17,7 @@ import {
   type NsrGroup,
   type StructuralSystemCode,
 } from './catalog';
+import { DEMO_JURISDICTION_ID } from './jurisdiction';
 import { emptyRepairQuantities, normalizeRepairQuantities, type RepairQuantities } from './quantities';
 
 export type Language = 'es' | 'en';
@@ -207,6 +208,8 @@ export interface Evaluation {
   canonicalPdfLeaseUntil?: string;
   reportLanguage: Language;
   createdByUserId: string;
+  createdByEmail: string;
+  sharedWithUserIds: string[];
   deviceId: string;
   createdAt: string;
   updatedAt: string;
@@ -284,6 +287,7 @@ export function createEvaluation(
   createdByUserId = 'demo-evaluator',
   deviceId = 'demo-device',
   jurisdictionId = 'jurisdiction-demo',
+  createdByEmail = '',
 ): Evaluation {
   const now = new Date().toISOString();
   return {
@@ -383,6 +387,8 @@ export function createEvaluation(
     repairQuantities: emptyRepairQuantities(),
     reportLanguage: 'es',
     createdByUserId,
+    createdByEmail,
+    sharedWithUserIds: [],
     deviceId,
     createdAt: now,
     updatedAt: now,
@@ -537,6 +543,10 @@ export function normalizeEvaluation(raw: Evaluation): Evaluation {
     inspectors: raw.inspectors?.length ? raw.inspectors : base.inspectors,
     photos: raw.photos ?? [],
     repairQuantities: normalizeRepairQuantities(raw.repairQuantities),
+    createdByEmail: typeof raw.createdByEmail === 'string' ? raw.createdByEmail : '',
+    sharedWithUserIds: Array.isArray(raw.sharedWithUserIds)
+      ? raw.sharedWithUserIds.filter((value): value is string => typeof value === 'string' && Boolean(value.trim()))
+      : [],
   };
 }
 
@@ -585,12 +595,46 @@ export function canSaveEvaluation(existing: Evaluation | null, next: Evaluation)
   return existing.status === 'draft';
 }
 
-export function canDeleteEvaluation(evaluation: Evaluation) {
+export function isEvaluationOwner(evaluation: Evaluation, uid: string) {
+  return Boolean(uid) && evaluation.createdByUserId === uid;
+}
+
+export function isSupportingInspector(evaluation: Evaluation, uid: string) {
+  return Boolean(uid) && Array.isArray(evaluation.sharedWithUserIds) && evaluation.sharedWithUserIds.includes(uid);
+}
+
+export function isEvaluatorVisible(evaluation: Evaluation, uid: string) {
+  return isEvaluationOwner(evaluation, uid) || isSupportingInspector(evaluation, uid);
+}
+
+export function canViewEvaluation(evaluation: Evaluation, uid: string, role: UserRole | null) {
+  if (role === 'coordinator' || role === 'admin') return true;
+  return isEvaluatorVisible(evaluation, uid);
+}
+
+export function canModerateDelete(evaluation: Evaluation, role: UserRole | null) {
+  if (role === 'admin') return true;
+  if (role !== 'coordinator') return false;
+  return evaluation.status === 'draft' && evaluation.officialNumber == null && !evaluation.canonicalPdfStoragePath;
+}
+
+export function evaluatorAccountLabel(evaluation: Evaluation) {
+  return evaluation.createdByEmail.trim() || evaluation.inspectors[0]?.name.trim() || evaluation.createdByUserId;
+}
+
+export function canDeleteEvaluation(evaluation: Evaluation, uid?: string) {
   if (evaluation.status !== 'draft') return false;
   if (evaluation.officialNumber != null) return false;
   if (evaluation.canonicalPdfStoragePath) return false;
   if (evaluation.signatureUri?.trim()) return false;
+  if (uid && !isEvaluationOwner(evaluation, uid)) return false;
   return true;
+}
+
+export function needsRemoteSync(evaluation: Evaluation) {
+  if (evaluation.officialNumber != null || evaluation.canonicalPdfStoragePath) return false;
+  if (evaluation.syncState !== 'synced') return true;
+  return evaluation.status !== 'draft' && evaluation.jurisdictionId === DEMO_JURISDICTION_ID;
 }
 
 export function classificationColor(value: Habitability) {

@@ -124,7 +124,7 @@ export function AuthProvider({ children }: React.PropsWithChildren) {
   const value = useMemo<AuthState>(
     () => ({
       user,
-      uid: user?.uid ?? 'demo-evaluator',
+      uid: user?.uid ?? (firebaseConfigured ? '' : 'demo-evaluator'),
       role,
       jurisdictionIds,
       status,

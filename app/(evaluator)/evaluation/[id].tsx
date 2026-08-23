@@ -13,6 +13,7 @@ import {
   sectionKeysFor,
   validateForSubmission,
 } from '@/domain/evaluation';
+import { pullEvaluation, subscribeEvaluation } from '@/firebase/repository';
 import { useI18n } from '@/i18n/I18nProvider';
 import { useSafeBack } from '@/navigation/useSafeBack';
 import { renderPlacardHtml } from '@/report/renderPlacardHtml';
@@ -22,7 +23,9 @@ import { captureCoordinates, pickDamagePhoto, pickDamagePhotos } from '@/service
 import { exportQuantitiesCsv } from '@/services/exportData';
 import { openHtmlDocument } from '@/services/htmlDocument';
 import { hydrateEvaluationImages } from '@/services/resolveImage';
+import { saveLocalEvaluation } from '@/services/localStore';
 import { useEvaluations } from '@/state/EvaluationProvider';
+import { useAuth } from '@/auth/AuthProvider';
 import { colors, layout } from '@/theme';
 
 export default function EvaluationWizard() {
@@ -31,7 +34,8 @@ export default function EvaluationWizard() {
   const { t, language } = useI18n();
   const { width } = useWindowDimensions();
   const narrow = width < layout.compactWidth;
-  const { get, save, remove } = useEvaluations();
+  const { get, save, remove, refresh } = useEvaluations();
+  const { uid } = useAuth();
   const [evaluation, setEvaluation] = useState<Evaluation | null>(null);
   const [section, setSection] = useState(0);
   const [busy, setBusy] = useState(false);
@@ -49,6 +53,58 @@ export default function EvaluationWizard() {
       setSection(value.currentSection);
     });
   }, [id, get]);
+
+  useEffect(() => {
+    if (!id || !evaluation || evaluation.status === 'draft') return;
+
+    const applyRemote = (remote: Evaluation) => {
+      if (remote.status === 'draft') return;
+      void saveLocalEvaluation(remote, false).then(() => {
+        setEvaluation((current) => {
+          if (!current || current.id !== remote.id) return current;
+          if (
+            current.officialNumber === remote.officialNumber &&
+            current.status === remote.status &&
+            current.syncState === remote.syncState &&
+            current.canonicalPdfStoragePath === remote.canonicalPdfStoragePath
+          ) {
+            return current;
+          }
+          return {
+            ...current,
+            officialNumber: remote.officialNumber ?? current.officialNumber,
+            status: remote.status,
+            syncState: remote.syncState,
+            canonicalPdfStoragePath:
+              remote.canonicalPdfStoragePath || current.canonicalPdfStoragePath,
+            canonicalPdfState: remote.canonicalPdfState ?? current.canonicalPdfState,
+          };
+        });
+        void refresh();
+      });
+    };
+
+    const unsub = subscribeEvaluation(
+      id,
+      applyRemote,
+      (error) => console.error('EVALQUAKE could not watch official number', error),
+    );
+    if (evaluation.officialNumber != null) return unsub;
+
+    let cancelled = false;
+    const poll = () => {
+      void pullEvaluation(id).then((remote) => {
+        if (!cancelled && remote) applyRemote(remote);
+      });
+    };
+    poll();
+    const interval = setInterval(poll, 2000);
+    return () => {
+      cancelled = true;
+      clearInterval(interval);
+      unsub();
+    };
+  }, [evaluation?.officialNumber, evaluation?.status, id, refresh]);
 
   useEffect(() => {
     if (deletingRef.current || deleting || !evaluation || evaluation.status !== 'draft') return;
@@ -99,6 +155,9 @@ export default function EvaluationWizard() {
               ? `#${evaluation.officialNumber}`
               : t.officialPending}
           </Text>
+          {!evaluation.officialNumber ? (
+            <Text style={styles.officialHint}>{t.officialPendingHint}</Text>
+          ) : null}
           <Text style={styles.submittedDescription}>{t.immutableNotice}</Text>
           <View style={styles.submittedActions}>
             <Button variant="ghost" onPress={goBack} style={styles.actionButton}>
@@ -279,7 +338,7 @@ export default function EvaluationWizard() {
                 {t.back}
               </Button>
             )}
-            {canDeleteEvaluation(evaluation) && (
+            {canDeleteEvaluation(evaluation, uid) && (
               <Button
                 variant="danger"
                 icon={<Trash2 size={18} color={colors.white} />}
@@ -369,6 +428,7 @@ const styles = StyleSheet.create({
   submittedCard: { width: '100%', maxWidth: 620, alignSelf: 'center', marginTop: 40, gap: 14, minWidth: 0 },
   submittedTitle: { color: colors.text, fontSize: 25, fontWeight: '900' },
   officialNumber: { color: colors.primary, fontSize: 17, fontWeight: '900' },
+  officialHint: { color: colors.textMuted, fontSize: 13, lineHeight: 19, marginTop: -6 },
   submittedDescription: { color: colors.textMuted, lineHeight: 21 },
   submittedActions: {
     width: '100%',

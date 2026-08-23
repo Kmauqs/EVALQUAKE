@@ -25,7 +25,7 @@ async function prepareCanonicalGeneration(reference: DocumentReference) {
 
     let officialNumber = current.officialNumber;
     if (officialNumber == null) {
-      const counterRef = db.doc(`counters/${current.jurisdictionId}`);
+      const counterRef = db.doc(`counters/${current.eventId || 'event-2026'}`);
       const counter = await transaction.get(counterRef);
       officialNumber = (counter.data()?.lastNumber ?? 0) + 1;
       transaction.set(
@@ -167,6 +167,7 @@ export {
   setUserDisabled,
   setUserRole,
 } from './users';
+export { moderateDeleteEvaluation } from './moderation';
 
 export const exportEvaluations = onCall(
   { region: 'us-central1', memory: '512MiB', timeoutSeconds: 120 },

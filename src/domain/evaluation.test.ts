@@ -2,11 +2,14 @@ import { describe, expect, it } from 'vitest';
 
 import {
   canDeleteEvaluation,
+  canModerateDelete,
   canSaveEvaluation,
+  canViewEvaluation,
   classificationColor,
   composeBuildingDimensions,
   createEvaluation,
   lastSectionIndex,
+  needsRemoteSync,
   normalizeEvaluation,
   sectionCountFor,
   validateForSubmission,
@@ -152,5 +155,47 @@ describe('evaluation domain', () => {
     expect(canDeleteEvaluation({ ...draft, status: 'submitted' })).toBe(false);
     expect(canDeleteEvaluation({ ...draft, status: 'synced' })).toBe(false);
     expect(canDeleteEvaluation({ ...draft, officialNumber: 12 })).toBe(false);
+    expect(canDeleteEvaluation(draft, 'other-user')).toBe(false);
+    expect(canDeleteEvaluation(draft, 'demo-evaluator')).toBe(true);
+  });
+
+  it('lets coordinators purge drafts and admins purge submitted evaluations', () => {
+    const draft = createEvaluation('purge-draft', 'owner-1');
+    const submitted = { ...draft, status: 'submitted' as const };
+    expect(canModerateDelete(draft, 'coordinator')).toBe(true);
+    expect(canModerateDelete(submitted, 'coordinator')).toBe(false);
+    expect(canModerateDelete(submitted, 'admin')).toBe(true);
+    expect(canModerateDelete(draft, 'evaluator')).toBe(false);
+  });
+
+  it('lets supporting inspectors view a shared inspection without owning it', () => {
+    const owned = createEvaluation('share-id', 'owner-1');
+    const shared = { ...owned, sharedWithUserIds: ['helper-2'] };
+    expect(canViewEvaluation(owned, 'owner-1', 'evaluator')).toBe(true);
+    expect(canViewEvaluation(owned, 'helper-2', 'evaluator')).toBe(false);
+    expect(canViewEvaluation(owned, '', 'evaluator')).toBe(false);
+    expect(canViewEvaluation(owned, 'anyone', 'admin')).toBe(true);
+    expect(canViewEvaluation(shared, 'helper-2', 'evaluator')).toBe(true);
+    expect(canViewEvaluation(owned, 'anyone', 'coordinator')).toBe(true);
+  });
+
+  it('requeues until the inspection is stored in Firebase, not until the consecutive arrives', () => {
+    const draft = createEvaluation('sync-draft');
+    const submitted = { ...draft, status: 'submitted' as const, syncState: 'pending' as const };
+    expect(needsRemoteSync(draft)).toBe(true);
+    expect(needsRemoteSync(submitted)).toBe(true);
+    expect(needsRemoteSync({ ...submitted, syncState: 'synced', jurisdictionId: 'Armenia' })).toBe(
+      false,
+    );
+    expect(
+      needsRemoteSync({
+        ...submitted,
+        syncState: 'synced',
+        jurisdictionId: 'jurisdiction-demo',
+      }),
+    ).toBe(true);
+    expect(
+      needsRemoteSync({ ...submitted, syncState: 'synced', officialNumber: 7, status: 'synced' }),
+    ).toBe(false);
   });
 });

@@ -1,8 +1,13 @@
 import * as SQLite from 'expo-sqlite';
 
-import { normalizeEvaluation, type Evaluation } from '@/domain/evaluation';
+import { normalizeEvaluation, isEvaluatorVisible, type Evaluation } from '@/domain/evaluation';
 
 let databasePromise: Promise<SQLite.SQLiteDatabase> | undefined;
+let activeUserId = '';
+
+export function setLocalStoreUser(uid: string) {
+  activeUserId = uid.trim();
+}
 
 async function database() {
   databasePromise ??= SQLite.openDatabaseAsync('evalquake.db').then(async (db) => {
@@ -30,7 +35,9 @@ export async function listLocalEvaluations(): Promise<Evaluation[]> {
   const rows = await db.getAllAsync<{ payload: string }>(
     'SELECT payload FROM evaluations ORDER BY updated_at DESC',
   );
-  return rows.map((row) => normalizeEvaluation(JSON.parse(row.payload) as Evaluation));
+  const records = rows.map((row) => normalizeEvaluation(JSON.parse(row.payload) as Evaluation));
+  if (!activeUserId) return records;
+  return records.filter((record) => isEvaluatorVisible(record, activeUserId));
 }
 
 export async function getLocalEvaluation(id: string): Promise<Evaluation | null> {
@@ -61,6 +68,16 @@ export async function saveLocalEvaluation(evaluation: Evaluation, queueSync = tr
   }
 }
 
+export async function addToOutbox(id: string) {
+  const db = await database();
+  await db.runAsync(
+    `INSERT INTO outbox (evaluation_id, operation, created_at) VALUES (?, 'upsert', ?)
+     ON CONFLICT(evaluation_id) DO UPDATE SET operation = 'upsert'`,
+    id,
+    new Date().toISOString(),
+  );
+}
+
 export async function listOutboxIds(): Promise<string[]> {
   const db = await database();
   const rows = await db.getAllAsync<{ evaluation_id: string }>('SELECT evaluation_id FROM outbox');
@@ -80,18 +97,28 @@ export async function completeLocalSync(
   const db = await database();
   let completed = false;
   await db.withExclusiveTransactionAsync(async (transaction) => {
-    const result = await transaction.runAsync(
-      `UPDATE evaluations SET payload = ?, updated_at = ?
-       WHERE id = ? AND updated_at = ?`,
-      JSON.stringify(remote),
-      remote.updatedAt,
+    const row = await transaction.getFirstAsync<{ payload: string }>(
+      'SELECT payload FROM evaluations WHERE id = ?',
       id,
-      expectedUpdatedAt,
     );
-    if (result.changes === 1) {
-      await transaction.runAsync('DELETE FROM outbox WHERE evaluation_id = ?', id);
-      completed = true;
-    }
+    if (!row) return;
+    const local = normalizeEvaluation(JSON.parse(row.payload) as Evaluation);
+    if (local.updatedAt !== expectedUpdatedAt && local.status === 'draft') return;
+    const merged = {
+      ...local,
+      ...remote,
+      photos: local.photos.length ? local.photos : remote.photos,
+      sketchUri: local.sketchUri || remote.sketchUri,
+      signatureUri: local.signatureUri || remote.signatureUri,
+    };
+    await transaction.runAsync(
+      `UPDATE evaluations SET payload = ?, updated_at = ? WHERE id = ?`,
+      JSON.stringify(merged),
+      merged.updatedAt,
+      id,
+    );
+    await transaction.runAsync('DELETE FROM outbox WHERE evaluation_id = ?', id);
+    completed = true;
   });
   return completed;
 }

@@ -22,7 +22,64 @@ La versión visible en la cabecera de la app sale de `src/version.ts`.
 
 ## [Unreleased]
 
-Cambios posteriores a 0.12.2 se listan aquí hasta el siguiente corte.
+Cambios posteriores a 0.14.0 se listan aquí hasta el siguiente corte.
+
+## [0.14.0] — 2026-08-23
+
+### Fixed
+
+- El evaluador ya no ve el almacén local compartido del navegador: solo sus fichas y las que le compartieron como inspector de apoyo.
+
+### Added
+
+- Coordinación puede eliminar borradores de cualquier evaluador (depuración). Administración también puede eliminar fichas ya firmadas o enviadas. Cada borrado pide confirmación y queda en un registro que solo ve Administración.
+
+## [0.13.0] — 2026-08-23
+
+### Changed
+
+- El evaluador solo ve sus fichas (y las que le compartan como inspector de apoyo). Coordinación y administración ven todas, con la cuenta del evaluador, filtros por daño global y por evaluador, y un reporte resumen de lo filtrado.
+
+### Fixed
+
+- Borrar un borrador ya no falla con `permission-denied` al intentar borrar en Firebase un documento inaccesible o ajeno.
+
+## [0.12.8] — 2026-08-23
+
+### Fixed
+
+- En web, reintentar sincronización fallaba con `enqueueUnsyncedEvaluations is not a function` porque esa rutina no existía en el almacén local de navegador.
+
+## [0.12.7] — 2026-08-23
+
+### Fixed
+
+- El resultado de la sincronización se muestra en la pantalla (en web `Alert` no aparece) y la subida solo se da por hecha cuando Firebase confirma el documento en el servidor.
+
+## [0.12.6] — 2026-08-23
+
+### Fixed
+
+- Las evaluaciones ya enviadas dejaban de subirse porque un `getDoc` previo chocaba con las reglas (documento nuevo o etiquetado `jurisdiction-demo`) y la lista las marcaba “pendiente de sincronización” solo por no tener consecutivo.
+
+## [0.12.5] — 2026-08-23
+
+### Fixed
+
+- Reintentar sincronización informa el error real (permiso, token o datos inválidos) y vuelve a subir inspecciones enviadas que Firestore rechazaba por campos `undefined` o por falta de jurisdicciones en el token.
+
+## [0.12.4] — 2026-08-23
+
+### Fixed
+
+- Las evaluaciones ya enviadas que quedaron pendientes se vuelven a poner en cola y se suben a Firebase, con un botón para reintentar la sincronización.
+- Se eliminó la página de bienvenida de Firebase Hosting en `public/index.html`, que tapaba la app al exportar y al desplegar.
+
+## [0.12.3] — 2026-08-23
+
+### Changed
+
+- El consecutivo oficial se asigna en el servidor por evento (todas las inspecciones cargadas a Firebase para ese sismo) y la ficha enviada muestra el número en cuanto llega.
 
 ## [0.12.2] — 2026-08-23
 

@@ -81,6 +81,7 @@ export function getFirebaseServices(): FirebaseServices | null {
   let db: Firestore;
   try {
     db = initializeFirestore(app, {
+      ignoreUndefinedProperties: true,
       localCache:
         Platform.OS === 'web'
           ? persistentLocalCache({ tabManager: persistentMultipleTabManager() })

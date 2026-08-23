@@ -42,7 +42,10 @@ service firebase.storage {
     }
 
     match /evaluations/{evaluationId}/{allPaths=**} {
-      allow read: if canReadEvaluation(evaluationId);
+      allow read: if signedIn() && (
+        resource.metadata.createdByUserId == request.auth.uid
+        || canReadEvaluation(evaluationId)
+      );
       allow create: if canUpload();
       allow update, delete: if false;
     }

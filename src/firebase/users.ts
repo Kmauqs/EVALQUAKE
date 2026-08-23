@@ -2,6 +2,8 @@ import {
   collection,
   doc,
   onSnapshot,
+  query,
+  where,
 } from 'firebase/firestore';
 import { httpsCallable } from 'firebase/functions';
 
@@ -43,6 +45,28 @@ export function subscribeUsers(
         snapshot.docs
           .map((item) => asAppUser(item.id, item.data()))
           .sort((left, right) => right.createdAt.localeCompare(left.createdAt)),
+      ),
+    (error) => onError?.(error),
+  );
+}
+
+export function subscribeEvaluators(
+  onChange: (users: AppUser[]) => void,
+  onError?: (error: Error) => void,
+) {
+  const services = getFirebaseServices();
+  if (!services) {
+    onChange([]);
+    return () => undefined;
+  }
+  return onSnapshot(
+    query(collection(services.db, 'users'), where('role', '==', 'evaluator')),
+    (snapshot) =>
+      onChange(
+        snapshot.docs
+          .map((item) => asAppUser(item.id, item.data()))
+          .filter((user) => !user.disabled && user.status !== 'disabled')
+          .sort((left, right) => left.email.localeCompare(right.email)),
       ),
     (error) => onError?.(error),
   );

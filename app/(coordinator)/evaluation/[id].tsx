@@ -1,26 +1,28 @@
 import { useLocalSearchParams } from 'expo-router';
-import { ArrowLeft, Braces, FileText, MapPin, Tag } from 'lucide-react-native';
+import { ArrowLeft, Braces, FileText, MapPin, Tag, Trash2 } from 'lucide-react-native';
 import React, { useEffect, useState } from 'react';
 import { Pressable, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 
 import { useAuth } from '@/auth/AuthProvider';
 import { AppShell, Button, Card, ClassificationBadge } from '@/components/ui';
-import type { Evaluation } from '@/domain/evaluation';
+import { evaluatorAccountLabel, canModerateDelete, type Evaluation } from '@/domain/evaluation';
 import { demoEvaluations } from '@/domain/fixtures';
 import { pullEvaluation } from '@/firebase/repository';
+import { subscribeUsers } from '@/firebase/users';
 import { useI18n } from '@/i18n/I18nProvider';
 import { useSafeBack } from '@/navigation/useSafeBack';
 import { renderPlacardHtml } from '@/report/renderPlacardHtml';
 import { renderReportHtml } from '@/report/renderReportHtml';
 import { openHtmlDocument } from '@/services/htmlDocument';
 import { hydrateEvaluationImages } from '@/services/resolveImage';
+import { requestModerateDelete } from '@/services/moderateDelete';
 import { useEvaluations } from '@/state/EvaluationProvider';
 import { colors, layout } from '@/theme';
 
 export default function EvaluationDetail() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { t, language } = useI18n();
-  const { configured } = useAuth();
+  const { configured, role } = useAuth();
   const { get } = useEvaluations();
   const goBack = useSafeBack('/(coordinator)');
   const { width } = useWindowDimensions();
@@ -29,11 +31,24 @@ export default function EvaluationDetail() {
     demoEvaluations.find((item) => item.id === id) ?? null,
   );
   const [raw, setRaw] = useState(false);
+  const [accountEmail, setAccountEmail] = useState('');
 
   useEffect(() => {
     if (!id || evaluation) return;
     void (configured ? pullEvaluation(id) : get(id)).then(setEvaluation);
   }, [configured, id, evaluation, get]);
+
+  useEffect(() => {
+    if (!configured || !evaluation?.createdByUserId) return;
+    if (evaluation.createdByEmail.trim()) {
+      setAccountEmail(evaluation.createdByEmail);
+      return;
+    }
+    return subscribeUsers((users) => {
+      const match = users.find((user) => user.id === evaluation.createdByUserId);
+      setAccountEmail(match?.email || match?.displayName || '');
+    });
+  }, [configured, evaluation?.createdByEmail, evaluation?.createdByUserId]);
 
   if (!evaluation) {
     return (
@@ -67,6 +82,7 @@ export default function EvaluationDetail() {
     [t.fields.structuralSystem, evaluation.structure.structuralSystem],
     [t.fields.globalDamage, `${evaluation.globalDamagePercentage}%`],
     [t.fields.inspectorName, evaluation.inspectors[0]?.name],
+    [t.evaluatorAccount, accountEmail || evaluatorAccountLabel(evaluation)],
     [t.fields.entity, evaluation.inspectors[0]?.entity],
     [t.fields.comments, evaluation.comments],
   ];
@@ -120,6 +136,21 @@ export default function EvaluationDetail() {
         >
           {t.rawData}
         </Button>
+        {canModerateDelete(evaluation, role) ? (
+          <Button
+            variant="danger"
+            icon={<Trash2 size={18} color={colors.white} />}
+            onPress={() =>
+              requestModerateDelete(evaluation, role, t, () => {
+                setEvaluation(null);
+                goBack();
+              })
+            }
+            style={[styles.actionButton, narrow && styles.actionButtonNarrow]}
+          >
+            {t.deleteEvaluation}
+          </Button>
+        ) : null}
       </View>
 
       {raw ? (

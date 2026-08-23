@@ -1,19 +1,34 @@
 import { useRouter } from 'expo-router';
-import { ArrowLeft, Building2, Plus, RotateCw, Trash2 } from 'lucide-react-native';
-import React from 'react';
-import { ActivityIndicator, Alert, Pressable, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
+import { ArrowLeft, Building2, Plus, RotateCw, Trash2, UserPlus } from 'lucide-react-native';
+import React, { useState } from 'react';
+import { ActivityIndicator, Pressable, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 
+import { ShareSupportModal } from '@/components/ShareSupportModal';
 import { AppShell, Button, Card, ClassificationBadge, OfflinePill } from '@/components/ui';
-import { canDeleteEvaluation, sectionCountFor } from '@/domain/evaluation';
+import { useAuth } from '@/auth/AuthProvider';
+import {
+  canDeleteEvaluation,
+  isEvaluationOwner,
+  isSupportingInspector,
+  needsRemoteSync,
+  sectionCountFor,
+  type Evaluation,
+} from '@/domain/evaluation';
+import { isSyncFailure } from '@/firebase/sync';
 import { useI18n } from '@/i18n/I18nProvider';
 import { useSafeBack } from '@/navigation/useSafeBack';
 import { confirmDestructive } from '@/services/confirm';
+import { notify } from '@/services/notify';
 import { useEvaluations } from '@/state/EvaluationProvider';
 import { colors } from '@/theme';
 
 export default function EvaluatorHome() {
   const { t, language } = useI18n();
-  const { evaluations, loading, create, remove } = useEvaluations();
+  const { evaluations: storedEvaluations, loading, create, remove, retrySync, lastSyncResult, share } = useEvaluations();
+  const { uid } = useAuth();
+  const evaluations = storedEvaluations.filter(
+    (evaluation) => isEvaluationOwner(evaluation, uid) || isSupportingInspector(evaluation, uid),
+  );
   const router = useRouter();
   const goBack = useSafeBack('/');
   const { width } = useWindowDimensions();
@@ -24,6 +39,26 @@ export default function EvaluatorHome() {
     router.push(`/(evaluator)/evaluation/${evaluation.id}`);
   };
 
+  const [syncing, setSyncing] = useState(false);
+  const [sharing, setSharing] = useState<Evaluation | null>(null);
+  const pendingUpload = evaluations.some(
+    (evaluation) =>
+      needsRemoteSync(evaluation) || (evaluation.status !== 'draft' && evaluation.officialNumber == null),
+  );
+  const syncDetail = lastSyncResult?.errors.filter(Boolean).join('\n') ?? '';
+  const syncFailed = Boolean(lastSyncResult && isSyncFailure(lastSyncResult));
+
+  const requestRetry = () => {
+    setSyncing(true);
+    void retrySync()
+      .then((result) => {
+        const detail = result.errors.filter(Boolean).slice(0, 6).join('\n');
+        notify(t.retrySync, isSyncFailure(result) ? detail || t.syncRetryFailed : t.syncRetryOk);
+      })
+      .catch((error) => notify(t.retrySync, String(error?.message ?? t.syncRetryFailed)))
+      .finally(() => setSyncing(false));
+  };
+
   const requestDelete = (id: string) => {
     confirmDestructive(
       t.deleteEvaluationTitle,
@@ -31,7 +66,7 @@ export default function EvaluatorHome() {
       t.deleteEvaluation,
       t.cancel,
       () => {
-        void remove(id).catch(() => Alert.alert(t.deleteEvaluationTitle, t.deleteFailed));
+        void remove(id).catch(() => notify(t.deleteEvaluationTitle, t.deleteFailed));
       },
     );
   };
@@ -55,6 +90,17 @@ export default function EvaluatorHome() {
       <Button icon={<Plus size={19} color={colors.white} />} onPress={createNew} style={styles.newButton}>
         {t.newEvaluation}
       </Button>
+      {pendingUpload || syncFailed ? (
+        <Button variant="ghost" loading={syncing} onPress={requestRetry} style={styles.retryButton}>
+          {t.retrySync}
+        </Button>
+      ) : null}
+      {syncFailed ? (
+        <Card style={styles.syncError}>
+          <Text style={styles.syncErrorTitle}>{t.retrySync}</Text>
+          <Text style={styles.syncErrorText}>{syncDetail || t.syncRetryFailed}</Text>
+        </Card>
+      ) : null}
 
       {loading ? (
         <ActivityIndicator color={colors.primary} style={styles.loading} />
@@ -80,6 +126,7 @@ export default function EvaluatorHome() {
                     {evaluation.building.address || `${t.draft} · ${evaluation.id.slice(-6).toUpperCase()}`}
                   </Text>
                   <Text style={styles.meta}>
+                    {isSupportingInspector(evaluation, uid) ? `${t.sharedWithYou} · ` : ''}
                     {evaluation.identification.neighborhood || t.currentEvent} ·{' '}
                     {new Date(evaluation.updatedAt).toLocaleDateString(language)}
                   </Text>
@@ -95,13 +142,28 @@ export default function EvaluatorHome() {
               </Pressable>
               <View style={[styles.itemStatus, narrow && styles.itemStatusNarrow]}>
                 <ClassificationBadge value={evaluation.habitability} compact />
-                <View style={styles.sync}>
+                <Pressable onPress={() => { if (!syncing) requestRetry(); }} style={styles.sync}>
                   <RotateCw size={12} color={colors.textMuted} />
                   <Text style={styles.syncText}>
-                    {evaluation.syncState === 'synced' ? t.synced : t.pendingSync}
+                    {evaluation.syncState === 'synced' && evaluation.officialNumber != null
+                      ? t.synced
+                      : evaluation.syncState === 'synced'
+                        ? t.officialPending
+                        : t.pendingSync}
                   </Text>
-                </View>
-                {canDeleteEvaluation(evaluation) && (
+                </Pressable>
+                {isEvaluationOwner(evaluation, uid) && evaluation.status === 'draft' ? (
+                  <Pressable
+                    accessibilityRole="button"
+                    accessibilityLabel={t.shareWithEvaluator}
+                    hitSlop={8}
+                    onPress={() => setSharing(evaluation)}
+                    style={styles.deleteButton}
+                  >
+                    <UserPlus size={16} color={colors.primary} />
+                  </Pressable>
+                ) : null}
+                {canDeleteEvaluation(evaluation, uid) && (
                   <Pressable
                     accessibilityRole="button"
                     accessibilityLabel={t.deleteEvaluation}
@@ -117,6 +179,13 @@ export default function EvaluatorHome() {
           ))}
         </View>
       )}
+      <ShareSupportModal
+        evaluation={sharing}
+        currentUserId={uid}
+        visible={Boolean(sharing)}
+        onClose={() => setSharing(null)}
+        onShare={(userId) => share(sharing!.id, userId)}
+      />
     </AppShell>
   );
 }
@@ -133,6 +202,10 @@ const styles = StyleSheet.create({
   offlineWrap: { alignItems: 'flex-end' },
   offlineWrapNarrow: { width: '100%', alignItems: 'flex-start', paddingLeft: 58, marginTop: -4 },
   newButton: { alignSelf: 'flex-start', marginTop: 22 },
+  retryButton: { alignSelf: 'flex-start', marginTop: 10 },
+  syncError: { marginTop: 12, borderColor: colors.danger, backgroundColor: colors.surfaceMuted },
+  syncErrorTitle: { color: colors.danger, fontWeight: '800', fontSize: 13 },
+  syncErrorText: { color: colors.text, marginTop: 6, fontSize: 13, lineHeight: 18 },
   loading: { marginTop: 60 },
   empty: { alignItems: 'center', marginTop: 22, paddingVertical: 55 },
   emptyTitle: { color: colors.text, fontSize: 20, fontWeight: '900', marginTop: 14 },

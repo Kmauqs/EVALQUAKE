@@ -127,6 +127,7 @@ iOS requiere cuenta Apple Developer. Tras el build, instalar y confirmar la vers
 | Síntoma | Qué hacer |
 |---|---|
 | Sigue **Modo demostración** | El build no trajo `EXPO_PUBLIC_FIREBASE_*`. Revisar secrets de GitHub o exportar en local con `.env` y `USE_FIREBASE_EMULATORS=false`. |
+| Página **Firebase Hosting Setup Complete** | No deje `public/index.html` de plantilla Firebase: Expo lo copia a `dist` y tapa la app. Exportar de nuevo (`npm run export:web`) y desplegar Hosting. |
 | Cabecera con versión vieja | Hard refresh, o el push/export no se completó. |
 | Cuenta nueva no puede evaluar | El admin debe aprobar rol y jurisdicción; el usuario pulsa **Comprobar acceso**. |
 | Functions no aplica el cambio | No basta el push: `firebase deploy --only functions`. |
