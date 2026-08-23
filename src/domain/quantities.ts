@@ -31,6 +31,7 @@ export interface QuantityWall {
 
 export interface QuantityRoof {
   id: string;
+  location: string;
   length: string;
   width: string;
   structureType: RoofStructureType | '';
@@ -43,6 +44,7 @@ export interface QuantityRoof {
 
 export interface QuantityMember {
   id: string;
+  location: string;
   width: string;
   depth: string;
   length: string;
@@ -65,6 +67,15 @@ export function emptyRepairQuantities(): RepairQuantities {
   return { walls: [], roofs: [], beams: [], columns: [] };
 }
 
+export function normalizeRepairQuantities(raw?: RepairQuantities): RepairQuantities {
+  return {
+    walls: (raw?.walls ?? []).map((wall) => ({ ...wall, location: wall.location ?? '' })),
+    roofs: (raw?.roofs ?? []).map((roof) => ({ ...roof, location: roof.location ?? '' })),
+    beams: (raw?.beams ?? []).map((beam) => ({ ...beam, location: beam.location ?? '' })),
+    columns: (raw?.columns ?? []).map((column) => ({ ...column, location: column.location ?? '' })),
+  };
+}
+
 export function createQuantityWall(): QuantityWall {
   return {
     id: newQuantityId(),
@@ -84,6 +95,7 @@ export function createQuantityWall(): QuantityWall {
 export function createQuantityRoof(): QuantityRoof {
   return {
     id: newQuantityId(),
+    location: '',
     length: '',
     width: '',
     structureType: '',
@@ -98,6 +110,7 @@ export function createQuantityRoof(): QuantityRoof {
 export function createQuantityMember(): QuantityMember {
   return {
     id: newQuantityId(),
+    location: '',
     width: '',
     depth: '',
     length: '',
@@ -242,7 +255,7 @@ export function quantityCsvRows(evaluation: Evaluation, t: Dictionary): string[]
         : catalogLabel(t.catalogs.roofStructureTypes, roof.structureType);
     rows.push([
       t.quantityRoofs,
-      '',
+      roof.location,
       roof.length,
       '',
       roof.width,
@@ -269,7 +282,7 @@ export function quantityCsvRows(evaluation: Evaluation, t: Dictionary): string[]
         : catalogLabel(t.catalogs.frameMaterials, member.material);
     rows.push([
       category,
-      '',
+      member.location,
       member.length,
       '',
       member.width,

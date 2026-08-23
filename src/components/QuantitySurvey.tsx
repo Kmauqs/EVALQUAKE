@@ -47,6 +47,7 @@ export function QuantitySurvey({ evaluation, onChange, onExport }: Props) {
   return (
     <View style={styles.stack}>
       <Text style={styles.hint}>{t.hints.quantitiesOptional}</Text>
+      <Text style={styles.hint}>{t.hints.quantityElementLocation}</Text>
       <Button
         variant="secondary"
         icon={<Download size={18} color={colors.primary} />}
@@ -204,12 +205,14 @@ function WallEditor({
   return (
     <View style={styles.card}>
       <ItemHeader title={`${t.quantityWalls} ${index + 1}`} onRemove={onRemove} />
+      <Field
+        label={t.fields.quantityLocation}
+        value={wall.location}
+        onChangeText={(location) => onChange({ ...wall, location })}
+        placeholder={t.hints.quantityLocationExample}
+        style={styles.locationField}
+      />
       <View style={styles.grid}>
-        <Field
-          label={t.fields.quantityLocation}
-          value={wall.location}
-          onChangeText={(location) => onChange({ ...wall, location })}
-        />
         <Field
           label={t.fields.quantityLength}
           keyboardType="decimal-pad"
@@ -296,6 +299,13 @@ function RoofEditor({
   return (
     <View style={styles.card}>
       <ItemHeader title={t.quantityRoofs} onRemove={onRemove} />
+      <Field
+        label={t.fields.quantityLocation}
+        value={roof.location}
+        onChangeText={(location) => onChange({ ...roof, location })}
+        placeholder={t.hints.quantityLocationExample}
+        style={styles.locationField}
+      />
       <View style={styles.grid}>
         <Field
           label={t.fields.quantityLength}
@@ -373,6 +383,13 @@ function MemberEditor({
   return (
     <View style={styles.card}>
       <ItemHeader title={t.fields.quantitySection} onRemove={onRemove} />
+      <Field
+        label={t.fields.quantityLocation}
+        value={member.location}
+        onChangeText={(location) => onChange({ ...member, location })}
+        placeholder={t.hints.quantityLocationExample}
+        style={styles.locationField}
+      />
       <View style={styles.grid}>
         <Field
           label={t.fields.quantityWidth}
@@ -528,6 +545,7 @@ const styles = StyleSheet.create({
   itemTitle: { color: colors.text, fontWeight: '800', fontSize: 14, flex: 1, minWidth: 0 },
   remove: { flexDirection: 'row', alignItems: 'center', gap: 6, flexShrink: 0 },
   removeText: { color: colors.danger, fontWeight: '800', fontSize: 13 },
+  locationField: { flexBasis: '100%', width: '100%' },
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12, width: '100%' },
   computed: { color: colors.primaryDark, fontSize: 13, fontWeight: '800' },
   multi: { gap: 7, width: '100%', minWidth: 0 },

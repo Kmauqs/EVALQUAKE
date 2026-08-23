@@ -17,7 +17,7 @@ import {
   type NsrGroup,
   type StructuralSystemCode,
 } from './catalog';
-import { emptyRepairQuantities, type RepairQuantities } from './quantities';
+import { emptyRepairQuantities, normalizeRepairQuantities, type RepairQuantities } from './quantities';
 
 export type Language = 'es' | 'en';
 export type UserRole = 'evaluator' | 'coordinator' | 'admin';
@@ -535,12 +535,7 @@ export function normalizeEvaluation(raw: Evaluation): Evaluation {
     },
     inspectors: raw.inspectors?.length ? raw.inspectors : base.inspectors,
     photos: raw.photos ?? [],
-    repairQuantities: {
-      walls: raw.repairQuantities?.walls ?? [],
-      roofs: raw.repairQuantities?.roofs ?? [],
-      beams: raw.repairQuantities?.beams ?? [],
-      columns: raw.repairQuantities?.columns ?? [],
-    },
+    repairQuantities: normalizeRepairQuantities(raw.repairQuantities),
   };
 }
 

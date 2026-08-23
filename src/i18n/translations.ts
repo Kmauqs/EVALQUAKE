@@ -269,7 +269,7 @@ export const es = {
     inspectorId: 'ID de inspector',
     entity: 'Entidad',
     quantityCategory: 'Elemento',
-    quantityLocation: 'Localización',
+    quantityLocation: 'Ubicación de elemento',
     quantityLength: 'Largo (m)',
     quantityHeight: 'Alto (m)',
     quantityWidth: 'Ancho (m)',
@@ -303,6 +303,9 @@ export const es = {
     openGuide: 'Ver puntos de inspección en la guía',
     quantitiesOptional:
       'Cuestionario opcional. Sirve para armar el listado de cantidades de reparación; no es necesario para enviar la evaluación.',
+    quantityElementLocation:
+      'Indique la ubicación de cada elemento para identificarlo después y relacionarlo con el plano de levantamiento de fallas.',
+    quantityLocationExample: 'Ej.: muro norte, eje A-1, primer piso',
     addressFromCadastral:
       'Se carga desde la identificación catastral. Puede ajustarla si es necesario.',
     constructionPeriodFromYear:
@@ -878,7 +881,7 @@ export const en = {
     inspectorId: 'Inspector ID',
     entity: 'Organization',
     quantityCategory: 'Element',
-    quantityLocation: 'Location',
+    quantityLocation: 'Element location',
     quantityLength: 'Length (m)',
     quantityHeight: 'Height (m)',
     quantityWidth: 'Width (m)',
@@ -912,6 +915,9 @@ export const en = {
     openGuide: 'See inspection points in the guide',
     quantitiesOptional:
       'Optional questionnaire. It builds the repair-quantity list and is not required to submit the assessment.',
+    quantityElementLocation:
+      'Record each element location so it can be identified later and matched to the fault-survey drawing.',
+    quantityLocationExample: 'e.g. north wall, grid A-1, first floor',
     addressFromCadastral: 'Loaded from cadastral identification. You can adjust it if needed.',
     constructionPeriodFromYear:
       'Entering the year fills the period automatically. If the exact year is unknown, leave it blank and choose the period.',

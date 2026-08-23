@@ -244,17 +244,26 @@ export function renderReportHtml(evaluation: Evaluation, language: Language) {
         .join('') +
       evaluation.repairQuantities.roofs
         .map((roof, index) =>
-          row(`${t.quantityRoofs} ${index + 1}`, `${formatMeasure(roofArea(roof))} m²`),
+          row(
+            `${t.quantityRoofs} ${index + 1}`,
+            `${roof.location || '—'} · ${formatMeasure(roofArea(roof))} m²`,
+          ),
         )
         .join('') +
       evaluation.repairQuantities.beams
         .map((beam, index) =>
-          row(`${t.quantityBeams} ${index + 1}`, `${formatMeasure(memberVolume(beam))} m³`),
+          row(
+            `${t.quantityBeams} ${index + 1}`,
+            `${beam.location || '—'} · ${formatMeasure(memberVolume(beam))} m³`,
+          ),
         )
         .join('') +
       evaluation.repairQuantities.columns
         .map((column, index) =>
-          row(`${t.quantityColumns} ${index + 1}`, `${formatMeasure(memberVolume(column))} m³`),
+          row(
+            `${t.quantityColumns} ${index + 1}`,
+            `${column.location || '—'} · ${formatMeasure(memberVolume(column))} m³`,
+          ),
         )
         .join('') +
       row(t.fields.quantityTotalWallArea, `${formatMeasure(totalWallArea(evaluation.repairQuantities.walls))} m²`) +

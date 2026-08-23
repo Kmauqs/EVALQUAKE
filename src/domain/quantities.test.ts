@@ -1,12 +1,16 @@
 import { describe, expect, it } from 'vitest';
 
 import { createEvaluation } from './evaluation';
+import { es } from '@/i18n/translations';
+
 import {
   createQuantityMember,
   createQuantityRoof,
   createQuantityWall,
   formatMeasure,
+  normalizeRepairQuantities,
   parseMeasure,
+  quantityCsvRows,
   roofArea,
   totalMemberLength,
   totalMemberVolume,
@@ -43,5 +47,34 @@ describe('repair quantities', () => {
   it('keeps quantities optional on new evaluations', () => {
     const evaluation = createEvaluation('qty-draft');
     expect(evaluation.repairQuantities).toEqual({ walls: [], roofs: [], beams: [], columns: [] });
+  });
+
+  it('gives every quantity item an element location field', () => {
+    expect(createQuantityWall().location).toBe('');
+    expect(createQuantityRoof().location).toBe('');
+    expect(createQuantityMember().location).toBe('');
+    const migrated = normalizeRepairQuantities({
+      walls: [{ ...createQuantityWall(), location: 'Muro norte' }],
+      roofs: [{ ...createQuantityRoof(), location: undefined as never }],
+      beams: [],
+      columns: [],
+    });
+    expect(migrated.walls[0]?.location).toBe('Muro norte');
+    expect(migrated.roofs[0]?.location).toBe('');
+  });
+
+  it('exports element location in the quantities CSV', () => {
+    const evaluation = createEvaluation('qty-csv');
+    const roof = createQuantityRoof();
+    roof.location = 'Cubierta patio';
+    roof.length = '6';
+    roof.width = '4';
+    const beam = createQuantityMember();
+    beam.location = 'Viga eje B, piso 2';
+    evaluation.repairQuantities = { walls: [], roofs: [roof], beams: [beam], columns: [] };
+    const rows = quantityCsvRows(evaluation, es);
+    expect(rows[0]).toContain(es.fields.quantityLocation);
+    expect(rows.some((row) => row.includes('Cubierta patio'))).toBe(true);
+    expect(rows.some((row) => row.includes('Viga eje B, piso 2'))).toBe(true);
   });
 });

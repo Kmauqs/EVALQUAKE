@@ -22,7 +22,13 @@ La versión visible en la cabecera de la app sale de `src/version.ts`.
 
 ## [Unreleased]
 
-Cambios posteriores a 0.10.0 se listan aquí hasta el siguiente corte.
+Cambios posteriores a 0.11.0 se listan aquí hasta el siguiente corte.
+
+## [0.11.0] — 2026-08-22
+
+### Added
+
+- Cada elemento de cantidades tiene ubicación para identificarlo y relacionarlo con el plano de levantamiento de fallas.
 
 ## [0.10.0] — 2026-08-22
 
