@@ -22,7 +22,13 @@ La versión visible en la cabecera de la app sale de `src/version.ts`.
 
 ## [Unreleased]
 
-Cambios posteriores a 0.11.5 se listan aquí hasta el siguiente corte.
+Cambios posteriores a 0.11.6 se listan aquí hasta el siguiente corte.
+
+## [0.11.6] — 2026-08-22
+
+### Added
+
+- La página de inicio incluye un enlace al repositorio del proyecto en GitHub.
 
 ## [0.11.5] — 2026-08-22
 

@@ -1,12 +1,33 @@
 import { type Href, useRouter } from 'expo-router';
-import { ClipboardCheck, ShieldCheck, Users } from 'lucide-react-native';
+import { ClipboardCheck, ExternalLink, ShieldCheck, Users } from 'lucide-react-native';
 import React, { useState } from 'react';
-import { ActivityIndicator, Alert, Image, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
+import { ActivityIndicator, Alert, Image, Linking, Platform, Pressable, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 
 import { authErrorMessage, useAuth } from '@/auth/AuthProvider';
 import { AppShell, Button, Card, Field, OfflinePill, ToggleRow } from '@/components/ui';
 import { useI18n } from '@/i18n/I18nProvider';
 import { colors } from '@/theme';
+
+const GITHUB_URL = 'https://github.com/Kmauqs/EVALQUAKE';
+
+function GitHubProjectLink() {
+  const { t } = useI18n();
+  return (
+    <Pressable
+      accessibilityRole="link"
+      accessibilityLabel={t.githubProject}
+      onPress={() => void Linking.openURL(GITHUB_URL)}
+      style={({ pressed }) => [
+        styles.githubLink,
+        Platform.OS === 'web' ? { cursor: 'pointer' as const } : undefined,
+        pressed && styles.githubLinkPressed,
+      ]}
+    >
+      <ExternalLink size={18} color={colors.primary} />
+      <Text style={styles.githubText}>{t.githubProject}</Text>
+    </Pressable>
+  );
+}
 
 export default function WelcomeScreen() {
   const { t } = useI18n();
@@ -91,6 +112,7 @@ export default function WelcomeScreen() {
             {mode === 'register' ? t.haveAccount : t.needAccount}
           </Button>
         </Card>
+        <GitHubProjectLink />
       </AppShell>
     );
   }
@@ -122,6 +144,7 @@ export default function WelcomeScreen() {
             {t.signOut}
           </Button>
         </Card>
+        <GitHubProjectLink />
       </AppShell>
     );
   }
@@ -184,6 +207,7 @@ export default function WelcomeScreen() {
           {t.signOut}
         </Button>
       )}
+      <GitHubProjectLink />
     </AppShell>
   );
 }
@@ -213,7 +237,20 @@ const styles = StyleSheet.create({
   loginCard: { width: '100%', maxWidth: 440, alignSelf: 'center', marginTop: 50, gap: 16 },
   loginLogo: { width: 92, height: 92, borderRadius: 46, alignSelf: 'center' },
   authLead: { color: colors.textMuted, lineHeight: 21, textAlign: 'center' },
-  signOut: { alignSelf: 'center', marginBottom: 24 },
+  signOut: { alignSelf: 'center', marginBottom: 8 },
+  githubLink: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    alignSelf: 'center',
+    gap: 8,
+    marginTop: 16,
+    marginBottom: 20,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+  },
+  githubLinkPressed: { opacity: 0.65 },
+  githubText: { color: colors.primary, fontWeight: '800', fontSize: 14 },
   roles: { flexDirection: 'row', gap: 18, marginTop: 20, paddingBottom: 20 },
   rolesNarrow: { flexDirection: 'column' },
   roleCard: { flex: 1, gap: 14 },
