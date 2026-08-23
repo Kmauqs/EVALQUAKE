@@ -44,6 +44,16 @@ describe('bilingual report renderer', () => {
     expect(spanish).toContain('&lt;Casa &amp; Hogar&gt;');
     expect(spanish).not.toContain('<Casa & Hogar>');
     expect(spanish).not.toContain('Criterios ATC-20 en campo');
+    expect(spanish).toContain('Formulario Regional Homogenizado 2A');
+    expect(spanish).toContain('ADVERTENCIA IMPORTANTE.');
+    expect(spanish.indexOf('ADVERTENCIA IMPORTANTE.')).toBeLessThan(spanish.indexOf('Identificación catastral'));
+    expect(spanish).toContain('ANEXO. MARCO NORMATIVO Y REFERENCIAS TÉCNICAS APLICABLES');
+    expect(spanish).toContain('Ley 400 de 1997');
+    expect(spanish).toContain('ATC-20-2');
+    expect(spanish.indexOf('Registro fotográfico')).toBeLessThan(
+      spanish.indexOf('ANEXO. MARCO NORMATIVO Y REFERENCIAS TÉCNICAS APLICABLES'),
+    );
+    expect(english).toContain('IMPORTANT WARNING.');
   });
 
   it('embeds signatures, sketches, photographs, captions, and coordinates', () => {

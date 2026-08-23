@@ -22,7 +22,13 @@ La versión visible en la cabecera de la app sale de `src/version.ts`.
 
 ## [Unreleased]
 
-Cambios posteriores a 0.11.7 se listan aquí hasta el siguiente corte.
+Cambios posteriores a 0.12.0 se listan aquí hasta el siguiente corte.
+
+## [0.12.0] — 2026-08-22
+
+### Added
+
+- El informe final incluye la leyenda legal y la advertencia de inspección preliminar antes de la sección 1, y un anexo normativo al final.
 
 ## [0.11.7] — 2026-08-22
 

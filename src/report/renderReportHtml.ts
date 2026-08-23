@@ -14,6 +14,7 @@ import {
 import { formatCadastralAddress } from '../domain/placeLookup';
 import { en, es, type Dictionary } from '../i18n/translations';
 import { escapeHtml, wrapPrintableHtml } from './htmlChrome';
+import { renderReportAnnexHtml, renderReportPreambleHtml } from './reportLegal';
 
 const escape = escapeHtml;
 
@@ -335,7 +336,16 @@ export function renderReportHtml(evaluation: Evaluation, language: Language) {
 header{display:flex;align-items:center;border-bottom:4px solid #176235;padding-bottom:14px;margin-bottom:18px;background:#fff;padding:14px;border-radius:8px}
 .mark{width:54px;height:54px;border-radius:50%;background:#176235;color:#fff;display:flex;align-items:center;justify-content:center;font-size:24px;font-weight:bold;margin-right:14px}
 h1{color:#176235;font-size:24px;margin:0}.subtitle{color:#637068;margin-top:4px}.meta{margin-left:auto;text-align:right}
+.preamble{border:1px solid #d9e2d8;border-radius:8px;margin:0 0 11px;background:#fff;padding:12px 14px}
+.preamble .basis{margin:0 0 10px;color:#0e4525;line-height:1.45}
+.preamble .warning{margin:0;padding:10px 12px;background:#fbf4d6;border:1px solid #e4c76a;border-radius:6px;color:#17251c;line-height:1.45}
+.preamble .warning strong{display:inline;color:#8a4b00}
 section{break-inside:avoid;border:1px solid #d9e2d8;border-radius:8px;margin:0 0 11px;overflow:hidden;background:#fff}
+section.annex{break-inside:auto;overflow:visible;break-before:page;page-break-before:always}
+section.annex h3{background:#fff;padding:10px 12px 0;font-size:12px}
+section.annex ul{margin:0;padding:8px 12px 10px 28px}
+section.annex li{margin:0 0 6px;line-height:1.4}
+section.annex p{margin:0;padding:0 12px 10px;line-height:1.45}
 h2{background:#eef3ec;color:#0e4525;font-size:13px;margin:0;padding:9px 12px}.row{display:flex;border-top:1px solid #edf1ec;padding:6px 12px;gap:12px}
 .row span{color:#637068;width:42%}.row strong{flex:1}.classification{padding:12px;color:#fff;font-weight:bold;text-transform:uppercase}
 .habitable{background:#2d7a45}.restricted{background:#d69e00}.unsafe{background:#c43d32}.collapsed{background:#242824}
@@ -359,7 +369,7 @@ footer{text-align:center;color:#637068;margin-top:15px}
     evaluation.officialNumber ? `N.º ${evaluation.officialNumber}` : escape(t.officialPending)
   }</strong><br>${escape(new Date(evaluation.inspectedAt).toLocaleString(language))}<br>${escape(
     evaluation.id,
-  )}</div></header>${content}<footer>${escape(t.immutableNotice)}</footer></body></html>`;
+  )}</div></header>${renderReportPreambleHtml(language)}${content}${renderReportAnnexHtml()}<footer>${escape(t.immutableNotice)}</footer></body></html>`;
 
   return wrapPrintableHtml(documentHtml, printLabel(t));
 }
