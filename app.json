@@ -2,7 +2,7 @@
   "expo": {
     "name": "EVALQUAKE",
     "slug": "evalquake",
-    "version": "0.14.0",
+    "version": "0.14.1",
     "orientation": "default",
     "scheme": "evalquake",
     "userInterfaceStyle": "light",
@@ -37,7 +37,13 @@
     "web": {
       "bundler": "metro",
       "output": "static",
-      "favicon": "./icon_960.png"
+      "favicon": "./public/favicon.png",
+      "name": "EVALQUAKE",
+      "shortName": "EVALQUAKE",
+      "themeColor": "#176235",
+      "backgroundColor": "#F5F8F3",
+      "display": "standalone",
+      "startUrl": "/"
     },
     "plugins": [
       "expo-router",

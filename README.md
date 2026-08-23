@@ -1,6 +1,6 @@
 # EVALQUAKE
 
-**Versión actual: [0.14.0](CHANGELOG.md)**
+**Versión actual: [0.14.1](CHANGELOG.md)**
 
 Evaluación rápida de daños y habitabilidad postsismo, bilingüe (español/inglés) y offline-first para Android, iOS y web. El formulario unifica el Formulario Regional Homogenizado 2A (AIS) con el Manual de Campo y listas ATC-20 / ATC-20-2, en cumplimiento de la NSR-10. Sigue [`ARCHITECTURE.md`](ARCHITECTURE.md) y usa `icon_960.png` como icono, favicon, splash y base visual.
 

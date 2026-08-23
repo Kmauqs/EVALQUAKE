@@ -22,7 +22,13 @@ La versión visible en la cabecera de la app sale de `src/version.ts`.
 
 ## [Unreleased]
 
-Cambios posteriores a 0.14.0 se listan aquí hasta el siguiente corte.
+Cambios posteriores a 0.14.1 se listan aquí hasta el siguiente corte.
+
+## [0.14.1] — 2026-08-23
+
+### Added
+
+- Manifest PWA e iconos (192, 512, Apple Touch) para que al instalar el acceso directo en móvil o escritorio aparezca el ícono de EVALQUAKE.
 
 ## [0.14.0] — 2026-08-23
 
