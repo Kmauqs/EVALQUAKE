@@ -21,6 +21,7 @@ import { confirmDestructive } from '@/services/confirm';
 import { captureCoordinates, pickDamagePhoto, pickDamagePhotos } from '@/services/device';
 import { exportQuantitiesCsv } from '@/services/exportData';
 import { openHtmlDocument } from '@/services/htmlDocument';
+import { hydrateEvaluationImages } from '@/services/resolveImage';
 import { useEvaluations } from '@/state/EvaluationProvider';
 import { colors, layout } from '@/theme';
 
@@ -73,12 +74,14 @@ export default function EvaluationWizard() {
   const sectionKey = keys[current] ?? 'cadastral';
 
   const openReport = async () => {
-    await openHtmlDocument(renderReportHtml(evaluation, language), `evalquake-${evaluation.id}.html`);
+    const ready = await hydrateEvaluationImages(evaluation);
+    await openHtmlDocument(renderReportHtml(ready, language), `evalquake-${evaluation.id}.html`);
   };
 
   const openPlacard = async () => {
+    const ready = await hydrateEvaluationImages(evaluation);
     await openHtmlDocument(
-      renderPlacardHtml(evaluation, language),
+      renderPlacardHtml(ready, language),
       `evalquake-placard-${evaluation.id}.html`,
     );
   };
@@ -98,13 +101,14 @@ export default function EvaluationWizard() {
           </Text>
           <Text style={styles.submittedDescription}>{t.immutableNotice}</Text>
           <View style={styles.submittedActions}>
-            <Button variant="ghost" onPress={goBack}>
+            <Button variant="ghost" onPress={goBack} style={styles.actionButton}>
               {t.back}
             </Button>
             <Button
               variant="secondary"
               icon={<Tag size={18} color={colors.primary} />}
               onPress={() => void openPlacard()}
+              style={styles.actionButton}
             >
               {t.generatePlacard}
             </Button>
@@ -112,6 +116,7 @@ export default function EvaluationWizard() {
               variant="secondary"
               icon={<FileText size={18} color={colors.primary} />}
               onPress={() => void openReport()}
+              style={styles.actionButton}
             >
               {t.viewReport}
             </Button>
@@ -119,6 +124,7 @@ export default function EvaluationWizard() {
               variant="ghost"
               icon={<FileText size={18} color={colors.primary} />}
               onPress={() => void exportQuantitiesCsv([evaluation], language)}
+              style={styles.actionButton}
             >
               {t.exportQuantitiesCsv}
             </Button>
@@ -266,10 +272,10 @@ export default function EvaluationWizard() {
           onSketch={(source) => void addSketch(source)}
         />
         <View style={styles.divider} />
-        <View style={[styles.actions, narrow && styles.actionsNarrow]}>
-          <View style={[styles.actionsLeft, narrow && styles.actionsGroupNarrow]}>
+        <View style={styles.actions}>
+          <View style={styles.actionsGroup}>
             {current > 0 && (
-              <Button variant="ghost" onPress={() => void go(current - 1)} style={narrow ? styles.actionButtonNarrow : undefined}>
+              <Button variant="ghost" onPress={() => void go(current - 1)} style={styles.actionButton}>
                 {t.back}
               </Button>
             )}
@@ -279,13 +285,13 @@ export default function EvaluationWizard() {
                 icon={<Trash2 size={18} color={colors.white} />}
                 loading={deleting}
                 onPress={requestDelete}
-                style={narrow ? styles.actionButtonNarrow : undefined}
+                style={styles.actionButton}
               >
                 {t.deleteEvaluation}
               </Button>
             )}
           </View>
-          <View style={[styles.actionsRight, narrow && styles.actionsGroupNarrow]}>
+          <View style={styles.actionsGroup}>
             {current === last && (
               <>
                 <Button
@@ -293,7 +299,7 @@ export default function EvaluationWizard() {
                   icon={<Tag size={18} color={colors.primary} />}
                   loading={busy}
                   onPress={() => void openPlacard()}
-                  style={narrow ? styles.actionButtonNarrow : undefined}
+                  style={styles.actionButton}
                 >
                   {t.generatePlacard}
                 </Button>
@@ -302,14 +308,14 @@ export default function EvaluationWizard() {
                   icon={<FileText size={18} color={colors.primary} />}
                   loading={busy}
                   onPress={() => void openReport()}
-                  style={narrow ? styles.actionButtonNarrow : undefined}
+                  style={styles.actionButton}
                 >
                   {t.viewReport}
                 </Button>
               </>
             )}
             {current < last ? (
-              <Button onPress={() => void go(current + 1)} style={narrow ? styles.actionButtonNarrow : undefined}>
+              <Button onPress={() => void go(current + 1)} style={styles.actionButton}>
                 {t.next}
               </Button>
             ) : (
@@ -317,7 +323,7 @@ export default function EvaluationWizard() {
                 icon={<CheckCircle2 size={18} color={colors.white} />}
                 loading={busy}
                 onPress={() => void submit()}
-                style={narrow ? styles.actionButtonNarrow : undefined}
+                style={styles.actionButton}
               >
                 {t.submit}
               </Button>
@@ -340,17 +346,37 @@ const styles = StyleSheet.create({
   saved: { flexDirection: 'row', alignItems: 'center', gap: 5, flexShrink: 0, maxWidth: 160 },
   savedNarrow: { maxWidth: '100%', width: '100%', paddingLeft: 56 },
   savedText: { color: colors.textMuted, fontSize: 11, flexShrink: 1 },
-  formCard: { width: '100%', maxWidth: layout.contentWidth, alignSelf: 'center', marginTop: 15, marginBottom: 24 },
+  formCard: { width: '100%', maxWidth: layout.contentWidth, alignSelf: 'stretch', marginTop: 15, marginBottom: 24, minWidth: 0 },
   divider: { height: 1, backgroundColor: colors.border, marginVertical: 22 },
-  actions: { flexDirection: 'row', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap' },
-  actionsNarrow: { flexDirection: 'column', alignItems: 'stretch' },
-  actionsLeft: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
-  actionsRight: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'flex-end', gap: 10, flex: 1 },
-  actionsGroupNarrow: { width: '100%', flex: 0, flexDirection: 'column', alignItems: 'stretch' },
-  actionButtonNarrow: { width: '100%' },
-  submittedCard: { width: '100%', maxWidth: 620, alignSelf: 'center', marginTop: 40, gap: 14 },
+  actions: {
+    width: '100%',
+    maxWidth: '100%',
+    minWidth: 0,
+    alignSelf: 'stretch',
+    flexDirection: 'column',
+    alignItems: 'stretch',
+    gap: 10,
+  },
+  actionsGroup: {
+    width: '100%',
+    maxWidth: '100%',
+    minWidth: 0,
+    flexDirection: 'column',
+    alignItems: 'stretch',
+    gap: 10,
+  },
+  actionButton: { width: '100%', maxWidth: '100%', alignSelf: 'stretch', flexShrink: 1 },
+  submittedCard: { width: '100%', maxWidth: 620, alignSelf: 'center', marginTop: 40, gap: 14, minWidth: 0 },
   submittedTitle: { color: colors.text, fontSize: 25, fontWeight: '900' },
   officialNumber: { color: colors.primary, fontSize: 17, fontWeight: '900' },
   submittedDescription: { color: colors.textMuted, lineHeight: 21 },
-  submittedActions: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'flex-end', gap: 10, marginTop: 8 },
+  submittedActions: {
+    width: '100%',
+    maxWidth: '100%',
+    minWidth: 0,
+    flexDirection: 'column',
+    alignItems: 'stretch',
+    gap: 10,
+    marginTop: 8,
+  },
 });

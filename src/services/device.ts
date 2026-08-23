@@ -1,11 +1,11 @@
-import * as ImageManipulator from 'expo-image-manipulator';
 import * as ImagePicker from 'expo-image-picker';
 import * as Location from 'expo-location';
 import { Platform } from 'react-native';
 
 import type { Attachment, Coordinates } from '@/domain/evaluation';
 import { cryptoRandomId } from '@/domain/evaluation';
-import { hasPickerAssets, persistableImageUri } from '@/domain/imageUri';
+import { hasPickerAssets } from '@/domain/imageUri';
+import { persistImage } from '@/services/imagePersistence';
 
 export async function captureCoordinates(): Promise<Coordinates> {
   const permission = await Location.requestForegroundPermissionsAsync();
@@ -57,9 +57,10 @@ export async function pickDamagePhotos(
 
   const photos: Attachment[] = [];
   for (const asset of result.assets) {
-    const localUri = await persistPickedImage(asset);
+    const id = cryptoRandomId();
+    const localUri = await persistImage(id, asset);
     photos.push({
-      id: cryptoRandomId(),
+      id,
       localUri,
       sectionRef: 'photos',
       coordinates,
@@ -67,45 +68,4 @@ export async function pickDamagePhotos(
     });
   }
   return photos;
-}
-
-async function persistPickedImage(asset: ImagePicker.ImagePickerAsset) {
-  const fallback = persistableImageUri(asset);
-  try {
-    const context = ImageManipulator.ImageManipulator.manipulate(asset.uri);
-    context.resize({ width: 1600 });
-    const rendered = await context.renderAsync();
-    const compressed = await rendered.saveAsync({
-      compress: 0.72,
-      format: ImageManipulator.SaveFormat.JPEG,
-      base64: Platform.OS === 'web',
-    });
-    if (compressed.base64) {
-      return persistableImageUri({
-        uri: compressed.uri,
-        base64: compressed.base64,
-        mimeType: 'image/jpeg',
-      });
-    }
-    if (Platform.OS === 'web') {
-      return await readUriAsDataUri(compressed.uri).catch(() => fallback);
-    }
-    return compressed.uri;
-  } catch {
-    if (Platform.OS === 'web' && !fallback.startsWith('data:')) {
-      return readUriAsDataUri(asset.uri).catch(() => fallback);
-    }
-    return fallback;
-  }
-}
-
-async function readUriAsDataUri(uri: string) {
-  const response = await fetch(uri);
-  const blob = await response.blob();
-  return await new Promise<string>((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(String(reader.result));
-    reader.onerror = () => reject(reader.error ?? new Error('Could not read image'));
-    reader.readAsDataURL(blob);
-  });
 }

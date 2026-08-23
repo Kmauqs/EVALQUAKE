@@ -15,7 +15,19 @@ import {
 import { getDownloadURL, ref, uploadBytes } from 'firebase/storage';
 
 import { normalizeEvaluation, type Evaluation } from '@/domain/evaluation';
+import { mediaIdFromUri } from '@/domain/imageUri';
+import { resolveLocalImageUri, uriToBlob } from '@/services/imagePersistence';
 import { getFirebaseServices } from './client';
+
+async function blobFromImageUri(uri?: string) {
+  const resolved = await resolveLocalImageUri(uri);
+  if (!resolved) throw new Error('Photo is not available locally');
+  return uriToBlob(resolved);
+}
+
+function durableRemoteUri(uri: string) {
+  return uri.startsWith('http://') || uri.startsWith('https://') ? uri : '';
+}
 
 export async function pushEvaluation(evaluation: Evaluation): Promise<Evaluation> {
   const services = getFirebaseServices();
@@ -23,9 +35,12 @@ export async function pushEvaluation(evaluation: Evaluation): Promise<Evaluation
 
   const photos = await Promise.all(
     evaluation.photos.map(async (photo) => {
-      if (photo.storagePath) return photo;
-      const response = await fetch(photo.localUri);
-      const blob = await response.blob();
+      if (photo.storagePath) {
+        if (durableRemoteUri(photo.localUri)) return photo;
+        const localUri = await getDownloadURL(ref(services.storage, photo.storagePath));
+        return { ...photo, localUri, syncState: 'synced' as const };
+      }
+      const blob = await blobFromImageUri(photo.localUri);
       const storagePath = `evaluations/${evaluation.id}/photos/${photo.id}.jpg`;
       await uploadBytes(ref(services.storage, storagePath), blob, {
         contentType: 'image/jpeg',
@@ -36,21 +51,15 @@ export async function pushEvaluation(evaluation: Evaluation): Promise<Evaluation
           sectionRef: photo.sectionRef,
         },
       });
-      return { ...photo, storagePath, syncState: 'synced' as const };
+      const localUri = await getDownloadURL(ref(services.storage, storagePath));
+      return { ...photo, localUri, storagePath, syncState: 'synced' as const };
     }),
   );
 
   let sketchUri = evaluation.sketchUri;
   let sketchStoragePath = evaluation.sketchStoragePath;
-  if (
-    sketchUri &&
-    !sketchStoragePath &&
-    !sketchUri.startsWith('data:') &&
-    !sketchUri.startsWith('http://') &&
-    !sketchUri.startsWith('https://')
-  ) {
-    const response = await fetch(sketchUri);
-    const blob = await response.blob();
+  if (sketchUri && !sketchStoragePath) {
+    const blob = await blobFromImageUri(sketchUri);
     sketchStoragePath = `evaluations/${evaluation.id}/sketch/sketch-${Date.now()}.jpg`;
     const sketchReference = ref(services.storage, sketchStoragePath);
     await uploadBytes(sketchReference, blob, {
@@ -63,18 +72,30 @@ export async function pushEvaluation(evaluation: Evaluation): Promise<Evaluation
       },
     });
     sketchUri = await getDownloadURL(sketchReference);
+  } else if (sketchStoragePath && sketchUri && !durableRemoteUri(sketchUri)) {
+    sketchUri = await getDownloadURL(ref(services.storage, sketchStoragePath));
   }
 
   const next = {
     ...evaluation,
-    photos,
-    sketchUri,
+    photos: photos.map((photo, index) => ({
+      ...photo,
+      localUri: mediaIdFromUri(evaluation.photos[index]?.localUri)
+        ? evaluation.photos[index]!.localUri
+        : photo.localUri,
+    })),
+    sketchUri: mediaIdFromUri(evaluation.sketchUri) ? evaluation.sketchUri : sketchUri,
     sketchStoragePath,
     syncState: 'synced' as const,
     syncedAt: new Date().toISOString(),
   };
   await setDoc(doc(services.db, 'evaluations', evaluation.id), {
     ...next,
+    photos: photos.map((photo) => ({
+      ...photo,
+      localUri: durableRemoteUri(photo.localUri),
+    })),
+    sketchUri: sketchUri && durableRemoteUri(sketchUri) ? sketchUri : '',
     serverUpdatedAt: serverTimestamp(),
   });
   return next;

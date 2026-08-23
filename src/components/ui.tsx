@@ -503,8 +503,18 @@ export function SectionProgress({
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.background },
-  scroll: { flexGrow: 1 },
-  shellContent: { width: '100%', maxWidth: layout.maxWidth, alignSelf: 'center', padding: 20, flex: 1 },
+  scroll: Platform.select({
+    web: { flexGrow: 1, maxWidth: '100%', overflowX: 'hidden' },
+    default: { flexGrow: 1 },
+  }),
+  shellContent: {
+    width: '100%',
+    maxWidth: layout.maxWidth,
+    alignSelf: 'center',
+    padding: 20,
+    flex: 1,
+    minWidth: 0,
+  },
   header: {
     minHeight: 72,
     paddingHorizontal: 22,
@@ -596,6 +606,8 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.border,
     padding: 20,
+    maxWidth: '100%',
+    minWidth: 0,
     ...shadows,
   },
   button: {
@@ -605,6 +617,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     flexShrink: 0,
+    maxWidth: '100%',
+    minWidth: 0,
   },
   buttonInner: {
     flexDirection: 'row',

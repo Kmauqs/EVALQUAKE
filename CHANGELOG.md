@@ -22,7 +22,19 @@ La versión visible en la cabecera de la app sale de `src/version.ts`.
 
 ## [Unreleased]
 
-Cambios posteriores a 0.11.2 se listan aquí hasta el siguiente corte.
+Cambios posteriores a 0.11.4 se listan aquí hasta el siguiente corte.
+
+## [0.11.4] — 2026-08-22
+
+### Fixed
+
+- Las fotos de la sección 17 se conservan al salir y volver a la evaluación, en lugar de perderse con URLs temporales del navegador.
+
+## [0.11.3] — 2026-08-22
+
+### Fixed
+
+- Los botones al final de cada sección del formulario se apilan a lo ancho en móvil y ya no se salen de la pantalla.
 
 ## [0.11.2] — 2026-08-22
 

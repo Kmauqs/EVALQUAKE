@@ -13,6 +13,7 @@ import { useSafeBack } from '@/navigation/useSafeBack';
 import { renderPlacardHtml } from '@/report/renderPlacardHtml';
 import { renderReportHtml } from '@/report/renderReportHtml';
 import { openHtmlDocument } from '@/services/htmlDocument';
+import { hydrateEvaluationImages } from '@/services/resolveImage';
 import { useEvaluations } from '@/state/EvaluationProvider';
 import { colors, layout } from '@/theme';
 
@@ -43,12 +44,14 @@ export default function EvaluationDetail() {
   }
 
   const openReport = async () => {
-    await openHtmlDocument(renderReportHtml(evaluation, language), `evalquake-${evaluation.id}.html`);
+    const ready = await hydrateEvaluationImages(evaluation);
+    await openHtmlDocument(renderReportHtml(ready, language), `evalquake-${evaluation.id}.html`);
   };
 
   const openPlacard = async () => {
+    const ready = await hydrateEvaluationImages(evaluation);
     await openHtmlDocument(
-      renderPlacardHtml(evaluation, language),
+      renderPlacardHtml(ready, language),
       `evalquake-placard-${evaluation.id}.html`,
     );
   };
@@ -97,7 +100,7 @@ export default function EvaluationDetail() {
         <Button
           icon={<FileText size={18} color={colors.white} />}
           onPress={() => void openReport()}
-          style={narrow ? styles.actionButtonNarrow : undefined}
+          style={[styles.actionButton, narrow && styles.actionButtonNarrow]}
         >
           {t.viewReport}
         </Button>
@@ -105,7 +108,7 @@ export default function EvaluationDetail() {
           variant="secondary"
           icon={<Tag size={18} color={colors.primary} />}
           onPress={() => void openPlacard()}
-          style={narrow ? styles.actionButtonNarrow : undefined}
+          style={[styles.actionButton, narrow && styles.actionButtonNarrow]}
         >
           {t.generatePlacard}
         </Button>
@@ -113,7 +116,7 @@ export default function EvaluationDetail() {
           variant="ghost"
           icon={<Braces size={18} color={colors.primary} />}
           onPress={() => setRaw(!raw)}
-          style={narrow ? styles.actionButtonNarrow : undefined}
+          style={[styles.actionButton, narrow && styles.actionButtonNarrow]}
         >
           {t.rawData}
         </Button>
@@ -151,8 +154,18 @@ const styles = StyleSheet.create({
   location: { flexDirection: 'row', gap: 5, alignItems: 'flex-start', marginTop: 7 },
   locationText: { color: colors.textMuted, fontSize: 13, flex: 1, minWidth: 0 },
   badgeNarrow: { width: '100%', paddingLeft: 58 },
-  actions: { width: '100%', maxWidth: layout.contentWidth, alignSelf: 'center', flexDirection: 'row', gap: 9, marginTop: 20 },
-  actionsNarrow: { flexDirection: 'column', paddingLeft: 58 },
+  actions: {
+    width: '100%',
+    maxWidth: layout.contentWidth,
+    alignSelf: 'center',
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 9,
+    marginTop: 20,
+    minWidth: 0,
+  },
+  actionsNarrow: { flexDirection: 'column', alignItems: 'stretch', paddingLeft: 58 },
+  actionButton: { maxWidth: '100%', flexShrink: 1, minWidth: 0 },
   actionButtonNarrow: { width: '100%' },
   detailCard: { width: '100%', maxWidth: layout.contentWidth, alignSelf: 'center', marginTop: 14, marginBottom: 24, padding: 0, overflow: 'hidden' },
   row: { flexDirection: 'row', gap: 16, padding: 15, borderBottomWidth: 1, borderBottomColor: colors.border },

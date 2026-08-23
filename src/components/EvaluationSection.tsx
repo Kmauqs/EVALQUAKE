@@ -49,6 +49,7 @@ import {
 } from '@/domain/placeLookup';
 import { lookupPlace } from '@/services/reverseGeocode';
 import { colors } from '@/theme';
+import { PersistentImage } from './PersistentImage';
 import { QuantitySurvey } from './QuantitySurvey';
 import { SignatureCapture } from './SignatureCapture';
 import { Button, ClassificationBadge, Field, SelectRow, ToggleRow } from './ui';
@@ -966,8 +967,9 @@ export function EvaluationSection({
               </View>
               <View style={styles.sketchPreview}>
                 {evaluation.sketchUri ? (
-                  <Image
-                    source={{ uri: evaluation.sketchUri }}
+                  <PersistentImage
+                    uri={evaluation.sketchUri}
+                    storagePath={evaluation.sketchStoragePath}
                     resizeMode="contain"
                     style={styles.sketchImage}
                   />
@@ -1027,8 +1029,9 @@ export function EvaluationSection({
                 {evaluation.photos.map((photo) => (
                   <View key={photo.id} style={styles.photoCard}>
                     <View style={styles.photoPreview}>
-                      <Image
-                        source={{ uri: photo.localUri }}
+                      <PersistentImage
+                        uri={photo.localUri}
+                        storagePath={photo.storagePath}
                         resizeMode="cover"
                         style={styles.photo}
                       />
