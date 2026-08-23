@@ -22,7 +22,13 @@ La versión visible en la cabecera de la app sale de `src/version.ts`.
 
 ## [Unreleased]
 
-Cambios posteriores a 0.11.4 se listan aquí hasta el siguiente corte.
+Cambios posteriores a 0.11.5 se listan aquí hasta el siguiente corte.
+
+## [0.11.5] — 2026-08-22
+
+### Changed
+
+- En el informe final, el croquis ocupa una página entera y la firma del evaluador queda justo después de los datos del inspector.
 
 ## [0.11.4] — 2026-08-22
 

@@ -66,6 +66,15 @@ describe('bilingual report renderer', () => {
     expect(html).toContain('data:image/jpeg;base64,PHOTO');
     expect(html).toContain('Crack on north wall');
     expect(html).toContain('4.650000, -74.050000');
+    const inspectorIdx = html.indexOf('Inspectors');
+    const signatureIdx = html.indexOf('Evaluator signature');
+    const sketchPageIdx = html.indexOf('class="sketch-page"');
+    const photosIdx = html.indexOf('Photographic record');
+    expect(inspectorIdx).toBeGreaterThan(-1);
+    expect(inspectorIdx).toBeLessThan(signatureIdx);
+    expect(signatureIdx).toBeLessThan(sketchPageIdx);
+    expect(sketchPageIdx).toBeLessThan(photosIdx);
+    expect(html).toContain('page-break-before:always');
   });
 
   it('includes the equipment section for complete inspections of essential buildings', () => {

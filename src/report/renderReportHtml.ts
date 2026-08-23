@@ -26,8 +26,24 @@ export function renderReportHtml(evaluation: Evaluation, language: Language) {
   const t = language === 'es' ? es : en;
   const row = (label: string, value: unknown) =>
     `<div class="row"><span>${escape(label)}</span><strong>${escape(value || '—')}</strong></div>`;
+  const titledSection = (title: string, content: string, className = '') =>
+    `<section${className ? ` class="${className}"` : ''}><h2>${escape(title)}</h2>${content}</section>`;
   const section = (key: EvaluationSectionKey, index: number, content: string) =>
-    `<section><h2>${index + 1}. ${escape(t.sections[key])}</h2>${content}</section>`;
+    titledSection(`${index + 1}. ${t.sections[key]}`, content);
+  const signatureField = `<div class="signature-field"><strong>${escape(t.signature)}</strong>${
+    evaluation.signatureUri
+      ? `<img src="${escape(evaluation.signatureUri)}" alt="${escape(t.signature)}">`
+      : '<div class="blank"></div>'
+  }</div>`;
+  const sketchPage = titledSection(
+    t.sketch,
+    `<div class="sketch-frame">${
+      evaluation.sketchUri
+        ? `<img src="${escape(evaluation.sketchUri)}" alt="${escape(t.sketch)}">`
+        : '<span>—</span>'
+    }</div>`,
+    'sketch-page',
+  );
   const risk = (value: string) => escape((t as Record<string, unknown>)[value] ?? value);
   const damageRow = (item: Evaluation['structuralDamage']['elements'][number]) =>
     row(
@@ -223,15 +239,16 @@ export function renderReportHtml(evaluation: Evaluation, language: Language) {
       row(t.fields.phone, evaluation.contact.phone) +
       row(t.fields.contactAddress, evaluation.contact.address) +
       row(t.fields.comments, evaluation.comments),
-    inspectors: evaluation.inspectors
-      .map(
-        (inspector) =>
-          `<div class="inspector">${row(t.fields.inspectorName, inspector.name)}${row(
-            t.fields.profession,
-            inspector.profession,
-          )}${row(t.fields.license, inspector.license)}${row(t.fields.entity, inspector.entity)}</div>`,
-      )
-      .join(''),
+    inspectors:
+      evaluation.inspectors
+        .map(
+          (inspector) =>
+            `<div class="inspector">${row(t.fields.inspectorName, inspector.name)}${row(
+              t.fields.profession,
+              inspector.profession,
+            )}${row(t.fields.license, inspector.license)}${row(t.fields.entity, inspector.entity)}</div>`,
+        )
+        .join('') + signatureField,
     quantities:
       `<p class="hint">${escape(t.hints.quantitiesOptional)}</p>` +
       evaluation.repairQuantities.walls
@@ -284,34 +301,30 @@ export function renderReportHtml(evaluation: Evaluation, language: Language) {
         `${t.quantityColumns} — ${t.fields.quantityTotalVolume}`,
         `${formatMeasure(totalMemberVolume(evaluation.repairQuantities.columns))} m³`,
       ),
-    media: `<div class="evidence">
-        <div class="drawing"><strong>${escape(t.sketch)}</strong>${
-          evaluation.sketchUri
-            ? `<img src="${escape(evaluation.sketchUri)}" alt="${escape(t.sketch)}">`
-            : '<span>—</span>'
-        }</div>
-        <div class="drawing"><strong>${escape(t.signature)}</strong>${
-          evaluation.signatureUri
-            ? `<img src="${escape(evaluation.signatureUri)}" alt="${escape(t.signature)}">`
-            : '<span>—</span>'
-        }</div>
-      </div>
-      <div class="photos">${evaluation.photos
-        .map(
-          (photo, index) =>
-            `<figure><img src="${escape(photo.localUri)}" alt="${escape(
-              photo.caption || `${t.addPhoto} ${index + 1}`,
-            )}"><figcaption>${escape(photo.caption || `${t.addPhoto} ${index + 1}`)}${
-              photo.coordinates
-                ? `<br>${photo.coordinates.latitude.toFixed(6)}, ${photo.coordinates.longitude.toFixed(6)}`
-                : ''
-            }</figcaption></figure>`,
-        )
-        .join('')}</div>`,
+    media: `<div class="photos">${evaluation.photos
+      .map(
+        (photo, index) =>
+          `<figure><img src="${escape(photo.localUri)}" alt="${escape(
+            photo.caption || `${t.addPhoto} ${index + 1}`,
+          )}"><figcaption>${escape(photo.caption || `${t.addPhoto} ${index + 1}`)}${
+            photo.coordinates
+              ? `<br>${photo.coordinates.latitude.toFixed(6)}, ${photo.coordinates.longitude.toFixed(6)}`
+              : ''
+          }</figcaption></figure>`,
+      )
+      .join('')}</div>`,
   };
 
   const content = sectionKeysFor(evaluation)
-    .map((key, index) => section(key, index, blocks[key]))
+    .map((key, index) => {
+      if (key === 'media') {
+        return (
+          sketchPage +
+          titledSection(`${index + 1}. ${t.photoRecord}`, blocks.media)
+        );
+      }
+      return section(key, index, blocks[key]);
+    })
     .join('');
 
   const documentHtml = `<!doctype html>
@@ -327,9 +340,17 @@ h2{background:#eef3ec;color:#0e4525;font-size:13px;margin:0;padding:9px 12px}.ro
 .row span{color:#637068;width:42%}.row strong{flex:1}.classification{padding:12px;color:#fff;font-weight:bold;text-transform:uppercase}
 .habitable{background:#2d7a45}.restricted{background:#d69e00}.unsafe{background:#c43d32}.collapsed{background:#242824}
 .hint{margin:0;padding:8px 12px;color:#637068;font-size:11px}
-.inspector{margin:8px;border:1px solid #edf1ec;border-radius:5px}.evidence{display:flex;gap:12px;padding:12px}
-.drawing{flex:1;min-height:120px;border:1px solid #d9e2d8;padding:8px}.drawing strong{display:block;color:#637068;margin-bottom:8px}.drawing img{width:100%;height:100px;object-fit:contain}
+.inspector{margin:8px;border:1px solid #edf1ec;border-radius:5px}
+.signature-field{margin:8px 12px 12px;border:1px solid #d9e2d8;border-radius:5px;padding:10px}
+.signature-field strong{display:block;color:#637068;margin-bottom:8px}
+.signature-field img{display:block;width:100%;max-height:90px;object-fit:contain;background:#f5f8f3}
+.signature-field .blank{min-height:72px;border:1px dashed #d9e2d8;background:#f5f8f3}
+.sketch-page{break-inside:auto;break-before:page;break-after:page;page-break-before:always;page-break-after:always;min-height:calc(297mm - 30mm);display:flex;flex-direction:column}
+.sketch-page h2{flex-shrink:0}
+.sketch-frame{flex:1;display:flex;align-items:center;justify-content:center;padding:12px;min-height:0}
+.sketch-frame img{max-width:100%;max-height:100%;width:auto;height:auto;object-fit:contain}
 .photos{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;padding:12px}.photos figure{margin:0;border:1px solid #d9e2d8;padding:6px;break-inside:avoid}.photos img{width:100%;height:180px;object-fit:contain}.photos figcaption{font-size:9px;color:#637068;margin-top:5px}
+@media print{section.sketch-page{height:100vh;min-height:0;margin:0;border-radius:0}}
 footer{text-align:center;color:#637068;margin-top:15px}
 </style></head><body><header><div class="mark">EQ</div><div><h1>EVALQUAKE</h1><div class="subtitle">${escape(
     t.tagline,
