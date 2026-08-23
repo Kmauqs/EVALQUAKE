@@ -204,18 +204,22 @@ export function SelectRow<T extends string>({
   value,
   options,
   onChange,
+  style,
 }: {
   label: string;
   value: T | '';
   options: readonly { value: T; label: string }[];
   onChange: (value: T) => void;
+  style?: ViewStyle;
 }) {
   if (options.length >= DROPDOWN_OPTION_THRESHOLD) {
-    return <SelectDropdown label={label} value={value} options={options} onChange={onChange} />;
+    return (
+      <SelectDropdown label={label} value={value} options={options} onChange={onChange} style={style} />
+    );
   }
   const wide = useChoiceWrap();
   return (
-    <View style={styles.field}>
+    <View style={[styles.field, style]}>
       <Text style={styles.label}>{label}</Text>
       <View style={[styles.choiceWrap, wide && styles.choiceWrapWide]}>
         {options.map((option) => (
@@ -246,11 +250,13 @@ export function SelectDropdown<T extends string>({
   value,
   options,
   onChange,
+  style,
 }: {
   label: string;
   value: T | '';
   options: readonly { value: T; label: string }[];
   onChange: (value: T) => void;
+  style?: ViewStyle;
 }) {
   const { t } = useI18n();
   const { height } = useWindowDimensions();
@@ -258,7 +264,7 @@ export function SelectDropdown<T extends string>({
   const selected = options.find((option) => option.value === value);
 
   return (
-    <View style={styles.field}>
+    <View style={[styles.field, style]}>
       <Text style={styles.label}>{label}</Text>
       <Pressable
         accessibilityRole="button"
@@ -323,11 +329,13 @@ export function MultiSelectDropdown<T extends string>({
   values,
   options,
   onChange,
+  style,
 }: {
   label: string;
   values: readonly T[];
   options: readonly { value: T; label: string }[];
   onChange: (values: T[]) => void;
+  style?: ViewStyle;
 }) {
   const { t } = useI18n();
   const { height } = useWindowDimensions();
@@ -338,7 +346,7 @@ export function MultiSelectDropdown<T extends string>({
     .join(', ');
 
   return (
-    <View style={styles.field}>
+    <View style={[styles.field, style]}>
       <Text style={styles.label}>{label}</Text>
       <Pressable
         accessibilityRole="button"

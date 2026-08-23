@@ -2,7 +2,7 @@
   "expo": {
     "name": "EVALQUAKE",
     "slug": "evalquake",
-    "version": "0.11.0",
+    "version": "0.11.1",
     "orientation": "default",
     "scheme": "evalquake",
     "userInterfaceStyle": "light",

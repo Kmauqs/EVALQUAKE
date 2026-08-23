@@ -210,7 +210,7 @@ function WallEditor({
         value={wall.location}
         onChangeText={(location) => onChange({ ...wall, location })}
         placeholder={t.hints.quantityLocationExample}
-        style={styles.locationField}
+        style={styles.stackedField}
       />
       <View style={styles.grid}>
         <Field
@@ -237,12 +237,14 @@ function WallEditor({
         value={wall.wallType}
         options={WALL_TYPES.map((value) => ({ value, label: t.catalogs.wallTypes[value] }))}
         onChange={(wallType) => onChange({ ...wall, wallType })}
+        style={styles.stackedField}
       />
       {wall.wallType === 'other' && (
         <Field
           label={t.fields.quantityOther}
           value={wall.wallTypeOther}
           onChangeText={(wallTypeOther) => onChange({ ...wall, wallTypeOther })}
+          style={styles.stackedField}
         />
       )}
       <SelectRow
@@ -253,6 +255,7 @@ function WallEditor({
           label: t.catalogs.quantityDamage[value],
         }))}
         onChange={(damage) => onChange({ ...wall, damage })}
+        style={styles.stackedField}
       />
       <MultiSelect
         label={t.fields.quantityRepair}
@@ -267,6 +270,7 @@ function WallEditor({
             value={wall.recommendedWallType}
             options={WALL_TYPES.map((value) => ({ value, label: t.catalogs.wallTypes[value] }))}
             onChange={(recommendedWallType) => onChange({ ...wall, recommendedWallType })}
+            style={styles.stackedField}
           />
           {wall.recommendedWallType === 'other' && (
             <Field
@@ -275,6 +279,7 @@ function WallEditor({
               onChangeText={(recommendedWallTypeOther) =>
                 onChange({ ...wall, recommendedWallTypeOther })
               }
+              style={styles.stackedField}
             />
           )}
         </>
@@ -304,7 +309,7 @@ function RoofEditor({
         value={roof.location}
         onChangeText={(location) => onChange({ ...roof, location })}
         placeholder={t.hints.quantityLocationExample}
-        style={styles.locationField}
+        style={styles.stackedField}
       />
       <View style={styles.grid}>
         <Field
@@ -328,18 +333,21 @@ function RoofEditor({
           label: t.catalogs.roofStructureTypes[value],
         }))}
         onChange={(structureType) => onChange({ ...roof, structureType })}
+        style={styles.stackedField}
       />
       {roof.structureType === 'other' && (
         <Field
           label={t.fields.quantityOther}
           value={roof.structureTypeOther}
           onChangeText={(structureTypeOther) => onChange({ ...roof, structureTypeOther })}
+          style={styles.stackedField}
         />
       )}
       <Field
         label={t.fields.quantityRoofCovering}
         value={roof.covering}
         onChangeText={(covering) => onChange({ ...roof, covering })}
+        style={styles.stackedField}
       />
       <SelectRow
         label={t.fields.quantityDamage}
@@ -349,6 +357,7 @@ function RoofEditor({
           label: t.catalogs.quantityDamage[value],
         }))}
         onChange={(damage) => onChange({ ...roof, damage })}
+        style={styles.stackedField}
       />
       <MultiSelect
         label={t.fields.quantityRepair}
@@ -361,6 +370,7 @@ function RoofEditor({
           label={t.fields.quantityTypologyChange}
           value={roof.typologyChange}
           onChangeText={(typologyChange) => onChange({ ...roof, typologyChange })}
+          style={styles.stackedField}
         />
       )}
       <Text style={styles.computed}>
@@ -388,7 +398,7 @@ function MemberEditor({
         value={member.location}
         onChangeText={(location) => onChange({ ...member, location })}
         placeholder={t.hints.quantityLocationExample}
-        style={styles.locationField}
+        style={styles.stackedField}
       />
       <View style={styles.grid}>
         <Field
@@ -418,12 +428,14 @@ function MemberEditor({
           label: t.catalogs.frameMaterials[value],
         }))}
         onChange={(material) => onChange({ ...member, material })}
+        style={styles.stackedField}
       />
       {member.material === 'other' && (
         <Field
           label={t.fields.quantityOther}
           value={member.materialOther}
           onChangeText={(materialOther) => onChange({ ...member, materialOther })}
+          style={styles.stackedField}
         />
       )}
       <SelectRow
@@ -434,6 +446,7 @@ function MemberEditor({
           label: t.catalogs.quantityDamage[value],
         }))}
         onChange={(damage) => onChange({ ...member, damage })}
+        style={styles.stackedField}
       />
       <MultiSelect
         label={t.fields.quantityRepair}
@@ -446,6 +459,7 @@ function MemberEditor({
           label={t.fields.quantityTypologyChange}
           value={member.typologyChange}
           onChangeText={(typologyChange) => onChange({ ...member, typologyChange })}
+          style={styles.stackedField}
         />
       )}
       {member.repairs.includes('other') && (
@@ -453,6 +467,7 @@ function MemberEditor({
           label={t.fields.quantityOther}
           value={member.otherRepair}
           onChangeText={(otherRepair) => onChange({ ...member, otherRepair })}
+          style={styles.stackedField}
         />
       )}
       <Text style={styles.computed}>
@@ -487,11 +502,19 @@ function MultiSelect<T extends string>({
   onChange: (values: T[]) => void;
 }) {
   if (options.length >= 4) {
-    return <MultiSelectDropdown label={label} values={values} options={options} onChange={onChange} />;
+    return (
+      <MultiSelectDropdown
+        label={label}
+        values={values}
+        options={options}
+        onChange={onChange}
+        style={styles.stackedField}
+      />
+    );
   }
   const wide = useChoiceWrap();
   return (
-    <View style={styles.multi}>
+    <View style={[styles.multi, styles.stackedField]}>
       <Text style={styles.label}>{label}</Text>
       <View style={[uiStyles.choiceWrap, wide && uiStyles.choiceWrapWide]}>
         {options.map((option) => {
@@ -524,9 +547,9 @@ function MultiSelect<T extends string>({
 }
 
 const styles = StyleSheet.create({
-  stack: { gap: 22, width: '100%' },
-  hint: { color: colors.textMuted, fontSize: 12, lineHeight: 17 },
-  group: { gap: 12 },
+  stack: { gap: 22, width: '100%', flexGrow: 0 },
+  hint: { color: colors.textMuted, fontSize: 12, lineHeight: 17, flexGrow: 0 },
+  group: { gap: 12, width: '100%', flexGrow: 0, flexShrink: 0 },
   groupTitle: { color: colors.text, fontSize: 16, fontWeight: '800' },
   empty: { color: colors.textMuted, fontSize: 13 },
   groupFooter: { gap: 10 },
@@ -539,14 +562,23 @@ const styles = StyleSheet.create({
     gap: 12,
     backgroundColor: colors.white,
     width: '100%',
+    flexGrow: 0,
     flexShrink: 0,
+    alignSelf: 'stretch',
   },
   itemHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 10 },
   itemTitle: { color: colors.text, fontWeight: '800', fontSize: 14, flex: 1, minWidth: 0 },
   remove: { flexDirection: 'row', alignItems: 'center', gap: 6, flexShrink: 0 },
   removeText: { color: colors.danger, fontWeight: '800', fontSize: 13 },
-  locationField: { flexBasis: '100%', width: '100%' },
-  grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12, width: '100%' },
+  stackedField: {
+    flexGrow: 0,
+    flexShrink: 0,
+    flexBasis: 'auto',
+    width: '100%',
+    maxWidth: '100%',
+    alignSelf: 'stretch',
+  },
+  grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12, width: '100%', flexGrow: 0, flexShrink: 0 },
   computed: { color: colors.primaryDark, fontSize: 13, fontWeight: '800' },
   multi: { gap: 7, width: '100%', minWidth: 0 },
   label: { color: colors.text, fontSize: 13, fontWeight: '700' },
