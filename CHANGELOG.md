@@ -22,7 +22,13 @@ La versión visible en la cabecera de la app sale de `src/version.ts`.
 
 ## [Unreleased]
 
-Cambios posteriores a 0.11.1 se listan aquí hasta el siguiente corte.
+Cambios posteriores a 0.11.2 se listan aquí hasta el siguiente corte.
+
+## [0.11.2] — 2026-08-22
+
+### Fixed
+
+- Las fotos de la cámara o la galería se guardan en el registro fotográfico aunque el recorte automático falle en el navegador.
 
 ## [0.11.1] — 2026-08-22
 

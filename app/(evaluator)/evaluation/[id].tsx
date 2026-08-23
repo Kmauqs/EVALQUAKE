@@ -36,7 +36,9 @@ export default function EvaluationWizard() {
   const [busy, setBusy] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const deletingRef = useRef(false);
+  const evaluationRef = useRef<Evaluation | null>(null);
   const [message, setMessage] = useState('');
+  evaluationRef.current = evaluation;
 
   useEffect(() => {
     if (!id) return;
@@ -148,27 +150,35 @@ export default function EvaluationWizard() {
 
   const addPhoto = async (source: 'camera' | 'library') => {
     try {
-      const photos = await pickDamagePhotos(source, evaluation.identification.coordinates);
-      if (photos.length) {
-        setEvaluation({ ...evaluation, photos: [...evaluation.photos, ...photos] });
-      }
+      const current = evaluationRef.current;
+      if (!current) return;
+      const photos = await pickDamagePhotos(source, current.identification.coordinates);
+      const latest = evaluationRef.current ?? current;
+      if (!photos.length) return;
+      const next = { ...latest, photos: [...latest.photos, ...photos] };
+      setEvaluation(next);
+      await save(next);
     } catch {
-      Alert.alert(t.addPhoto, t.offline);
+      Alert.alert(t.addPhoto, t.photoFailed);
     }
   };
 
   const addSketch = async (source: 'camera' | 'library') => {
     try {
-      const image = await pickDamagePhoto(source, evaluation.identification.coordinates);
-      if (image) {
-        setEvaluation({
-          ...evaluation,
-          sketchUri: image.localUri,
-          sketchStoragePath: undefined,
-        });
-      }
+      const current = evaluationRef.current;
+      if (!current) return;
+      const image = await pickDamagePhoto(source, current.identification.coordinates);
+      const latest = evaluationRef.current ?? current;
+      if (!image) return;
+      const next = {
+        ...latest,
+        sketchUri: image.localUri,
+        sketchStoragePath: undefined,
+      };
+      setEvaluation(next);
+      await save(next);
     } catch {
-      Alert.alert(t.sketch, t.offline);
+      Alert.alert(t.sketch, t.photoFailed);
     }
   };
 
