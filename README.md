@@ -1,6 +1,6 @@
 # EVALQUAKE
 
-**Versión actual: [0.14.1](CHANGELOG.md)**
+**Versión actual: [0.15.1](CHANGELOG.md)**
 
 ![alt](https://github.com/Kmauqs/EVALQUAKE/blob/main/icon_512.png)
 
