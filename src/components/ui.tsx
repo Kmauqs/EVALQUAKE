@@ -212,12 +212,12 @@ export function SelectRow<T extends string>({
   onChange: (value: T) => void;
   style?: ViewStyle;
 }) {
+  const wide = useChoiceWrap();
   if (options.length >= DROPDOWN_OPTION_THRESHOLD) {
     return (
       <SelectDropdown label={label} value={value} options={options} onChange={onChange} style={style} />
     );
   }
-  const wide = useChoiceWrap();
   return (
     <View style={[styles.field, style]}>
       <Text style={styles.label}>{label}</Text>

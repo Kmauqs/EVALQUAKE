@@ -1,6 +1,6 @@
 import { Camera, ImagePlus, LocateFixed, X } from 'lucide-react-native';
 import { type Href, useRouter } from 'expo-router';
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import {
@@ -1089,8 +1089,11 @@ function BuildingAddressField({
   const { t } = useI18n();
   const evaluationRef = useRef(evaluation);
   const onChangeRef = useRef(onChange);
-  evaluationRef.current = evaluation;
-  onChangeRef.current = onChange;
+
+  useLayoutEffect(() => {
+    evaluationRef.current = evaluation;
+    onChangeRef.current = onChange;
+  });
 
   useEffect(() => {
     const next = withBuildingAddressFromCadastral(evaluationRef.current);
@@ -1135,19 +1138,22 @@ function CadastralSection({
   const { t } = useI18n();
   const evaluationRef = useRef(evaluation);
   const onChangeRef = useRef(onChange);
-  evaluationRef.current = evaluation;
-  onChangeRef.current = onChange;
   const lastLookup = useRef(lastCadastralLookups.get(evaluation.id) ?? '');
-  const [lookup, setLookup] = useState<'idle' | 'loading' | 'ok' | 'error'>(
-    lastLookup.current ? 'ok' : 'idle',
+  const coordinates = evaluation.identification.coordinates;
+  const [lookup, setLookup] = useState<'idle' | 'loading' | 'ok' | 'error'>(() =>
+    lastCadastralLookups.has(evaluation.id) ? 'ok' : 'idle',
   );
+  const displayLookup = coordinates ? lookup : 'idle';
+
+  useLayoutEffect(() => {
+    evaluationRef.current = evaluation;
+    onChangeRef.current = onChange;
+  });
 
   useEffect(() => {
-    const coordinates = evaluation.identification.coordinates;
     if (!coordinates) {
       lastLookup.current = '';
       lastCadastralLookups.delete(evaluation.id);
-      setLookup('idle');
       return;
     }
     const key = `${coordinates.latitude.toFixed(5)},${coordinates.longitude.toFixed(5)}`;
@@ -1175,7 +1181,7 @@ function CadastralSection({
       cancelled = true;
       clearTimeout(timer);
     };
-  }, [evaluation.id, evaluation.identification.coordinates?.latitude, evaluation.identification.coordinates?.longitude]);
+  }, [evaluation.id, coordinates]);
 
   const patchIdentification = (patch: Partial<Evaluation['identification']>) =>
     onChange({
@@ -1184,9 +1190,9 @@ function CadastralSection({
     });
 
   const lookupMessage =
-    lookup === 'loading'
+    displayLookup === 'loading'
       ? t.locationLookup
-      : lookup === 'error'
+      : displayLookup === 'error'
         ? t.locationLookupFailed
         : t.locationLookupHint;
 
@@ -1273,13 +1279,19 @@ function CoordinateCapture({
   onChange: (coordinates: Coordinates | undefined) => void;
 }) {
   const { t } = useI18n();
-  const [latitudeText, setLatitudeText] = useState(() => formatCoord(coordinates?.latitude));
-  const [longitudeText, setLongitudeText] = useState(() => formatCoord(coordinates?.longitude));
+  const latFormatted = formatCoord(coordinates?.latitude);
+  const lngFormatted = formatCoord(coordinates?.longitude);
+  const [latitudeText, setLatitudeText] = useState(latFormatted);
+  const [longitudeText, setLongitudeText] = useState(lngFormatted);
+  const [syncedLat, setSyncedLat] = useState(coordinates?.latitude);
+  const [syncedLng, setSyncedLng] = useState(coordinates?.longitude);
 
-  useEffect(() => {
-    setLatitudeText(formatCoord(coordinates?.latitude));
-    setLongitudeText(formatCoord(coordinates?.longitude));
-  }, [coordinates?.latitude, coordinates?.longitude]);
+  if (coordinates?.latitude !== syncedLat || coordinates?.longitude !== syncedLng) {
+    setSyncedLat(coordinates?.latitude);
+    setSyncedLng(coordinates?.longitude);
+    setLatitudeText(latFormatted);
+    setLongitudeText(lngFormatted);
+  }
 
   const commit = (nextLat: string, nextLng: string) => {
     setLatitudeText(nextLat);

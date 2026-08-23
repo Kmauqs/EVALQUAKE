@@ -31,7 +31,9 @@ export default function EvaluationDetail() {
     demoEvaluations.find((item) => item.id === id) ?? null,
   );
   const [raw, setRaw] = useState(false);
-  const [accountEmail, setAccountEmail] = useState('');
+  const [resolvedAccount, setResolvedAccount] = useState('');
+  const emailFromEvaluation = evaluation?.createdByEmail.trim() || '';
+  const accountEmail = emailFromEvaluation || resolvedAccount;
 
   useEffect(() => {
     if (!id || evaluation) return;
@@ -39,16 +41,12 @@ export default function EvaluationDetail() {
   }, [configured, id, evaluation, get]);
 
   useEffect(() => {
-    if (!configured || !evaluation?.createdByUserId) return;
-    if (evaluation.createdByEmail.trim()) {
-      setAccountEmail(evaluation.createdByEmail);
-      return;
-    }
+    if (!configured || !evaluation?.createdByUserId || emailFromEvaluation) return;
     return subscribeUsers((users) => {
       const match = users.find((user) => user.id === evaluation.createdByUserId);
-      setAccountEmail(match?.email || match?.displayName || '');
+      setResolvedAccount(match?.email || match?.displayName || '');
     });
-  }, [configured, evaluation?.createdByEmail, evaluation?.createdByUserId]);
+  }, [configured, emailFromEvaluation, evaluation?.createdByUserId]);
 
   if (!evaluation) {
     return (

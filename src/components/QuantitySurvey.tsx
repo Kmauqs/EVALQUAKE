@@ -501,6 +501,7 @@ function MultiSelect<T extends string>({
   options: { value: T; label: string }[];
   onChange: (values: T[]) => void;
 }) {
+  const wide = useChoiceWrap();
   if (options.length >= 4) {
     return (
       <MultiSelectDropdown
@@ -512,7 +513,6 @@ function MultiSelect<T extends string>({
       />
     );
   }
-  const wide = useChoiceWrap();
   return (
     <View style={[styles.multi, styles.stackedField]}>
       <Text style={styles.label}>{label}</Text>

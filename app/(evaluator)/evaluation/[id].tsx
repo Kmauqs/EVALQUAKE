@@ -1,6 +1,6 @@
 import { useLocalSearchParams } from 'expo-router';
 import { ArrowLeft, CheckCircle2, FileText, Tag, Trash2 } from 'lucide-react-native';
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { Alert, Pressable, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 
 import { EvaluationSection } from '@/components/EvaluationSection';
@@ -43,7 +43,10 @@ export default function EvaluationWizard() {
   const deletingRef = useRef(false);
   const evaluationRef = useRef<Evaluation | null>(null);
   const [message, setMessage] = useState('');
-  evaluationRef.current = evaluation;
+
+  useLayoutEffect(() => {
+    evaluationRef.current = evaluation;
+  });
 
   useEffect(() => {
     if (!id) return;
@@ -104,7 +107,8 @@ export default function EvaluationWizard() {
       clearInterval(interval);
       unsub();
     };
-  }, [evaluation?.officialNumber, evaluation?.status, id, refresh]);
+    // Only re-subscribe when status/official number change, not on every draft keystroke.
+  }, [evaluation?.officialNumber, evaluation?.status, id, refresh]); // eslint-disable-line react-hooks/exhaustive-deps -- evaluation identity changes while drafting
 
   useEffect(() => {
     if (deletingRef.current || deleting || !evaluation || evaluation.status !== 'draft') return;

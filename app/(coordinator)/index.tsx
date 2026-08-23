@@ -1,6 +1,6 @@
 import { useRouter } from 'expo-router';
 import { ArrowLeft, Download, FileJson, FileText, Search, Trash2 } from 'lucide-react-native';
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Pressable, StyleSheet, Text, TextInput, View, useWindowDimensions } from 'react-native';
 
 import { EvaluationMap } from '@/components/EvaluationMap';
@@ -51,8 +51,13 @@ export default function CoordinatorDashboard() {
         : () => undefined,
     [configured],
   );
-  const accountLabel = (evaluation: Evaluation) =>
-    evaluation.createdByEmail.trim() || accountByUid[evaluation.createdByUserId] || evaluatorAccountLabel(evaluation);
+  const accountLabel = useCallback(
+    (evaluation: Evaluation) =>
+      evaluation.createdByEmail.trim() ||
+      accountByUid[evaluation.createdByUserId] ||
+      evaluatorAccountLabel(evaluation),
+    [accountByUid],
+  );
   const evaluations = useMemo(
     () =>
       configured
@@ -70,7 +75,7 @@ export default function CoordinatorDashboard() {
       if (!byKey.has(key)) byKey.set(key, accountLabel(evaluation));
     }
     return [...byKey.entries()].sort((left, right) => left[1].localeCompare(right[1]));
-  }, [accountByUid, evaluations]);
+  }, [accountLabel, evaluations]);
   const filtered = evaluations.filter((evaluation) => {
     const haystack = [
       evaluation.building.address,
