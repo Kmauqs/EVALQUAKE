@@ -1,14 +1,15 @@
 # EVALQUAKE
 
-**Versión actual: [0.2.1](CHANGELOG.md)**
+**Versión actual: [0.12.1](CHANGELOG.md)**
 
-Evaluación rápida de daños en edificaciones, bilingüe (español/inglés) y offline-first para Android, iOS y web. Sigue `ARCHITECTURE.md` y usa `icon_960.png` como icono, favicon, splash y base visual.
+Evaluación rápida de daños y habitabilidad postsismo, bilingüe (español/inglés) y offline-first para Android, iOS y web. El formulario unifica el Formulario Regional Homogenizado 2A (AIS) con el Manual de Campo y listas ATC-20 / ATC-20-2, en cumplimiento de la NSR-10. Sigue [`ARCHITECTURE.md`](ARCHITECTURE.md) y usa `icon_960.png` como icono, favicon, splash y base visual.
 
-Sitio de producción: [https://evalquake.web.app](https://evalquake.web.app)
+- Sitio de producción: [https://evalquake.web.app](https://evalquake.web.app)
+- Código: [https://github.com/Kmauqs/EVALQUAKE](https://github.com/Kmauqs/EVALQUAKE)
 
 ## Versionado
 
-A partir de **0.2.0** cada entrega se registra en [`CHANGELOG.md`](CHANGELOG.md) con Semantic Versioning (`MAJOR.MINOR.PATCH`).
+Cada entrega se registra en [`CHANGELOG.md`](CHANGELOG.md) con Semantic Versioning (`MAJOR.MINOR.PATCH`).
 
 La misma versión debe coincidir en:
 
@@ -21,17 +22,18 @@ La misma versión debe coincidir en:
 
 Al cerrar un conjunto de cambios: subir el número, anotar la bitácora y seguir [`DEPLOY.md`](DEPLOY.md).
 
-## Qué incluye 0.2.0
+## Qué incluye
 
-- Una app Expo Router + TypeScript para Android, iOS y web responsive.
-- Flujo resumible de 17 secciones (modelo 2B/ATC-20).
-- Borradores locales y cola de salida: SQLite en móvil, persistencia del navegador en web.
-- GPS, cámara/galería (varias fotos), compresión, croquis por imagen y firma en modal fijo.
-- PDF bilingüe local inmediato y PDF canónico en Firebase (consecutivo oficial).
-- Envío inmutable: una evaluación enviada no se sobrescribe.
-- Panel de coordinación: filtros, mapa con gestos/ubicación, detalle y exportaciones CSV/JSON.
-- Autenticación por correo: el usuario crea su cuenta y un **admin** la aprueba, asigna rol y jurisdicción.
-- Roles `evaluator`, `coordinator` y `admin`.
+- App Expo Router + TypeScript para Android, iOS y web responsive.
+- Flujo resumible de 17 secciones (2A-AIS / 2B / ATC-20): catastro con GPS y geocodificación, NSR-10, sistema estructural, daños, habitabilidad, cantidades de reparación, inspectores, croquis y fotos.
+- Guía gráfica de inspección desde el encabezado (secciones contraídas, figuras empaquetadas en el bundle web).
+- Borradores locales y cola de salida: SQLite en móvil, persistencia del navegador en web. Sesión persistente en el dispositivo (hasta 30 días).
+- GPS, cámara/galería (varias fotos, persistentes), croquis por imagen y firma en modal fijo.
+- Informe HTML bilingüe con leyenda legal, anexo normativo, croquis en página propia y encabezado en cada página del PDF impreso. Pancarta ATC-20 de ocupación.
+- Envío inmutable: una evaluación enviada no se sobrescribe. El servidor asigna consecutivo oficial y guarda el PDF canónico.
+- Panel de coordinación: filtros, mapa OSM (u opcionalmente Tracestrack) con vista satelital y marcadores por habitabilidad, detalle y exportaciones CSV/JSON.
+- Autenticación por correo: el usuario crea su cuenta y un **admin** la aprueba, asigna rol y jurisdicción. Roles `evaluator`, `coordinator` y `admin`.
+- Logotipos de apoyo (Grupo Terra y Gtek) en el pie de las pantallas.
 
 Sin variables Firebase el cliente arranca en **modo demostración** (datos ficticios, solo en el dispositivo).
 
@@ -44,7 +46,7 @@ npm install
 npm start
 ```
 
-Luego `a` (Android), `i` (iOS, macOS/Xcode) o `w` (web). El control `EN` / `ES` del encabezado cambia el idioma y se guarda en el dispositivo.
+Luego `a` (Android), `i` (iOS, macOS/Xcode) o `w` (web). En web, `npm start` no copia las figuras de la guía; use `npm run web` o `npm run export:web`. El control `EN` / `ES` del encabezado cambia el idioma y se guarda en el dispositivo.
 
 ## Firebase (desarrollo)
 
@@ -84,7 +86,7 @@ Claims:
 }
 ```
 
-Roles: `evaluator`, `coordinator`, `admin`. Las reglas de Firestore limitan lecturas/escrituras a las jurisdicciones del token. Una evaluación `submitted` ya no se edita ni borra desde el cliente.
+Roles: `evaluator`, `coordinator`, `admin`. Las reglas de Firestore limitan lecturas/escrituras a las jurisdicciones del token. Una evaluación `submitted` ya no se edita ni borra desde el cliente. Los evaluadores sí pueden eliminar borradores incompletos.
 
 ## Despliegue de producción
 
@@ -100,15 +102,16 @@ GitHub Actions publica **solo** Hosting y necesita estos secrets: `EXPO_PUBLIC_F
 
 En React Native el SDK JS de Firebase no persiste Firestore en disco. Móvil usa SQLite + outbox; web usa persistencia del navegador. Ciclo al arrancar y cada 30 s: guardar en local → encolar → subir fotos → escribir Firestore → quitar de la cola solo si el remoto confirma.
 
-## Reportes
+## Informes y pancartas
 
-`src/report/renderReportHtml.ts` genera las 17 secciones en el idioma activo.
+`src/report/renderReportHtml.ts` genera el informe en el idioma activo: preámbulo legal, 17 secciones, croquis a página completa, registro fotográfico y anexo normativo. El encabezado (marca, título, consecutivo, fecha e id) se repite en cada página al imprimir.
 
-- Android/iOS: `expo-print` (sin red).
-- Web: jsPDF.
-- Servidor: `finalizeEvaluation` asigna consecutivo y guarda el PDF canónico en Storage.
+`src/report/renderPlacardHtml.ts` genera la pancarta ATC-20 (inspeccionado / uso restringido / inseguro).
 
-El reporte local muestra el UUID y “consecutivo pendiente”.
+- Cliente (web y nativo): se abre el HTML y **Imprimir en PDF** (`window.print` / diálogo del sistema).
+- Servidor: `finalizeEvaluation` asigna consecutivo y guarda el PDF canónico en Storage (Puppeteer sobre el mismo HTML).
+
+El informe local muestra el UUID y “consecutivo pendiente” hasta el envío.
 
 ## Verificación
 
