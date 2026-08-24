@@ -150,6 +150,16 @@ export const es = {
   actionLogDescription: 'Acciones de coordinación y administración sobre evaluaciones, incluida la depuración de borradores.',
   actionLogEmpty: 'Aún no hay acciones registradas.',
   actionLogDelete: 'Eliminó una evaluación',
+  guideEditor: 'Editor de guía',
+  guideEditorDescription: 'Edite la guía publicada con Markdown y etiquetas HTML permitidas, con vista previa inmediata.',
+  guideEditorHelp:
+    'Use títulos Markdown (`##` y `###`), listas con `-`, párrafos normales y etiquetas HTML como `<h2>`, `<h3>`, `<p>`, `<ul>`, `<li>`, `<img>` o etiquetas especiales `<figure />` y `<figure-row />` para reutilizar las imágenes de la guía.',
+  guideEditorSource: 'Fuente Markdown + HTML',
+  guideEditorPreview: 'Vista previa',
+  guideEditorRestore: 'Restaurar guía base',
+  guideEditorRestoreConfirm: 'Se reemplazará el borrador actual por la guía incluida en la app. ¿Desea continuar?',
+  guideEditorSaveError: 'No fue posible guardar la guía.',
+  guideEditorDemo: 'Configure Firebase para guardar cambios remotos. Mientras tanto, la vista previa funciona solo en esta sesión.',
   purgeEvaluationTitle: 'Eliminar evaluación',
   purgeDraftWarning:
     'Esta función es solo para depurar la base de datos de borradores no empleados. Esta acción no se puede deshacer. ¿Está seguro de eliminar esta evaluación?',
@@ -794,6 +804,16 @@ export const en = {
   actionLogDescription: 'Coordinator and administrator actions on assessments, including unused-draft cleanup.',
   actionLogEmpty: 'No actions have been logged yet.',
   actionLogDelete: 'Deleted an assessment',
+  guideEditor: 'Guide editor',
+  guideEditorDescription: 'Edit the published guide with Markdown and allowed HTML tags, with instant preview.',
+  guideEditorHelp:
+    'Use Markdown headings (`##` and `###`), `-` lists, plain paragraphs, and HTML tags such as `<h2>`, `<h3>`, `<p>`, `<ul>`, `<li>`, `<img>`, or the special `<figure />` and `<figure-row />` tags to reuse the guide images.',
+  guideEditorSource: 'Markdown + HTML source',
+  guideEditorPreview: 'Preview',
+  guideEditorRestore: 'Restore bundled guide',
+  guideEditorRestoreConfirm: 'This will replace the current draft with the guide bundled in the app. Continue?',
+  guideEditorSaveError: 'The guide could not be saved.',
+  guideEditorDemo: 'Configure Firebase to save remote changes. Until then, preview works only in this session.',
   purgeEvaluationTitle: 'Delete assessment',
   purgeDraftWarning:
     'This function is only for cleaning unused drafts from the database. This cannot be undone. Are you sure you want to delete this assessment?',

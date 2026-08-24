@@ -13,6 +13,7 @@ export interface GuideFigureRow {
 
 export interface GuideGroup {
   title: string;
+  paragraphs?: string[];
   bullets?: string[];
   figures?: GuideFigure[];
   figureRows?: GuideFigureRow[];

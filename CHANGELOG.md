@@ -24,6 +24,10 @@ La versión visible en la cabecera de la app sale de `src/version.ts`.
 
 Cambios posteriores a 0.15.1 se listan aquí hasta el siguiente corte.
 
+### Added
+
+- Editor online de la guía de inspección (Administración): Markdown + etiquetas HTML permitidas, vista previa, guardado en Firestore y lectura en la guía pública, con la versión incluida en la app como respaldo.
+
 ## [0.15.1] — 2026-08-23
 
 ### Fixed

@@ -134,6 +134,12 @@ service cloud.firestore {
       allow update, delete: if false;
     }
 
+    match /content/{docId} {
+      allow read: if signedIn();
+      allow create, update: if signedIn() && role() == 'admin';
+      allow delete: if false;
+    }
+
     match /counters/{counterId} {
       allow read, write: if false;
     }

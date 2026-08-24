@@ -1,5 +1,5 @@
 import { type Href, useRouter } from 'expo-router';
-import { ArrowLeft, ScrollText, ShieldBan, ShieldCheck, UserRoundCheck } from 'lucide-react-native';
+import { ArrowLeft, FilePenLine, ScrollText, ShieldBan, ShieldCheck, UserRoundCheck } from 'lucide-react-native';
 import React, { useEffect, useMemo, useState } from 'react';
 import { Alert, Pressable, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 
@@ -60,6 +60,14 @@ export default function AdminUsersScreen() {
           style={narrow ? styles.logButtonNarrow : undefined}
         >
           {t.actionLog}
+        </Button>
+        <Button
+          variant="secondary"
+          icon={<FilePenLine size={17} color={colors.primary} />}
+          onPress={() => router.push('/(admin)/guide' as Href)}
+          style={narrow ? styles.logButtonNarrow : undefined}
+        >
+          {t.guideEditor}
         </Button>
       </View>
 
