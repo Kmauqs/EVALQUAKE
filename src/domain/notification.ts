@@ -25,6 +25,12 @@ export function isUnread(notification: AppNotification) {
   return notification.readAt == null;
 }
 
+export function hrefFromNotificationData(data: unknown): string | null {
+  if (!data || typeof data !== 'object') return null;
+  const href = (data as { href?: unknown }).href;
+  return typeof href === 'string' && href.trim() ? href.trim() : null;
+}
+
 export function parseAppNotification(
   id: string,
   data: Record<string, unknown>,

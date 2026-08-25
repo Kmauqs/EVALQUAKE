@@ -71,15 +71,19 @@
 │   users, events,       firma, PDF            (transacción atómica)    │
 │   jurisdictions,        canónico)            · genera PDF canónico    │
 │   actionLogs,                                 (mismo HTML template,    │
-│   mail, notificationJobs)                     Puppeteer)              │
+│   mail, notificationJobs,                 Puppeteer)              │
+│   users/*/notifications,                                          │
+│   users/*/devices)                       · email + in-app + push  │
+│                                              (registro / evaluación│
+│                                               / aprobación)        │
 │  Firebase Auth                               · moderateDeleteEvaluation│
 │  (evaluador/coord.,                          (coordinador/admin)     │
-│   custom claims por                          · email: registro,       │
-│   jurisdicción)                                evaluación, aprobación │
-│                                              · exportación masiva     │
+│   custom claims por                          · exportación masiva     │
+│   jurisdicción)                                                       │
 │                                                                        │
 │  Firebase Hosting → sirve el build web del panel                      │
 │  Extensión Trigger Email (opcional) → entrega SMTP desde `mail/`      │
+│  Expo Push API → bandeja del SO (tokens en users/*/devices)           │
 └──────────────────────────────────────────────────────────────────────┘
 ```
 

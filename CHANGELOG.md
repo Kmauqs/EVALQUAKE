@@ -26,6 +26,7 @@ Cambios posteriores a 0.15.1 se listan aquí hasta el siguiente corte.
 
 ### Added
 
+- **Notificaciones push (Fase 3):** registro de tokens Expo en `users/{uid}/devices`, envío desde Cloud Functions vía Expo Push API, deep link al tocar la notificación del sistema (iOS/Android; requiere build nativo EAS). Web sigue con email + bandeja in-app.
 - **Notificaciones in-app (Fase 2):** bandeja en `users/{uid}/notifications`, campana en la cabecera con contador de no leídas, marcar leído / marcar todo leído y deep links a admin, coordinación o inicio.
 - **Notificaciones email (Fase 1):** cola Firestore `mail/` + jobs idempotentes `notificationJobs/` al registrar un usuario pendiente, al enviar una evaluación y al autorizar una cuenta (hooks en `onAuthUserCreated` / `ensureUserProfile`, `finalizeEvaluation`, `setUserRole`). Requiere extensión Trigger Email o worker SMTP; ver `DEPLOY.md` §5.1.
 - Editor online de la guía de inspección (Administración): Markdown + etiquetas HTML permitidas, vista previa, guardado en Firestore y lectura en la guía pública, con la versión incluida en la app como respaldo.

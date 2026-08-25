@@ -42,6 +42,16 @@ service cloud.firestore {
           && request.resource.data.readAt is string;
         allow create, delete: if false;
       }
+
+      match /devices/{deviceId} {
+        allow read: if signedIn() && request.auth.uid == userId;
+        allow create, update: if signedIn()
+          && request.auth.uid == userId
+          && request.resource.data.token is string
+          && request.resource.data.token.size() > 10
+          && request.resource.data.platform in ['ios', 'android'];
+        allow delete: if signedIn() && request.auth.uid == userId;
+      }
     }
 
     match /jurisdictions/{jurisdictionId} {

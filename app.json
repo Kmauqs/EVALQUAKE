@@ -31,7 +31,8 @@
         "android.permission.ACCESS_FINE_LOCATION",
         "android.permission.CAMERA",
         "android.permission.ACCESS_COARSE_LOCATION",
-        "android.permission.RECORD_AUDIO"
+        "android.permission.RECORD_AUDIO",
+        "android.permission.POST_NOTIFICATIONS"
       ]
     },
     "web": {
@@ -59,6 +60,14 @@
         {
           "photosPermission": "Allow EVALQUAKE to attach damage photos.",
           "cameraPermission": "Allow EVALQUAKE to photograph earthquake damage."
+        }
+      ],
+      [
+        "expo-notifications",
+        {
+          "icon": "./icon_960.png",
+          "color": "#176235",
+          "defaultChannel": "default"
         }
       ],
       "expo-status-bar",

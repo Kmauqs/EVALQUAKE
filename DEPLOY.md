@@ -96,6 +96,13 @@ Parámetro opcional de Functions: `APP_BASE_URL` (por defecto `https://evalquake
 
 **Bandeja in-app (Fase 2):** tras desplegar Functions y reglas, los usuarios autenticados ven la campana en la cabecera. Los documentos viven en `users/{uid}/notifications/{id}`.
 
+**Push móvil (Fase 3):** en iOS/Android (dispositivo físico + build EAS o Expo Go con proyecto EAS), la app pide permiso, guarda el token en `users/{uid}/devices` y Functions envía a la bandeja del sistema con [Expo Push](https://docs.expo.dev/push-notifications/overview/). Tras cambios de código nativo (`expo-notifications`), hace falta un nuevo build EAS.
+
+```powershell
+firebase deploy --only functions,firestore:rules
+npx eas-cli build --platform android --profile preview
+```
+
 **Nota:** en `.firebaserc` no defina un alias con el mismo nombre que el `projectId` (p. ej. `"evalquake": "evalquake"`). Eso hace fallar el deploy con *Can't have both dotenv files with projectId … and projectAlias*.
 
 ## 6. Publicar la web (si CI no basta)
@@ -137,6 +144,12 @@ npx eas-cli build --platform android --profile preview
 
 iOS requiere cuenta Apple Developer. Tras el build, instalar y confirmar la versión en la cabecera.
 
+El archive que sube EAS respeta [`.easignore`](.easignore) (si existe, **sustituye** `.gitignore`). Ahí se excluyen `DOCS/`, `functions/`, `dist/`, skills, etc., para no subir ~170 MB de material innecesario. Para inspeccionar el contenido del archive:
+
+```powershell
+npx eas-cli build:inspect --platform android --stage archive --output "$env:TEMP\evalquake-eas-archive" --profile preview
+```
+
 ## Lista corta (día a día)
 
 1. Código listo y probado.
@@ -161,6 +174,7 @@ iOS requiere cuenta Apple Developer. Tras el build, instalar y confirmar la vers
 | `set-user-role.mjs` no encontrado | Ejecutar desde `functions\`: `node scripts/set-user-role.mjs ...` |
 | Fotos antiguas muy pesadas en Storage / PDF | Desde `functions\`, con cuenta de servicio: `node scripts/optimize-storage-photos.mjs` (dry-run) y luego `--apply`. Opcional `--sketches`. |
 | No llegan correos de solicitud/evaluación/aprobación | Falta la extensión **Trigger Email** (o un worker que lea `mail/`). Ver sección 5.1. Comprobar documentos en Firestore `mail` y jobs en `notificationJobs`. |
+| No llega push al móvil | Hace falta build nativo (EAS), permiso concedido y token en `users/{uid}/devices`. Web no recibe push. Verificar logs de Functions y tickets Expo. |
 
 ```
 $env:GOOGLE_APPLICATION_CREDENTIALS="E:\secrets\evalquake-adminsdk.json"

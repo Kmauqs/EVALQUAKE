@@ -1,0 +1,59 @@
+# EAS Build upload ignore (replaces .gitignore when present).
+# Keep as a superset of .gitignore + mobile-build exclusions.
+# Prefer `/name` (anchored, no trailing slash) — see expo/eas-cli#3198.
+# Docs: https://docs.expo.dev/build-reference/easignore
+
+# --- from .gitignore ---
+/node_modules
+node_modules
+.expo
+/dist
+/web-build
+.firebase
+firebase-debug.log*
+.env
+.env.local
+.env.*.local
+functions/.env
+functions/.env.*
+functions/lib
+/coverage
+*.keystore
+*.jks
+*.p8
+*.p12
+*.mobileprovision
+.DS_Store
+.cursor
+/public/media
+expo-env.d.ts
+
+# --- not needed for Expo Android/iOS builds ---
+/DOCS
+/functions
+/.agents
+/.claude
+/.github
+/extensions
+/APK
+/old
+/TMP
+/client
+/assets/guide-new
+/assets/readme
+
+# Local / design leftovers
+*.docx
+*.cdr
+*.pdf
+/260814-EVALQUAKE-Prompt.txt
+/Icon.jpeg
+/icon.svg
+/icon_64.png
+/icon_128.png
+/icon_256.png
+/icon_468.png
+/icon_512.png
+
+# Secrets / local SMTP extension config
+**/firestore-send-email.env

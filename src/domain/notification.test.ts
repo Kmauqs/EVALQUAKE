@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { isUnread, parseAppNotification } from './notification';
+import { isUnread, parseAppNotification, hrefFromNotificationData } from './notification';
 
 describe('parseAppNotification', () => {
   it('parses a valid notification document', () => {
@@ -21,5 +21,16 @@ describe('parseAppNotification', () => {
 
   it('rejects unknown types', () => {
     expect(parseAppNotification('n1', { type: 'other', title: 'x', body: 'y' })).toBeNull();
+  });
+});
+
+describe('hrefFromNotificationData', () => {
+  it('reads href from push payload data', () => {
+    expect(hrefFromNotificationData({ href: '/(admin)' })).toBe('/(admin)');
+  });
+
+  it('returns null when href is missing', () => {
+    expect(hrefFromNotificationData({})).toBeNull();
+    expect(hrefFromNotificationData(null)).toBeNull();
   });
 });

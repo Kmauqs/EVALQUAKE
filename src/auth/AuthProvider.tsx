@@ -13,9 +13,10 @@ import { Platform } from 'react-native';
 
 import type { UserRole } from '@/domain/evaluation';
 import type { AccountStatus, AppUser } from '@/domain/user';
+import { clearSessionMarker, isSessionExpired, markSessionStart, prepareSession } from '@/auth/session';
 import { firebaseConfigured, getFirebaseServices } from '@/firebase/client';
 import { ensureUserProfile, subscribeUserProfile } from '@/firebase/users';
-import { clearSessionMarker, isSessionExpired, markSessionStart, prepareSession } from '@/auth/session';
+import { clearPushRegistration } from '@/services/push';
 
 interface AuthState {
   user: User | null;
@@ -159,6 +160,8 @@ export function AuthProvider({ children }: React.PropsWithChildren) {
       },
       logout: async () => {
         const services = getFirebaseServices();
+        const currentUid = services?.auth.currentUser?.uid;
+        if (currentUid) await clearPushRegistration(currentUid).catch(() => undefined);
         await clearSessionMarker();
         if (services) await firebaseSignOut(services.auth);
       },

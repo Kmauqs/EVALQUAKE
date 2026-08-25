@@ -5,6 +5,7 @@ import { logger } from 'firebase-functions';
 import { enqueueMail } from './email';
 import { writeInboxNotifications } from './inbox';
 import { jobDocumentId } from './ids';
+import { listPushTokens, sendExpoPush } from './push';
 import { resolveRecipientEmails } from './recipients';
 import type { DispatchNotificationInput, DispatchNotificationResult } from './types';
 
@@ -13,8 +14,7 @@ if (!getApps().length) initializeApp();
 const db = getFirestore();
 
 /**
- * Notification dispatcher: idempotent email (`mail/`) + in-app inbox
- * (`users/{uid}/notifications`). Push arrives in a later phase.
+ * Notification dispatcher: email (`mail/`) + in-app inbox + Expo push.
  */
 export async function dispatchNotification(
   input: DispatchNotificationInput,
@@ -38,7 +38,7 @@ export async function dispatchNotification(
       meta: input.meta ?? {},
       status: 'processing',
       recipientUids,
-      channels: ['email', 'in_app'],
+      channels: ['email', 'in_app', 'push'],
       createdAt: new Date().toISOString(),
       serverUpdatedAt: FieldValue.serverTimestamp(),
     });
@@ -47,7 +47,7 @@ export async function dispatchNotification(
 
   if (!claimed) {
     logger.info('Notification skipped (dedupe)', { dedupeKey: input.dedupeKey, type: input.type });
-    return { skipped: true, recipientCount: 0, mailCount: 0, inboxCount: 0 };
+    return { skipped: true, recipientCount: 0, mailCount: 0, inboxCount: 0, pushCount: 0 };
   }
 
   try {
@@ -73,12 +73,23 @@ export async function dispatchNotification(
       });
     }
 
+    const devices = await listPushTokens(recipientUids);
+    const pushCount = await sendExpoPush({
+      devices,
+      title: input.title,
+      body: input.body,
+      href: input.href,
+      type: input.type,
+      dedupeKey: input.dedupeKey,
+    });
+
     await jobRef.set(
       {
         status: 'completed',
         recipientCount: recipientUids.length,
         mailCount,
         inboxCount,
+        pushCount,
         completedAt: new Date().toISOString(),
         serverUpdatedAt: FieldValue.serverTimestamp(),
       },
@@ -91,9 +102,16 @@ export async function dispatchNotification(
       recipientCount: recipientUids.length,
       mailCount,
       inboxCount,
+      pushCount,
     });
 
-    return { skipped: false, recipientCount: recipientUids.length, mailCount, inboxCount };
+    return {
+      skipped: false,
+      recipientCount: recipientUids.length,
+      mailCount,
+      inboxCount,
+      pushCount,
+    };
   } catch (error) {
     await jobRef.set(
       {

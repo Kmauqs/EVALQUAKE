@@ -25,4 +25,5 @@ export interface DispatchNotificationResult {
   recipientCount: number;
   mailCount: number;
   inboxCount: number;
+  pushCount: number;
 }
