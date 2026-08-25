@@ -33,6 +33,15 @@ service cloud.firestore {
         || (role() == 'evaluator' && resource.data.role == 'evaluator')
       );
       allow write: if false;
+
+      match /notifications/{notifId} {
+        allow read: if signedIn() && request.auth.uid == userId;
+        allow update: if signedIn()
+          && request.auth.uid == userId
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['readAt'])
+          && request.resource.data.readAt is string;
+        allow create, delete: if false;
+      }
     }
 
     match /jurisdictions/{jurisdictionId} {
@@ -141,6 +150,16 @@ service cloud.firestore {
     }
 
     match /counters/{counterId} {
+      allow read, write: if false;
+    }
+
+    // Email queue for Trigger Email extension / Admin SDK only.
+    match /mail/{mailId} {
+      allow read, write: if false;
+    }
+
+    // Idempotent notification fan-out jobs (Admin SDK only).
+    match /notificationJobs/{jobId} {
       allow read, write: if false;
     }
   }

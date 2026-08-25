@@ -1,7 +1,6 @@
 {
   "projects": {
-    "default": "evalquake",
-    "evalquake": "evalquake"
+    "default": "evalquake"
   },
   "targets": {},
   "etags": {}

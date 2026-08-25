@@ -77,6 +77,27 @@ firebase deploy --only functions,firestore,storage
 
 La primera Function nueva puede tardar unos minutos. Si el CLI dice *Skipped (No changes detected)*, ese servicio ya estaba al día.
 
+### 5.1 Notificaciones por email (Fase 1)
+
+Las Cloud Functions encolan mensajes en Firestore `mail/{id}` (idempotencia en `notificationJobs/{dedupeKey}`) para:
+
+1. Solicitud de usuario nuevo → admins  
+2. Evaluación enviada → admins + coordinadores de la jurisdicción  
+3. Cuenta autorizada → el usuario aprobado  
+
+**Entrega real del correo:** instalar la extensión [Trigger Email from Firestore](https://extensions.dev/extensions/firebase/firestore-send-email) apuntando a la colección `mail`, con SMTP o un proveedor compatible:
+
+```powershell
+firebase deploy --only functions,firestore:rules
+firebase ext:install firebase/firestore-send-email --project evalquake
+```
+
+Parámetro opcional de Functions: `APP_BASE_URL` (por defecto `https://evalquake.web.app`) para los enlaces del cuerpo del correo. Valor local en `functions/.env.evalquake` (ver `.env.evalquake.example`).
+
+**Bandeja in-app (Fase 2):** tras desplegar Functions y reglas, los usuarios autenticados ven la campana en la cabecera. Los documentos viven en `users/{uid}/notifications/{id}`.
+
+**Nota:** en `.firebaserc` no defina un alias con el mismo nombre que el `projectId` (p. ej. `"evalquake": "evalquake"`). Eso hace fallar el deploy con *Can't have both dotenv files with projectId … and projectAlias*.
+
 ## 6. Publicar la web (si CI no basta)
 
 Si Actions falló, o quiere publicar **ahora** desde el PC:
@@ -138,5 +159,14 @@ iOS requiere cuenta Apple Developer. Tras el build, instalar y confirmar la vers
 | Cuenta nueva no puede evaluar | El admin debe aprobar rol y jurisdicción; el usuario pulsa **Comprobar acceso**. |
 | Functions no aplica el cambio | No basta el push: `firebase deploy --only functions`. |
 | `set-user-role.mjs` no encontrado | Ejecutar desde `functions\`: `node scripts/set-user-role.mjs ...` |
+| Fotos antiguas muy pesadas en Storage / PDF | Desde `functions\`, con cuenta de servicio: `node scripts/optimize-storage-photos.mjs` (dry-run) y luego `--apply`. Opcional `--sketches`. |
+| No llegan correos de solicitud/evaluación/aprobación | Falta la extensión **Trigger Email** (o un worker que lea `mail/`). Ver sección 5.1. Comprobar documentos en Firestore `mail` y jobs en `notificationJobs`. |
+
+```
+$env:GOOGLE_APPLICATION_CREDENTIALS="E:\secrets\evalquake-adminsdk.json"
+cd E:\dev\EVALQUAKE\functions
+node scripts/optimize-storage-photos.mjs
+node scripts/optimize-storage-photos.mjs --apply
+```
 
 Nunca suba `.env`, JSON de cuenta de servicio ni claves de firma a GitHub.

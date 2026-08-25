@@ -6,11 +6,50 @@ import { logger } from 'firebase-functions';
 import { onDocumentWritten } from 'firebase-functions/v2/firestore';
 import type { Evaluation } from '../../src/domain/evaluation';
 import { renderReportHtml } from '../../src/report/renderReportHtml';
+import {
+  dispatchNotification,
+  evaluationSubmittedEmail,
+  listAdminsAndCoordinatorsFor,
+} from './notifications';
 
 if (!getApps().length) initializeApp();
 
 const db = getFirestore();
 const bucket = getStorage().bucket();
+
+function isSubmittedStatus(status: Evaluation['status'] | undefined) {
+  return status === 'submitted' || status === 'synced';
+}
+
+async function notifyEvaluationSubmitted(evaluationId: string, evaluation: Evaluation) {
+  try {
+    const recipients = await listAdminsAndCoordinatorsFor(evaluation.jurisdictionId);
+    if (!recipients.length) {
+      logger.warn('No recipients for evaluation submitted notification', { evaluationId });
+      return;
+    }
+    await dispatchNotification({
+      type: 'evaluation.submitted',
+      recipientUids: recipients,
+      title: 'Nueva evaluación enviada',
+      body: `#${evaluation.officialNumber ?? evaluationId} · ${evaluation.jurisdictionId}`,
+      href: `/(coordinator)/evaluation/${evaluationId}`,
+      email: evaluationSubmittedEmail({
+        evaluationId,
+        jurisdictionId: evaluation.jurisdictionId,
+        officialNumber: evaluation.officialNumber,
+        habitability: evaluation.habitability,
+      }),
+      dedupeKey: `evaluation.submitted:${evaluationId}`,
+      meta: {
+        evaluationId,
+        jurisdictionId: evaluation.jurisdictionId,
+      },
+    });
+  } catch (error) {
+    logger.error('Failed to notify evaluation submitted', { evaluationId, error });
+  }
+}
 
 async function prepareCanonicalGeneration(reference: DocumentReference) {
   return db.runTransaction(async (transaction) => {
@@ -151,6 +190,13 @@ export const finalizeEvaluation = onDocumentWritten(
         jurisdictionId: evaluation.jurisdictionId,
         habitability: evaluation.habitability,
       });
+    }
+
+    const beforeStatus = before?.exists
+      ? (before.data() as Evaluation).status
+      : undefined;
+    if (isSubmittedStatus(evaluation.status) && !isSubmittedStatus(beforeStatus)) {
+      await notifyEvaluationSubmitted(after.id, evaluation);
     }
 
     const beforeState = before?.exists

@@ -70,15 +70,16 @@
 │  (evaluations,        (fotos, croquis,      · asigna consecutivo      │
 │   users, events,       firma, PDF            (transacción atómica)    │
 │   jurisdictions,        canónico)            · genera PDF canónico    │
-│   actionLogs)                                 (mismo HTML template,    │
-│                                               Puppeteer)              │
+│   actionLogs,                                 (mismo HTML template,    │
+│   mail, notificationJobs)                     Puppeteer)              │
 │  Firebase Auth                               · moderateDeleteEvaluation│
 │  (evaluador/coord.,                          (coordinador/admin)     │
-│   custom claims por                          · notifica clasificación │
-│   jurisdicción)                              roja/negra              │
+│   custom claims por                          · email: registro,       │
+│   jurisdicción)                                evaluación, aprobación │
 │                                              · exportación masiva     │
 │                                                                        │
 │  Firebase Hosting → sirve el build web del panel                      │
+│  Extensión Trigger Email (opcional) → entrega SMTP desde `mail/`      │
 └──────────────────────────────────────────────────────────────────────┘
 ```
 

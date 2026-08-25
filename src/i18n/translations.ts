@@ -88,6 +88,9 @@ export const es = {
   generatePlacard: 'Ver pancarta ATC-20',
   sharePdf: 'Abrir informe',
   guide: 'Guía de inspección',
+  notifications: 'Notificaciones',
+  notificationsEmpty: 'No hay notificaciones.',
+  markAllNotificationsRead: 'Marcar todo leído',
   guideKicker: 'ATC-20 · Guía gráfica',
   guideCollapsedHint: 'Toque un título o subtítulo para expandirlo. Al abrir la guía, todas las secciones están contraídas.',
   guideFigureCaption:
@@ -742,6 +745,9 @@ export const en = {
   generatePlacard: 'View ATC-20 placard',
   sharePdf: 'Open report',
   guide: 'Inspection guide',
+  notifications: 'Notifications',
+  notificationsEmpty: 'No notifications yet.',
+  markAllNotificationsRead: 'Mark all read',
   guideKicker: 'ATC-20 · Graphic guide',
   guideCollapsedHint: 'Tap a title or subtitle to expand it. All sections start collapsed.',
   guideFigureCaption:

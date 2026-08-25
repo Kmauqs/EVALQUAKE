@@ -19,6 +19,8 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { useAuth } from '@/auth/AuthProvider';
+import { NotificationBell } from '@/components/NotificationBell';
 import type { Habitability } from '@/domain/evaluation';
 import { useI18n } from '@/i18n/I18nProvider';
 import { colors, layout, shadows } from '@/theme';
@@ -41,6 +43,7 @@ export function AppShell({ children, scroll = true }: React.PropsWithChildren<{ 
 
 export function AppHeader() {
   const { t, language, setLanguage } = useI18n();
+  const { configured, user } = useAuth();
   const { width } = useWindowDimensions();
   const router = useRouter();
   const pathname = usePathname();
@@ -63,6 +66,7 @@ export function AppHeader() {
         </View>
       </Pressable>
       <View style={[styles.headerActions, compact && styles.headerActionsCompact]}>
+        {configured && user ? <NotificationBell /> : null}
         <Pressable
           accessibilityRole="button"
           accessibilityLabel={t.guide}
