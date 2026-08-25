@@ -144,11 +144,13 @@ npx eas-cli build --platform android --profile preview
 
 iOS requiere cuenta Apple Developer. Tras el build, instalar y confirmar la versión en la cabecera.
 
-El archive que sube EAS respeta [`.easignore`](.easignore) (si existe, **sustituye** `.gitignore`). Ahí se excluyen `DOCS/`, `functions/`, `dist/`, skills, etc., para no subir ~170 MB de material innecesario. Para inspeccionar el contenido del archive:
+El archive que sube EAS respeta [`.easignore`](.easignore) (si existe, **sustituye** `.gitignore`). Ahí se excluyen `DOCS/`, `functions/`, `dist/`, `android`/`ios` locales, skills, etc. Tras cambiar `.easignore`, conviene verificar:
 
 ```powershell
 npx eas-cli build:inspect --platform android --stage archive --output "$env:TEMP\evalquake-eas-archive" --profile preview
 ```
+
+El tamaño relevante es el de esa carpeta **sin** `.git` (EAS no sube `.git`). Con el ignore actual suele quedar en el orden de ~6 MB (sobre todo `assets/guide`).
 
 ## Lista corta (día a día)
 

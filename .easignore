@@ -3,20 +3,17 @@
 # Prefer `/name` (anchored, no trailing slash) — see expo/eas-cli#3198.
 # Docs: https://docs.expo.dev/build-reference/easignore
 
-# --- from .gitignore ---
+# --- from .gitignore (anchored) ---
 /node_modules
 node_modules
-.expo
+/.expo
 /dist
 /web-build
-.firebase
+/.firebase
 firebase-debug.log*
 .env
 .env.local
 .env.*.local
-functions/.env
-functions/.env.*
-functions/lib
 /coverage
 *.keystore
 *.jks
@@ -24,7 +21,7 @@ functions/lib
 *.p12
 *.mobileprovision
 .DS_Store
-.cursor
+/.cursor
 /public/media
 expo-env.d.ts
 
@@ -42,6 +39,10 @@ expo-env.d.ts
 /assets/guide-new
 /assets/readme
 
+# Native folders if generated locally by prebuild (EAS regenerates them)
+/android
+/ios
+
 # Local / design leftovers
 *.docx
 *.cdr
@@ -57,3 +58,8 @@ expo-env.d.ts
 
 # Secrets / local SMTP extension config
 **/firestore-send-email.env
+
+# Dev-only config (not required on the build worker)
+/vitest.config.ts
+/eslint.config.js
+/skills-lock.json
