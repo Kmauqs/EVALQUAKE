@@ -137,7 +137,7 @@ export default function CoordinatorDashboard() {
 
   return (
     <AppShell>
-      <View style={[styles.titleRow, narrow && styles.titleRowNarrow]}>
+      <View style={styles.titleRow}>
         <Pressable onPress={goBack} style={styles.back}>
           <ArrowLeft size={20} color={colors.primary} />
         </Pressable>
@@ -150,62 +150,63 @@ export default function CoordinatorDashboard() {
             {viewerOnly ? t.viewerDashboardHint : t.currentEvent}
           </Text>
         </View>
-        <View style={[styles.exports, narrow && styles.exportsNarrow]}>
-          {viewerOnly ? null : (
-            <Button
-              variant="secondary"
-              icon={<Users size={17} color={colors.primary} />}
-              onPress={() => router.push('/(coordinator)/groups' as Href)}
-              style={narrow ? styles.exportButtonNarrow : undefined}
-            >
-              {t.workGroups}
-            </Button>
-          )}
-          <Button
-            variant="ghost"
-            icon={<Download size={17} color={colors.primary} />}
-            onPress={() => void exportCsv(filtered)}
-            style={narrow ? styles.exportButtonNarrow : undefined}
-          >
-            {t.exportCsv}
-          </Button>
-          <Button
-            variant="ghost"
-            icon={<Download size={17} color={colors.primary} />}
-            onPress={() => void exportQuantitiesCsv(filtered, language)}
-            style={narrow ? styles.exportButtonNarrow : undefined}
-          >
-            {t.exportQuantitiesCsv}
-          </Button>
+      </View>
+
+      <View style={[styles.exports, narrow && styles.exportsNarrow]}>
+        {viewerOnly ? null : (
           <Button
             variant="secondary"
-            icon={<FileText size={17} color={colors.primary} />}
-            onPress={() =>
-              void exportSummaryHtml(
-                filtered,
-                {
-                  damage: filter,
-                  evaluator:
-                    evaluatorFilter === 'all'
-                      ? 'all'
-                      : evaluatorOptions.find(([id]) => id === evaluatorFilter)?.[1] ?? evaluatorFilter,
-                },
-                language,
-              )
-            }
+            icon={<Users size={17} color={colors.primary} />}
+            onPress={() => router.push('/(coordinator)/groups' as Href)}
             style={narrow ? styles.exportButtonNarrow : undefined}
           >
-            {t.exportSummary}
+            {t.workGroups}
           </Button>
-          <Button
-            variant="secondary"
-            icon={<FileJson size={17} color={colors.primary} />}
-            onPress={() => void exportJson(filtered)}
-            style={narrow ? styles.exportButtonNarrow : undefined}
-          >
-            {t.exportJson}
-          </Button>
-        </View>
+        )}
+        <Button
+          variant="ghost"
+          icon={<Download size={17} color={colors.primary} />}
+          onPress={() => void exportCsv(filtered)}
+          style={narrow ? styles.exportButtonNarrow : undefined}
+        >
+          {t.exportCsv}
+        </Button>
+        <Button
+          variant="ghost"
+          icon={<Download size={17} color={colors.primary} />}
+          onPress={() => void exportQuantitiesCsv(filtered, language)}
+          style={narrow ? styles.exportButtonNarrow : undefined}
+        >
+          {t.exportQuantitiesCsv}
+        </Button>
+        <Button
+          variant="secondary"
+          icon={<FileText size={17} color={colors.primary} />}
+          onPress={() =>
+            void exportSummaryHtml(
+              filtered,
+              {
+                damage: filter,
+                evaluator:
+                  evaluatorFilter === 'all'
+                    ? 'all'
+                    : evaluatorOptions.find(([id]) => id === evaluatorFilter)?.[1] ?? evaluatorFilter,
+              },
+              language,
+            )
+          }
+          style={narrow ? styles.exportButtonNarrow : undefined}
+        >
+          {t.exportSummary}
+        </Button>
+        <Button
+          variant="secondary"
+          icon={<FileJson size={17} color={colors.primary} />}
+          onPress={() => void exportJson(filtered)}
+          style={narrow ? styles.exportButtonNarrow : undefined}
+        >
+          {t.exportJson}
+        </Button>
       </View>
 
       <View style={styles.stats}>
@@ -372,15 +373,15 @@ export default function CoordinatorDashboard() {
 
 const styles = StyleSheet.create({
   titleRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 13, marginTop: 8 },
-  titleRowNarrow: { flexWrap: 'wrap' },
   back: { width: 44, height: 44, borderRadius: 12, borderWidth: 1, borderColor: colors.border, alignItems: 'center', justifyContent: 'center' },
   heading: { flex: 1, minWidth: 0 },
   eyebrow: { color: colors.primary, fontWeight: '900', fontSize: 12, textTransform: 'uppercase' },
   title: { color: colors.text, fontSize: 30, fontWeight: '900', marginTop: 3 },
   titleNarrow: { fontSize: 27, lineHeight: 33 },
   subtitle: { color: colors.textMuted, marginTop: 4 },
-  exports: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, justifyContent: 'flex-end' },
-  exportsNarrow: { width: '100%', flexDirection: 'column', paddingLeft: 57, alignItems: 'stretch' },
+  // Second header row, indented to line up with the title text (back button + gap).
+  exports: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 14, paddingLeft: 57 },
+  exportsNarrow: { flexDirection: 'column', alignItems: 'stretch', paddingLeft: 0 },
   exportButtonNarrow: { width: '100%' },
   stats: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginTop: 22 },
   statPressable: { minWidth: 150, flex: 1 },
