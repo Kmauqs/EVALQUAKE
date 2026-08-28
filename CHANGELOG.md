@@ -22,7 +22,17 @@ La versión visible en la cabecera de la app sale de `src/version.ts`.
 
 ## [Unreleased]
 
-Cambios posteriores a 0.16.1 se listan aquí hasta el siguiente corte.
+Cambios posteriores a 0.16.2 se listan aquí hasta el siguiente corte.
+
+## [0.16.2] — 2026-08-28
+
+### Fixed
+
+- Chips de filtro del panel de consulta (daño global, grupo de trabajo y evaluador) ya no se salen de la pantalla en móvil. El contenedor de cada grupo se medía con el ancho de su fila de chips sin envolver y no podía encogerse, así que crecía más allá del viewport: en una pantalla de 360 px medía 564 px y los chips quedaban cortados a la derecha.
+
+### Changed
+
+- El campo de búsqueda del panel de consulta ocupa una fila propia y los grupos de filtros empiezan en la fila siguiente.
 
 ## [0.16.1] — 2026-08-28
 

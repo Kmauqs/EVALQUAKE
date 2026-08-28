@@ -389,13 +389,16 @@ const styles = StyleSheet.create({
   statValue: { color: colors.text, fontSize: 26, fontWeight: '900' },
   statLabel: { color: colors.textMuted, fontWeight: '700' },
   filters: { marginTop: 18, flexDirection: 'row', flexWrap: 'wrap', gap: 12, alignItems: 'flex-start' },
-  search: { flexGrow: 1, flexBasis: 240, minWidth: 0, maxWidth: '100%', height: 48, backgroundColor: colors.white, borderWidth: 1, borderColor: colors.border, borderRadius: 12, flexDirection: 'row', alignItems: 'center', paddingHorizontal: 14, gap: 8 },
+  // flexBasis 100% keeps the search field on a row of its own, so the filter groups start below it.
+  search: { flexGrow: 1, flexBasis: '100%', minWidth: 0, maxWidth: '100%', height: 48, backgroundColor: colors.white, borderWidth: 1, borderColor: colors.border, borderRadius: 12, flexDirection: 'row', alignItems: 'center', paddingHorizontal: 14, gap: 8 },
   searchInput: { flex: 1, color: colors.text, height: '100%' },
-  filterGroup: { gap: 6, flexGrow: 1, minWidth: 220 },
+  // minWidth 0 + flexShrink let the group narrow past its unwrapped content width, which
+  // is what allows the chips inside to wrap instead of running off screen.
+  filterGroup: { gap: 6, flexGrow: 1, flexShrink: 1, flexBasis: 220, minWidth: 0, maxWidth: '100%' },
   filterLabel: { color: colors.textMuted, fontWeight: '800', fontSize: 11, textTransform: 'uppercase' },
   filterChips: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
   notice: { color: colors.textMuted, fontWeight: '700', fontSize: 12, width: '100%' },
-  filterChip: { paddingHorizontal: 12, paddingVertical: 9, borderRadius: 999, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.white },
+  filterChip: { paddingHorizontal: 12, paddingVertical: 9, borderRadius: 999, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.white, maxWidth: '100%', flexShrink: 1 },
   filterChipActive: { backgroundColor: colors.primary, borderColor: colors.primary },
   filterText: { color: colors.textMuted, fontWeight: '700', fontSize: 12 },
   filterTextActive: { color: colors.white },
