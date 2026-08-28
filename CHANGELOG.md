@@ -22,7 +22,13 @@ La versión visible en la cabecera de la app sale de `src/version.ts`.
 
 ## [Unreleased]
 
-Cambios posteriores a 0.16.0 se listan aquí hasta el siguiente corte.
+Cambios posteriores a 0.16.1 se listan aquí hasta el siguiente corte.
+
+## [0.16.1] — 2026-08-28
+
+### Fixed
+
+- Encabezado del panel de coordinación en dos filas: la flecha de regreso y el título arriba, los botones de acción (grupos de trabajo y exportaciones) en la fila siguiente. Antes compartían una sola fila y el título «Panel de coordinación» se partía en tres líneas. En pantallas angostas los botones apilados ya no arrastran la sangría de la maquetación anterior.
 
 ## [0.16.0] — 2026-08-28
 
