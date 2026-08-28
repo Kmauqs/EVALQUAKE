@@ -8,7 +8,15 @@ import {
   signOut as firebaseSignOut,
   type User,
 } from 'firebase/auth';
-import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
+import React, {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
 import { Platform } from 'react-native';
 
 import type { UserRole } from '@/domain/evaluation';
@@ -23,6 +31,7 @@ interface AuthState {
   uid: string;
   role: UserRole | null;
   jurisdictionIds: string[];
+  groupIds: string[];
   status: AccountStatus;
   profile: AppUser | null;
   loading: boolean;
@@ -42,15 +51,43 @@ function roleFromClaims(claims: Record<string, unknown>): UserRole | null {
     : null;
 }
 
+function stringListFromClaims(value: unknown): string[] {
+  return Array.isArray(value)
+    ? value.filter((entry): entry is string => typeof entry === 'string')
+    : [];
+}
+
+function sameIds(left: string[], right: string[]) {
+  return left.length === right.length && [...left].sort().join('|') === [...right].sort().join('|');
+}
+
 export function AuthProvider({ children }: React.PropsWithChildren) {
   const [user, setUser] = useState<User | null>(null);
   const [role, setRole] = useState<UserRole | null>(firebaseConfigured ? null : 'evaluator');
   const [jurisdictionIds, setJurisdictionIds] = useState<string[]>(
     firebaseConfigured ? [] : ['jurisdiction-demo'],
   );
+  const [groupIds, setGroupIds] = useState<string[]>([]);
   const [status, setStatus] = useState<AccountStatus>(firebaseConfigured ? 'pending' : 'active');
   const [profile, setProfile] = useState<AppUser | null>(null);
   const [loading, setLoading] = useState(firebaseConfigured);
+  const groupIdsRef = useRef<string[]>(groupIds);
+  useEffect(() => {
+    groupIdsRef.current = groupIds;
+  }, [groupIds]);
+
+  const refreshAccess = useCallback(async () => {
+    const current = getFirebaseServices()?.auth.currentUser;
+    if (!current) return;
+    const token = await current.getIdTokenResult(true);
+    const claimedRole = roleFromClaims(token.claims);
+    setRole(claimedRole);
+    setJurisdictionIds(stringListFromClaims(token.claims.jurisdictionIds));
+    setGroupIds(stringListFromClaims(token.claims.groupIds));
+    setStatus((currentStatus) =>
+      claimedRole ? 'active' : currentStatus === 'disabled' ? 'disabled' : 'pending',
+    );
+  }, []);
 
   useEffect(() => {
     const services = getFirebaseServices();
@@ -65,6 +102,7 @@ export function AuthProvider({ children }: React.PropsWithChildren) {
       if (!nextUser) {
         setRole(null);
         setJurisdictionIds([]);
+        setGroupIds([]);
         setStatus('pending');
         setProfile(null);
         setLoading(false);
@@ -74,13 +112,8 @@ export function AuthProvider({ children }: React.PropsWithChildren) {
       const token = await nextUser.getIdTokenResult();
       const claimedRole = roleFromClaims(token.claims);
       setRole(claimedRole);
-      setJurisdictionIds(
-        Array.isArray(token.claims.jurisdictionIds)
-          ? token.claims.jurisdictionIds.filter(
-              (value): value is string => typeof value === 'string',
-            )
-          : [],
-      );
+      setJurisdictionIds(stringListFromClaims(token.claims.jurisdictionIds));
+      setGroupIds(stringListFromClaims(token.claims.groupIds));
       setStatus(claimedRole ? 'active' : 'pending');
       void ensureUserProfile().catch(() => undefined);
       setLoading(false);
@@ -92,6 +125,11 @@ export function AuthProvider({ children }: React.PropsWithChildren) {
     return subscribeUserProfile(user.uid, (nextProfile) => {
       setProfile(nextProfile);
       if (!nextProfile) return;
+      // The server mirrors work group membership onto the profile right after updating the
+      // custom claims, so a divergence means our ID token is stale.
+      if (!sameIds(nextProfile.groupIds, groupIdsRef.current)) {
+        void refreshAccess().catch(() => undefined);
+      }
       if (nextProfile.disabled || nextProfile.status === 'disabled') {
         setStatus('disabled');
         return;
@@ -102,25 +140,7 @@ export function AuthProvider({ children }: React.PropsWithChildren) {
       }
       setStatus(nextProfile.status);
     });
-  }, [role, user]);
-
-  const refreshAccess = useCallback(async () => {
-    const current = getFirebaseServices()?.auth.currentUser;
-    if (!current) return;
-    const token = await current.getIdTokenResult(true);
-    const claimedRole = roleFromClaims(token.claims);
-    setRole(claimedRole);
-    setJurisdictionIds(
-      Array.isArray(token.claims.jurisdictionIds)
-        ? token.claims.jurisdictionIds.filter(
-            (value): value is string => typeof value === 'string',
-          )
-        : [],
-    );
-    setStatus((currentStatus) =>
-      claimedRole ? 'active' : currentStatus === 'disabled' ? 'disabled' : 'pending',
-    );
-  }, []);
+  }, [refreshAccess, role, user]);
 
   const value = useMemo<AuthState>(
     () => ({
@@ -128,6 +148,7 @@ export function AuthProvider({ children }: React.PropsWithChildren) {
       uid: user?.uid ?? (firebaseConfigured ? '' : 'demo-evaluator'),
       role,
       jurisdictionIds,
+      groupIds,
       status,
       profile,
       loading,
@@ -167,7 +188,7 @@ export function AuthProvider({ children }: React.PropsWithChildren) {
       },
       refreshAccess,
     }),
-    [jurisdictionIds, loading, profile, refreshAccess, role, status, user],
+    [groupIds, jurisdictionIds, loading, profile, refreshAccess, role, status, user],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

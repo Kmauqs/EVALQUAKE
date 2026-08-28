@@ -5,10 +5,16 @@ import { Pressable, StyleSheet, Text, View, useWindowDimensions } from 'react-na
 
 import { useAuth } from '@/auth/AuthProvider';
 import { AppShell, Button, Card, ClassificationBadge } from '@/components/ui';
-import { evaluatorAccountLabel, canModerateDelete, type Evaluation } from '@/domain/evaluation';
+import { evaluatorAccountLabel, type Evaluation } from '@/domain/evaluation';
 import { demoEvaluations } from '@/domain/fixtures';
+import {
+  canModerateDeleteInScope,
+  workGroupLabelsFor,
+  type WorkGroup,
+} from '@/domain/workGroup';
 import { pullEvaluation } from '@/firebase/repository';
 import { subscribeUsers } from '@/firebase/users';
+import { subscribeWorkGroups } from '@/firebase/workGroups';
 import { useI18n } from '@/i18n/I18nProvider';
 import { useSafeBack } from '@/navigation/useSafeBack';
 import { renderPlacardHtml } from '@/report/renderPlacardHtml';
@@ -22,7 +28,7 @@ import { colors, layout } from '@/theme';
 export default function EvaluationDetail() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { t, language } = useI18n();
-  const { configured, role } = useAuth();
+  const { configured, role, uid } = useAuth();
   const { get } = useEvaluations();
   const goBack = useSafeBack('/(coordinator)');
   const { width } = useWindowDimensions();
@@ -31,6 +37,7 @@ export default function EvaluationDetail() {
     demoEvaluations.find((item) => item.id === id) ?? null,
   );
   const [raw, setRaw] = useState(false);
+  const [groups, setGroups] = useState<WorkGroup[]>([]);
   const [resolvedAccount, setResolvedAccount] = useState('');
   const emailFromEvaluation = evaluation?.createdByEmail.trim() || '';
   const accountEmail = emailFromEvaluation || resolvedAccount;
@@ -41,12 +48,20 @@ export default function EvaluationDetail() {
   }, [configured, id, evaluation, get]);
 
   useEffect(() => {
-    if (!configured || !evaluation?.createdByUserId || emailFromEvaluation) return;
+    // Listing users is denied to the evaluator role; the evaluation's own email covers it.
+    if (!configured || role === 'evaluator' || !evaluation?.createdByUserId || emailFromEvaluation) {
+      return;
+    }
     return subscribeUsers((users) => {
       const match = users.find((user) => user.id === evaluation.createdByUserId);
       setResolvedAccount(match?.email || match?.displayName || '');
     });
-  }, [configured, emailFromEvaluation, evaluation?.createdByUserId]);
+  }, [configured, emailFromEvaluation, evaluation?.createdByUserId, role]);
+
+  useEffect(
+    () => (configured ? subscribeWorkGroups(setGroups) : () => undefined),
+    [configured],
+  );
 
   if (!evaluation) {
     return (
@@ -81,6 +96,7 @@ export default function EvaluationDetail() {
     [t.fields.globalDamage, `${evaluation.globalDamagePercentage}%`],
     [t.fields.inspectorName, evaluation.inspectors[0]?.name],
     [t.evaluatorAccount, accountEmail || evaluatorAccountLabel(evaluation)],
+    [t.workGroup, workGroupLabelsFor(groups, evaluation).join(', ') || t.withoutWorkGroup],
     [t.fields.entity, evaluation.inspectors[0]?.entity],
     [t.fields.comments, evaluation.comments],
   ];
@@ -134,7 +150,7 @@ export default function EvaluationDetail() {
         >
           {t.rawData}
         </Button>
-        {canModerateDelete(evaluation, role) ? (
+        {canModerateDeleteInScope(evaluation, role, uid, groups) ? (
           <Button
             variant="danger"
             icon={<Trash2 size={18} color={colors.white} />}

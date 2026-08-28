@@ -1,5 +1,5 @@
 import { type Href, useRouter } from 'expo-router';
-import { ClipboardCheck, ExternalLink, ShieldCheck, Users } from 'lucide-react-native';
+import { ClipboardCheck, ExternalLink, Map, ShieldCheck, Users } from 'lucide-react-native';
 import React, { useState } from 'react';
 import { ActivityIndicator, Alert, Image, Linking, Platform, Pressable, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 
@@ -185,6 +185,18 @@ export default function WelcomeScreen() {
             </View>
             <Text style={styles.roleTitle}>{t.coordinator}</Text>
             <Text style={styles.roleDescription}>{t.coordinatorDescription}</Text>
+            <Button variant="secondary" onPress={() => router.push('/(coordinator)')}>
+              {t.enter}
+            </Button>
+          </Card>
+        )}
+        {role === 'evaluator' && (
+          <Card style={styles.roleCard}>
+            <View style={styles.icon}>
+              <Map color={colors.primary} size={28} />
+            </View>
+            <Text style={styles.roleTitle}>{t.viewerDashboard}</Text>
+            <Text style={styles.roleDescription}>{t.viewerDashboardHint}</Text>
             <Button variant="secondary" onPress={() => router.push('/(coordinator)')}>
               {t.enter}
             </Button>

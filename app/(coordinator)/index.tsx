@@ -1,16 +1,24 @@
-import { useRouter } from 'expo-router';
-import { ArrowLeft, Download, FileJson, FileText, Search, Trash2 } from 'lucide-react-native';
+import { useRouter, type Href } from 'expo-router';
+import { ArrowLeft, Download, FileJson, FileText, Search, Trash2, Users } from 'lucide-react-native';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Pressable, StyleSheet, Text, TextInput, View, useWindowDimensions } from 'react-native';
 
 import { EvaluationMap } from '@/components/EvaluationMap';
 import { AppShell, Button, Card, ClassificationBadge } from '@/components/ui';
 import { useAuth } from '@/auth/AuthProvider';
-import { evaluatorAccountLabel, canModerateDelete, type Evaluation, type Habitability } from '@/domain/evaluation';
+import { evaluatorAccountLabel, type Evaluation, type Habitability } from '@/domain/evaluation';
 import { hasNationalScope } from '@/domain/jurisdiction';
 import { demoEvaluations } from '@/domain/fixtures';
-import { subscribeRemoteEvaluations } from '@/firebase/repository';
+import {
+  canModerateDeleteInScope,
+  evaluationAuthorScope,
+  isEvaluationInScope,
+  scopedWorkGroups,
+  type WorkGroup,
+} from '@/domain/workGroup';
+import { subscribeGroupEvaluations, subscribeRemoteEvaluations } from '@/firebase/repository';
 import { subscribeUsers } from '@/firebase/users';
+import { subscribeWorkGroups } from '@/firebase/workGroups';
 import { useI18n } from '@/i18n/I18nProvider';
 import { useSafeBack } from '@/navigation/useSafeBack';
 import { exportCsv, exportJson, exportQuantitiesCsv, exportSummaryHtml } from '@/services/exportData';
@@ -20,7 +28,7 @@ import { colors } from '@/theme';
 
 export default function CoordinatorDashboard() {
   const { t, language } = useI18n();
-  const { configured, jurisdictionIds, role } = useAuth();
+  const { configured, jurisdictionIds, role, uid, groupIds } = useAuth();
   const { evaluations: local } = useEvaluations();
   const router = useRouter();
   const goBack = useSafeBack('/');
@@ -29,27 +37,37 @@ export default function CoordinatorDashboard() {
   const [query, setQuery] = useState('');
   const [filter, setFilter] = useState<Habitability | 'all'>('all');
   const [evaluatorFilter, setEvaluatorFilter] = useState('all');
+  const [groupFilter, setGroupFilter] = useState('all');
   const [remote, setRemote] = useState<Evaluation[]>([]);
+  const [groups, setGroups] = useState<WorkGroup[]>([]);
   const [accountByUid, setAccountByUid] = useState<Record<string, string>>({});
+  const viewerOnly = role === 'evaluator';
+  useEffect(() => {
+    if (!configured) return;
+    // Evaluators may only list evaluations tagged with one of their work groups; the
+    // broader event-wide query is rejected by the Firestore rules for that role.
+    return viewerOnly
+      ? subscribeGroupEvaluations(groupIds, 'event-2026', setRemote)
+      : subscribeRemoteEvaluations(jurisdictionIds, 'event-2026', setRemote, undefined, {
+          allEvent: role === 'admin' || role === 'coordinator' || hasNationalScope(jurisdictionIds),
+        });
+  }, [configured, groupIds, jurisdictionIds, role, viewerOnly]);
   useEffect(
-    () =>
-      configured
-        ? subscribeRemoteEvaluations(jurisdictionIds, 'event-2026', setRemote, undefined, {
-            allEvent: role === 'admin' || role === 'coordinator' || hasNationalScope(jurisdictionIds),
-          })
-        : () => undefined,
-    [configured, jurisdictionIds, role],
+    () => (configured ? subscribeWorkGroups(setGroups) : () => undefined),
+    [configured],
   );
+  // Evaluators cannot list the whole users collection under the Firestore rules, so the
+  // read-only dashboard falls back to the email stored on each evaluation.
   useEffect(
     () =>
-      configured
+      configured && !viewerOnly
         ? subscribeUsers((users) => {
             setAccountByUid(
               Object.fromEntries(users.map((user) => [user.id, user.email || user.displayName || user.id])),
             );
           })
         : () => undefined,
-    [configured],
+    [configured, viewerOnly],
   );
   const accountLabel = useCallback(
     (evaluation: Evaluation) =>
@@ -68,15 +86,37 @@ export default function CoordinatorDashboard() {
           ],
     [configured, local, remote],
   );
+  const myGroups = useMemo(() => scopedWorkGroups(groups, uid, role), [groups, role, uid]);
+  // Administrators keep full visibility; everyone else is limited to the authors inside
+  // the work groups they coordinate or belong to. Demo mode stays unscoped.
+  const authorScope = useMemo(
+    () => (configured ? evaluationAuthorScope(groups, uid, role) : null),
+    [configured, groups, role, uid],
+  );
+  const groupAuthors = useMemo(() => {
+    if (groupFilter === 'all') return null;
+    const group = groups.find((item) => item.id === groupFilter);
+    if (!group) return new Set<string>();
+    return new Set<string>([...group.memberUids, ...group.coordinatorUids]);
+  }, [groupFilter, groups]);
+  const visible = useMemo(
+    () =>
+      evaluations.filter(
+        (evaluation) =>
+          isEvaluationInScope(evaluation, authorScope) &&
+          (groupAuthors === null || groupAuthors.has(evaluation.createdByUserId)),
+      ),
+    [authorScope, evaluations, groupAuthors],
+  );
   const evaluatorOptions = useMemo(() => {
     const byKey = new Map<string, string>();
-    for (const evaluation of evaluations) {
+    for (const evaluation of visible) {
       const key = evaluation.createdByUserId || accountLabel(evaluation);
       if (!byKey.has(key)) byKey.set(key, accountLabel(evaluation));
     }
     return [...byKey.entries()].sort((left, right) => left[1].localeCompare(right[1]));
-  }, [accountLabel, evaluations]);
-  const filtered = evaluations.filter((evaluation) => {
+  }, [accountLabel, visible]);
+  const filtered = visible.filter((evaluation) => {
     const haystack = [
       evaluation.building.address,
       evaluation.identification.neighborhood,
@@ -102,11 +142,25 @@ export default function CoordinatorDashboard() {
           <ArrowLeft size={20} color={colors.primary} />
         </Pressable>
         <View style={styles.heading}>
-          <Text style={styles.eyebrow}>{t.coordinator}</Text>
-          <Text style={[styles.title, narrow && styles.titleNarrow]}>{t.dashboard}</Text>
-          <Text style={styles.subtitle}>{t.currentEvent}</Text>
+          <Text style={styles.eyebrow}>{viewerOnly ? t.evaluator : t.coordinator}</Text>
+          <Text style={[styles.title, narrow && styles.titleNarrow]}>
+            {viewerOnly ? t.viewerDashboard : t.dashboard}
+          </Text>
+          <Text style={styles.subtitle}>
+            {viewerOnly ? t.viewerDashboardHint : t.currentEvent}
+          </Text>
         </View>
         <View style={[styles.exports, narrow && styles.exportsNarrow]}>
+          {viewerOnly ? null : (
+            <Button
+              variant="secondary"
+              icon={<Users size={17} color={colors.primary} />}
+              onPress={() => router.push('/(coordinator)/groups' as Href)}
+              style={narrow ? styles.exportButtonNarrow : undefined}
+            >
+              {t.workGroups}
+            </Button>
+          )}
           <Button
             variant="ghost"
             icon={<Download size={17} color={colors.primary} />}
@@ -156,14 +210,14 @@ export default function CoordinatorDashboard() {
 
       <View style={styles.stats}>
         <Card style={styles.statCard}>
-          <Text style={styles.statValue}>{evaluations.length}</Text>
+          <Text style={styles.statValue}>{visible.length}</Text>
           <Text style={styles.statLabel}>{t.totalEvaluations}</Text>
         </Card>
         {classifications.map((classification) => (
           <Pressable key={classification} style={styles.statPressable} onPress={() => setFilter(classification)}>
             <Card style={styles.statCard}>
               <Text style={styles.statValue}>
-                {evaluations.filter((item) => item.habitability === classification).length}
+                {visible.filter((item) => item.habitability === classification).length}
               </Text>
               <ClassificationBadge value={classification} compact />
             </Card>
@@ -198,6 +252,43 @@ export default function CoordinatorDashboard() {
             ))}
           </View>
         </View>
+        {myGroups.length ? (
+          <View style={styles.filterGroup}>
+            <Text style={styles.filterLabel}>{t.filterByWorkGroup}</Text>
+            <View style={styles.filterChips}>
+              <Pressable
+                onPress={() => setGroupFilter('all')}
+                style={[styles.filterChip, groupFilter === 'all' && styles.filterChipActive]}
+              >
+                <Text
+                  style={[styles.filterText, groupFilter === 'all' && styles.filterTextActive]}
+                >
+                  {t.allMyWorkGroups}
+                </Text>
+              </Pressable>
+              {myGroups.map((group) => (
+                <Pressable
+                  key={group.id}
+                  onPress={() => setGroupFilter(group.id)}
+                  style={[styles.filterChip, groupFilter === group.id && styles.filterChipActive]}
+                >
+                  <Text
+                    style={[
+                      styles.filterText,
+                      groupFilter === group.id && styles.filterTextActive,
+                    ]}
+                    numberOfLines={1}
+                  >
+                    {group.name}
+                  </Text>
+                </Pressable>
+              ))}
+            </View>
+          </View>
+        ) : null}
+        {configured && viewerOnly && !myGroups.length ? (
+          <Text style={styles.notice}>{t.noWorkGroupAssigned}</Text>
+        ) : null}
         <View style={styles.filterGroup}>
           <Text style={styles.filterLabel}>{t.filterByEvaluator}</Text>
           <View style={styles.filterChips}>
@@ -255,7 +346,7 @@ export default function CoordinatorDashboard() {
                     {new Date(evaluation.updatedAt).toLocaleString(language)}
                   </Text>
                 </Pressable>
-                {canModerateDelete(evaluation, role) ? (
+                {canModerateDeleteInScope(evaluation, role, uid, groups) ? (
                   <Pressable
                     accessibilityRole="button"
                     accessibilityLabel={t.deleteEvaluation}
@@ -302,6 +393,7 @@ const styles = StyleSheet.create({
   filterGroup: { gap: 6, flexGrow: 1, minWidth: 220 },
   filterLabel: { color: colors.textMuted, fontWeight: '800', fontSize: 11, textTransform: 'uppercase' },
   filterChips: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
+  notice: { color: colors.textMuted, fontWeight: '700', fontSize: 12, width: '100%' },
   filterChip: { paddingHorizontal: 12, paddingVertical: 9, borderRadius: 999, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.white },
   filterChipActive: { backgroundColor: colors.primary, borderColor: colors.primary },
   filterText: { color: colors.textMuted, fontWeight: '700', fontSize: 12 },

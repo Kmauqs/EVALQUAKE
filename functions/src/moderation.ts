@@ -2,6 +2,8 @@ import { getApps, initializeApp } from 'firebase-admin/app';
 import { FieldValue, getFirestore } from 'firebase-admin/firestore';
 import { HttpsError, onCall } from 'firebase-functions/v2/https';
 
+import { managedAuthorUids } from './workGroups';
+
 if (!getApps().length) initializeApp();
 
 const db = getFirestore();
@@ -58,6 +60,15 @@ export const moderateDeleteEvaluation = onCall({ region: 'us-central1' }, async 
       'permission-denied',
       'Coordinators can only delete unused drafts. Submitted evaluations require an administrator.',
     );
+  }
+  if (actor.role === 'coordinator') {
+    const authors = await managedAuthorUids(actor.uid);
+    if (!authors.has(evaluation.createdByUserId ?? '')) {
+      throw new HttpsError(
+        'permission-denied',
+        'This evaluation belongs to an account outside your work groups.',
+      );
+    }
   }
 
   const log: ActionLog = {

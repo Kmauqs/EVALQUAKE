@@ -214,6 +214,7 @@ export {
   setUserRole,
 } from './users';
 export { moderateDeleteEvaluation } from './moderation';
+export { createWorkGroup, deleteWorkGroup, updateWorkGroup } from './workGroups';
 
 export const exportEvaluations = onCall(
   { region: 'us-central1', memory: '512MiB', timeoutSeconds: 120 },

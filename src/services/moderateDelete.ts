@@ -15,6 +15,7 @@ export function requestModerateDelete(
     deleteEvaluation: string;
     cancel: string;
     deleteFailed: string;
+    outsideWorkGroupScope: string;
   },
   onDeleted: () => void,
 ) {
@@ -31,7 +32,14 @@ export function requestModerateDelete(
           await deleteLocalEvaluation(evaluation.id, false).catch(() => undefined);
           onDeleted();
         })
-        .catch(() => notify(copy.purgeEvaluationTitle, copy.deleteFailed));
+        .catch((error: unknown) => {
+          const code =
+            typeof error === 'object' && error && 'code' in error ? String(error.code) : '';
+          notify(
+            copy.purgeEvaluationTitle,
+            code.includes('permission-denied') ? copy.outsideWorkGroupScope : copy.deleteFailed,
+          );
+        });
     },
   );
 }

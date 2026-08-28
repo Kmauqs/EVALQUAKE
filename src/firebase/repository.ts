@@ -43,6 +43,24 @@ function isPermissionDenied(error: unknown) {
   );
 }
 
+/**
+ * Work groups of the signed-in account, read from the cached ID token. The Firestore
+ * rules only accept `groupIds` that are a subset of this claim, so authors stamp their
+ * own evaluations while moderators editing someone else's draft leave the tag alone.
+ */
+async function claimedGroupIds(): Promise<string[]> {
+  const current = getFirebaseServices()?.auth.currentUser;
+  if (!current) return [];
+  try {
+    const token = await current.getIdTokenResult();
+    return Array.isArray(token.claims.groupIds)
+      ? token.claims.groupIds.filter((value): value is string => typeof value === 'string')
+      : [];
+  } catch {
+    return [];
+  }
+}
+
 async function readExistingEvaluation(reference: DocumentReference) {
   try {
     const snapshot = await getDoc(reference);
@@ -162,9 +180,14 @@ export async function pushEvaluation(evaluation: Evaluation): Promise<Evaluation
     signatureUri = durableRemoteUri(evaluation.signatureUri ?? '');
   }
 
+  const authorUid = existing?.createdByUserId || evaluation.createdByUserId;
+  const isAuthor = services.auth.currentUser?.uid === authorUid;
   const next = {
     ...evaluation,
-    createdByUserId: existing?.createdByUserId || evaluation.createdByUserId,
+    createdByUserId: authorUid,
+    groupIds: isAuthor
+      ? await claimedGroupIds()
+      : existing?.groupIds ?? evaluation.groupIds ?? [],
     photos: photos.map((photo, index) => ({
       ...photo,
       localUri: mediaIdFromUri(evaluation.photos[index]?.localUri)
@@ -283,6 +306,37 @@ export function subscribeRemoteEvaluations(
             where('eventId', '==', eventId),
             where('jurisdictionId', 'in', jurisdictionIds.slice(0, 10)),
           ]),
+      orderBy('updatedAt', 'desc'),
+      limit(500),
+    ),
+    (snapshot) =>
+      onChange(snapshot.docs.map((item) => normalizeEvaluation(item.data() as Evaluation))),
+    (error) => onError?.(error),
+  );
+}
+
+/**
+ * Evaluations tagged with any of the caller's work groups. Used by the read-only
+ * dashboard for the evaluator role, whose Firestore rules only clear documents whose
+ * `groupIds` intersect the `groupIds` custom claim.
+ */
+export function subscribeGroupEvaluations(
+  groupIds: string[],
+  eventId: string,
+  onChange: (evaluations: Evaluation[]) => void,
+  onError?: (error: Error) => void,
+) {
+  const services = getFirebaseServices();
+  const scoped = groupIds.filter(Boolean).slice(0, 10);
+  if (!services || scoped.length === 0) {
+    onChange([]);
+    return () => undefined;
+  }
+  return onSnapshot(
+    query(
+      collection(services.db, 'evaluations'),
+      where('eventId', '==', eventId),
+      where('groupIds', 'array-contains-any', scoped),
       orderBy('updatedAt', 'desc'),
       limit(500),
     ),

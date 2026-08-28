@@ -22,6 +22,9 @@ function asAppUser(id: string, data: Record<string, unknown>): AppUser {
     jurisdictionIds: Array.isArray(data.jurisdictionIds)
       ? data.jurisdictionIds.filter((value): value is string => typeof value === 'string')
       : [],
+    groupIds: Array.isArray(data.groupIds)
+      ? data.groupIds.filter((value): value is string => typeof value === 'string')
+      : [],
     status: status === 'active' || status === 'disabled' ? status : 'pending',
     disabled: data.disabled === true,
     createdAt: typeof data.createdAt === 'string' ? data.createdAt : new Date().toISOString(),

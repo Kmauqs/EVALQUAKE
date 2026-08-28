@@ -103,6 +103,22 @@ firebase deploy --only functions,firestore:rules
 npx eas-cli build --platform android --profile preview
 ```
 
+### 5.2 Grupos de trabajo
+
+Requiere desplegar Functions, reglas **e índices** (hay un índice compuesto nuevo `eventId + groupIds + updatedAt`):
+
+```powershell
+firebase deploy --only functions,firestore:rules,firestore:indexes
+```
+
+Puntos a tener en cuenta al publicar por primera vez:
+
+- **Los coordinadores empiezan sin grupos.** Mientras un coordinador no cree su grupo y agregue integrantes, su panel solo mostrará sus propias evaluaciones y no podrá eliminar borradores de otras cuentas. Avísele al equipo antes de publicar.
+- **El administrador conserva visibilidad total** y sigue pudiendo eliminar cualquier evaluación.
+- **Etiquetado retroactivo.** `createWorkGroup` / `updateWorkGroup` / `deleteWorkGroup` recalculan el claim `groupIds`, lo replican en `users/{uid}.groupIds` y re-etiquetan las evaluaciones ya existentes del integrante (hasta 5 000 por cuenta). Con históricos grandes la llamada puede tardar; revise los logs de la Function si el panel del evaluador se ve vacío.
+- **Refresco del token.** El cliente detecta la divergencia entre el perfil y el ID token y lo refresca solo; no hace falta cerrar sesión.
+- Los nombres de grupo son únicos ignorando mayúsculas y acentos; la Function responde `already-exists` si se repiten.
+
 **Nota:** en `.firebaserc` no defina un alias con el mismo nombre que el `projectId` (p. ej. `"evalquake": "evalquake"`). Eso hace fallar el deploy con *Can't have both dotenv files with projectId … and projectAlias*.
 
 ## 6. Publicar la web (si CI no basta)

@@ -210,6 +210,8 @@ export interface Evaluation {
   createdByUserId: string;
   createdByEmail: string;
   sharedWithUserIds: string[];
+  /** Work groups the author belonged to; drives group-scoped dashboards and rules. */
+  groupIds: string[];
   deviceId: string;
   createdAt: string;
   updatedAt: string;
@@ -389,6 +391,7 @@ export function createEvaluation(
     createdByUserId,
     createdByEmail,
     sharedWithUserIds: [],
+    groupIds: [],
     deviceId,
     createdAt: now,
     updatedAt: now,
@@ -546,6 +549,9 @@ export function normalizeEvaluation(raw: Evaluation): Evaluation {
     createdByEmail: typeof raw.createdByEmail === 'string' ? raw.createdByEmail : '',
     sharedWithUserIds: Array.isArray(raw.sharedWithUserIds)
       ? raw.sharedWithUserIds.filter((value): value is string => typeof value === 'string' && Boolean(value.trim()))
+      : [],
+    groupIds: Array.isArray(raw.groupIds)
+      ? raw.groupIds.filter((value): value is string => typeof value === 'string' && Boolean(value.trim()))
       : [],
   };
 }

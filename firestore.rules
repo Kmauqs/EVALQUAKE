@@ -26,6 +26,18 @@ service cloud.firestore {
         (hasNationalScope() || (jurisdictions() is list && jurisdictionId in jurisdictions()));
     }
 
+    function myGroups() {
+      return request.auth.token.groupIds;
+    }
+
+    // Work groups are created and edited exclusively through the callable functions
+    // (createWorkGroup / updateWorkGroup / deleteWorkGroup), which enforce unique names,
+    // membership validation and the mirrored custom claims.
+    match /workGroups/{groupId} {
+      allow read: if signedIn();
+      allow write: if false;
+    }
+
     match /users/{userId} {
       allow read: if signedIn() && (
         request.auth.uid == userId
@@ -65,23 +77,46 @@ service cloud.firestore {
     }
 
     match /evaluations/{evaluationId} {
+      // Members of a work group may read the evaluations tagged with that group.
+      function inMyGroups() {
+        return resource.data.groupIds is list
+          && myGroups() is list
+          && resource.data.groupIds.hasAny(myGroups());
+      }
+
+      // An author may only tag an evaluation with groups they actually belong to.
+      function groupTagAllowed() {
+        return request.resource.data.groupIds is list
+          && (
+            request.resource.data.groupIds.size() == 0
+            || (myGroups() is list && request.resource.data.groupIds.hasOnly(myGroups()))
+          );
+      }
+
+      function groupTagUnchangedOrAllowed() {
+        return request.resource.data.groupIds == resource.data.groupIds || groupTagAllowed();
+      }
+
       function evaluationReadable() {
         return request.auth.uid == resource.data.createdByUserId
           || (
             resource.data.sharedWithUserIds is list
             && request.auth.uid in resource.data.sharedWithUserIds
           )
-          || role() in ['coordinator', 'admin'];
+          || role() in ['coordinator', 'admin']
+          || inMyGroups();
       }
 
       allow get: if signedIn() && (resource == null || evaluationReadable());
       allow list: if evaluationReadable();
       allow create: if canAccessJurisdiction(request.resource.data.jurisdictionId)
         && request.resource.data.createdByUserId == request.auth.uid
-        && request.resource.data.officialNumber == null;
+        && request.resource.data.officialNumber == null
+        && groupTagAllowed();
       allow update: if signedIn()
         && request.resource.data.id == resource.data.id
         && request.resource.data.createdByUserId == resource.data.createdByUserId
+        && groupTagUnchangedOrAllowed()
         && (
           (
             resource.data.status == 'draft'
@@ -121,12 +156,8 @@ service cloud.firestore {
           && (resource.data.signatureUri == null || resource.data.signatureUri == '')
           && (resource.data.canonicalPdfStoragePath == null || resource.data.canonicalPdfStoragePath == '')
         )
-        || (
-          role() == 'coordinator'
-          && resource.data.status == 'draft'
-          && resource.data.officialNumber == null
-          && (resource.data.canonicalPdfStoragePath == null || resource.data.canonicalPdfStoragePath == '')
-        )
+        // Coordinators no longer delete directly: moderateDeleteEvaluation checks that the
+        // author belongs to one of the work groups they coordinate before removing anything.
         || role() == 'admin'
       );
 

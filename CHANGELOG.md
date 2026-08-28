@@ -22,15 +22,23 @@ La versión visible en la cabecera de la app sale de `src/version.ts`.
 
 ## [Unreleased]
 
-Cambios posteriores a 0.15.1 se listan aquí hasta el siguiente corte.
+Cambios posteriores a 0.16.0 se listan aquí hasta el siguiente corte.
+
+## [0.16.0] — 2026-08-28
 
 ### Added
 
+- **Grupos de trabajo:** las cuentas con rol Coordinación pueden crear y administrar varios grupos desde `/(coordinator)/groups`, con nombre único en toda la base y selección de integrantes entre las cuentas ya autorizadas por el administrador. El panel de coordinación filtra automáticamente mapa, listado y contadores a las evaluaciones de sus grupos (más las propias), con chips para pivotar por grupo.
+- **Panel de consulta para rol Evaluación:** los evaluadores entran al panel en modo solo lectura y ven únicamente las evaluaciones de los grupos a los que un coordinador los asignó. Nueva colección `workGroups`, campo `groupIds` en `evaluations` y claim `groupIds` en el token.
 - **Notificaciones push (Fase 3):** registro de tokens Expo en `users/{uid}/devices`, envío desde Cloud Functions vía Expo Push API, deep link al tocar la notificación del sistema (iOS/Android; requiere build nativo EAS). Web sigue con email + bandeja in-app.
 - **Notificaciones in-app (Fase 2):** bandeja en `users/{uid}/notifications`, campana en la cabecera con contador de no leídas, marcar leído / marcar todo leído y deep links a admin, coordinación o inicio.
 - **Notificaciones email (Fase 1):** cola Firestore `mail/` + jobs idempotentes `notificationJobs/` al registrar un usuario pendiente, al enviar una evaluación y al autorizar una cuenta (hooks en `onAuthUserCreated` / `ensureUserProfile`, `finalizeEvaluation`, `setUserRole`). Requiere extensión Trigger Email o worker SMTP; ver `DEPLOY.md` §5.1.
 - Editor online de la guía de inspección (Administración): Markdown + etiquetas HTML permitidas, vista previa, guardado en Firestore y lectura en la guía pública, con la versión incluida en la app como respaldo.
 - Script `functions/scripts/optimize-storage-photos.mjs` para redimensionar y recomprimir fotos (y opcionalmente croquis) ya subidas a Firebase Storage con los mismos límites de la app (1280 px / JPEG ~65 %).
+
+### Changed
+
+- **Borrado moderado acotado al grupo:** un coordinador ya no puede eliminar evaluaciones de cuentas ajenas a sus grupos de trabajo. Las reglas de Firestore dejaron de permitir el borrado directo por rol `coordinator`; ahora siempre pasa por el callable `moderateDeleteEvaluation`, que valida la pertenencia al grupo antes de borrar y registrar en `actionLogs`.
 
 ## [0.15.1] — 2026-08-23
 

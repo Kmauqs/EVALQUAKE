@@ -8,6 +8,8 @@ export interface AppUser {
   displayName?: string;
   role: UserRole | null;
   jurisdictionIds: string[];
+  /** Work groups the account belongs to, mirrored from the custom claims by the server. */
+  groupIds: string[];
   status: AccountStatus;
   disabled: boolean;
   createdAt: string;

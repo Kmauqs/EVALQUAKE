@@ -20,7 +20,7 @@
 - Sincronización en segundo plano cuando el dispositivo recupera señal; sin pérdida de datos ni bloqueo de la app mientras tanto.
 - Panel web para coordinadores: lista y mapa de todas las evaluaciones de un evento/jurisdicción, filtrable por clasificación (verde/amarillo/rojo/negro), acceso al PDF y a los datos crudos, exportación masiva.
 - Roles: Evaluador (captura), Coordinador/Supervisor (consolidación, exportación, borrado de borradores ajenos), Administrador (usuarios, jurisdicciones, borrado de cualquier ficha, registro de acciones).
-- Visibilidad: el evaluador solo ve evaluaciones propias o compartidas como inspector de apoyo; coordinación y administración ven el conjunto de su jurisdicción.
+- Visibilidad: el evaluador solo ve evaluaciones propias, compartidas como inspector de apoyo o pertenecientes a sus grupos de trabajo; coordinación ve las de sus grupos de trabajo; administración ve el conjunto.
 - Compartir borrador con otro evaluador (`sharedWithUserIds`) para colaboración en campo.
 - Numeración consecutiva oficial del informe, asignada sin colisiones aunque varios evaluadores trabajen offline en simultáneo.
 - Trazabilidad: una evaluación ya enviada no se sobre-escribe; las correcciones quedan como historial. Los borrados moderados quedan en `actionLogs`.
@@ -142,8 +142,14 @@ evaluations/{evaluationId}          // id = UUID generado en el dispositivo
   pdfCanonicoStoragePath: string | null
   # Metadatos de sincronización / auditoría
   createdByUserId, createdByEmail, sharedWithUserIds[], deviceId
+  groupIds[]                          // grupos de trabajo del autor al momento de sincronizar
   createdAt, updatedAt, syncedAt
   auditLog subcollection: correcciones posteriores a "enviada"
+
+workGroups/{groupId}                  // lectura autenticada; escritura solo vía callables
+  name, nameKey                       // nameKey: sin acentos ni mayúsculas, único
+  coordinatorUids[], memberUids[]
+  createdByUserId, createdByEmail, createdAt, updatedAt
 
 actionLogs/{logId}                    // solo lectura admin; escritura vía Function
   action: "delete_evaluation"
@@ -153,15 +159,26 @@ actionLogs/{logId}                    // solo lectura admin; escritura vía Func
 
 users/{userId}
   nombre, rol: "evaluator"|"coordinator"|"admin", jurisdictionIds[], matricula, email
+  groupIds[]                          // espejo del claim; el cliente lo usa para refrescar el token
 ```
 
 **Reglas de visibilidad y borrado (Firestore + cliente):**
 
-- **Lectura:** propietario (`createdByUserId`), inspector de apoyo (`sharedWithUserIds`), o rol coordinador/admin con jurisdicción compatible.
-- **Escritura del evaluador:** solo borradores propios; puede compartir añadiendo UIDs a `sharedWithUserIds`.
+- **Lectura:** propietario (`createdByUserId`), inspector de apoyo (`sharedWithUserIds`), integrante de un grupo de trabajo cuyo id aparezca en `groupIds`, o rol coordinador/admin con jurisdicción compatible.
+- **Escritura del evaluador:** solo borradores propios; puede compartir añadiendo UIDs a `sharedWithUserIds`. Solo puede etiquetar `groupIds` con grupos a los que pertenece (se valida contra el claim).
 - **Borrado evaluador:** solo borradores propios.
-- **Borrado coordinador:** borradores de cualquier evaluador (vía callable `moderateDeleteEvaluation`).
+- **Borrado coordinador:** borradores de evaluadores que estén en alguno de sus grupos de trabajo. Las reglas ya no permiten el borrado directo: pasa siempre por el callable `moderateDeleteEvaluation`, que verifica la pertenencia al grupo.
 - **Borrado admin:** cualquier evaluación, incluidas enviadas (misma Function; queda en `actionLogs`).
+
+### 3.1 Grupos de trabajo
+
+Un grupo de trabajo acota qué evaluaciones ve y modera cada cuenta:
+
+- **Coordinación** crea y administra varios grupos (`createWorkGroup` / `updateWorkGroup` / `deleteWorkGroup`). El nombre es único en toda la base (`nameKey` normalizado sin acentos ni mayúsculas, verificado en una transacción).
+- Los integrantes se eligen de entre las cuentas ya autorizadas por el administrador (`status: active` con rol asignado).
+- El panel de coordinación filtra automáticamente mapa, listado y contadores a los autores de sus grupos, más sus propias evaluaciones.
+- **Evaluación** entra al mismo panel en modo consulta: solo lista las evaluaciones etiquetadas con sus grupos, sin acciones de moderación.
+- Al cambiar la membresía, la Function recalcula el claim `groupIds`, lo replica en `users/{uid}.groupIds` y re-etiqueta las evaluaciones ya creadas por esa cuenta. El cliente detecta la divergencia entre el perfil y el token y fuerza un refresco del ID token.
 
 **Almacén local web:** IndexedDB/localStorage bajo clave `evalquake.evaluations.{uid}` para evitar que varias cuentas en el mismo navegador vean el mismo caché. Al migrar, se filtran registros con `isEvaluatorVisible()`.
 
