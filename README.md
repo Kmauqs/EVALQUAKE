@@ -1,21 +1,62 @@
 # EVALQUAKE
 
-**Versión actual: [0.16.2](CHANGELOG.md)**
+**Evaluación de daños y habitabilidad post-sismo** — app offline-first (móvil y web) alineada con ATC-20 y NSR-10.
 
-EVALQUAKE es una aplicación para evaluar daños y habitabilidad de edificaciones después de un sismo. Está pensada para equipos de inspección en campo y para quienes coordinan o administran la respuesta desde un municipio, un departamento o el nivel nacional.
+[![Versión](https://img.shields.io/badge/versión-0.16.2-blue)](CHANGELOG.md)
+[![Sitio](https://img.shields.io/badge/demo-evalquake.web.app-success)](https://evalquake.web.app)
+[![ES / EN](https://img.shields.io/badge/idioma-ES%20%7C%20EN-informational)](#aspectos-técnicos-en-lenguaje-sencillo)
 
-Funciona en celular, tableta y computador (navegador). Está disponible en español e inglés. Se puede usar sin conexión a internet: la inspección se guarda en el dispositivo y se envía cuando vuelve la señal.
+EVALQUAKE es una aplicación de evaluación de daños post-terremoto y dictamen de habitabilidad de edificaciones. Está pensada para equipos de inspección en campo y para quienes coordinan o administran la respuesta desde un municipio, un departamento o el nivel nacional.
+
+Funciona en celular, tableta y computador (navegador). Disponible en español e inglés. Se puede usar **sin conexión a internet**: la inspección se guarda en el dispositivo y se envía cuando vuelve la señal.
 
 - Sitio en producción: [https://evalquake.web.app](https://evalquake.web.app)
 - Código del proyecto: [https://github.com/Kmauqs/EVALQUAKE](https://github.com/Kmauqs/EVALQUAKE)
+- Autor: [Carlos Mauricio Quintero Suárez](https://www.linkedin.com/in/mauchitoq/)
 
 El contenido del formulario se apoya en el Formulario Regional Homogenizado 2A (AIS), el Manual de Campo y las listas ATC-20 / ATC-20-2, en línea con la normativa colombiana NSR-10.
 
 ---
 
-## Para qué sirve
+## Tabla de contenidos
 
-Después de un terremoto, los evaluadores visitan viviendas y edificios, registran lo que observan y emiten un dictamen de habitabilidad (si se puede ocupar, con restricciones o si no es seguro). EVALQUAKE digitaliza ese proceso: captura en campo, informe imprimible, pancarta de ocupación y consolidación en un panel para la coordinación.
+- [Por qué existe EVALQUAKE](#por-qué-existe-evalquake)
+- [¿Para qué sirve?](#para-qué-sirve)
+- [Características principales](#características-principales)
+- [Qué puede hacer cada persona](#qué-puede-hacer-cada-persona)
+- [Cómo entra un usuario nuevo](#cómo-entra-un-usuario-nuevo)
+- [Seguridad y control de acceso](#seguridad-y-control-de-acceso)
+- [Aspectos técnicos](#aspectos-técnicos-en-lenguaje-sencillo)
+- [Documentación relacionada](#documentación-relacionada)
+- [Autor](#autor)
+
+---
+
+## Por qué existe EVALQUAKE
+
+Tras el terremoto del 10 de agosto en el occidente colombiano (Mw 7.4), el autor pasó de la preocupación a la acción. Ante un evento sísmico de esa magnitud, los ingenieros tienen el deber técnico de evaluar afectaciones geotécnicas y estructurales. Al hacer evaluaciones preliminares voluntarias en viviendas de familiares y amigos, quedó clara una necesidad: **automatizar y agilizar la recopilación de datos técnicos** acorde a la normativa vigente (NSR-10, Capítulo A.10) y a estándares internacionales (ATC-20).
+
+EVALQUAKE es esa herramienta: un formulario digital de evaluación rápida de daños para un levantamiento ágil y homologado. Su potencial es hacer más eficientes las inspecciones post-sismo de colegas, investigadores y equipos de respuesta —desde el campo hasta la coordinación municipal, departamental o nacional— con informes, pancartas de ocupación y consolidación en un mismo sistema.
+
+Más contexto en la [publicación original en LinkedIn](https://www.linkedin.com/posts/mauchitoq_httpslnkdinewuwxpqa-tras-el-terremoto-activity-7503312464302895105-Ob4f).
+
+---
+
+## ¿Para qué sirve?
+
+Después de un terremoto, los evaluadores visitan viviendas y edificios, registran lo que observan y emiten un dictamen de habitabilidad (si se puede ocupar, con restricciones o si no es seguro). EVALQUAKE digitaliza ese proceso: captura en campo, informe imprimible, pancarta de ocupación ATC-20 y consolidación en un panel para la coordinación.
+
+---
+
+## Características principales
+
+- Evaluación de daños post-sismo en 17 secciones (ubicación, estructura, daños, habitabilidad, fotos, croquis y firma).
+- Trabajo **offline-first**: borradores locales y sincronización automática al recuperar red.
+- Dictamen de habitabilidad e impresión de informe y pancarta ATC-20 (inspeccionado, uso restringido o inseguro).
+- GPS y mapa para ubicar la edificación; exportación tabular para coordinación.
+- Roles de evaluador, coordinación (grupos de trabajo) y administración, con control de acceso por jurisdicción.
+- Interfaz bilingüe español / inglés en la misma app (PWA / móvil / web).
+- Alineado con NSR-10, Formulario Regional Homogenizado 2A (AIS) y metodologías ATC-20 / ATC-20-2.
 
 ---
 
@@ -110,3 +151,9 @@ EVALQUAKE trata las inspecciones como información sensible: afectan decisiones 
 | [ARCHITECTURE.md](ARCHITECTURE.md) | Equipo técnico: diseño del sistema, datos y decisiones |
 
 La bitácora de versiones usa numeración mayor.menor.parche. Cada entrega actualiza la versión visible en la app y deja constancia en el changelog. El procedimiento detallado de publicación está en la guía de despliegue.
+
+---
+
+## Autor
+
+Desarrollado por [Carlos Mauricio Quintero Suárez](https://www.linkedin.com/in/mauchitoq/).
