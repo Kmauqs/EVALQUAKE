@@ -2,25 +2,62 @@ import { describe, expect, it } from 'vitest';
 
 import { createEvaluation } from '../domain/evaluation';
 import { en, es } from '../i18n/translations';
+import { renderPlacardHtml } from './renderPlacardHtml';
 import { renderReportHtml } from './renderReportHtml';
 
 describe('bilingual report renderer', () => {
-  it('keeps all 17 section names in both languages', () => {
-    expect(es.sections).toHaveLength(17);
-    expect(en.sections).toHaveLength(17);
+  it('keeps matching catalogs and section names in both languages', () => {
+    expect(Object.keys(es.sections)).toEqual(Object.keys(en.sections));
     expect(Object.keys(es.fields)).toEqual(Object.keys(en.fields));
     expect(Object.keys(es.damage)).toEqual(Object.keys(en.damage));
+    expect(Object.keys(es.catalogs)).toEqual(Object.keys(en.catalogs));
+    expect(Object.keys(es.hints)).toEqual(Object.keys(en.hints));
+    expect(Object.keys(es.catalogs.irregularities)).toEqual(Object.keys(en.catalogs.irregularities));
+    expect(Object.keys(es.catalogs.typicalRestrictions)).toEqual(
+      Object.keys(en.catalogs.typicalRestrictions),
+    );
+    expect(Object.keys(es.catalogs.furtherActions)).toEqual(Object.keys(en.catalogs.furtherActions));
+    expect(es.sections).not.toHaveProperty('8');
   });
 
-  it('renders escaped evaluation data in Spanish and English', () => {
+  it('renders escaped evaluation data in Spanish and English with a print-to-PDF control', () => {
     const evaluation = createEvaluation('EQ-TEST');
     evaluation.building.address = '<Casa & Hogar>';
+    evaluation.building.nsrGroup = 'group_i';
+    evaluation.building.length = '12';
+    evaluation.building.width = '8';
+    evaluation.building.height = '6';
     const spanish = renderReportHtml(evaluation, 'es');
     const english = renderReportHtml(evaluation, 'en');
     expect(spanish).toContain('Identificación catastral');
     expect(english).toContain('Cadastral identification');
+    expect(spanish).toContain('Cantidades para reparación');
+    expect(spanish).toContain('Área en planta');
+    expect(spanish).toContain('Largo (m)');
+    expect(spanish).toContain('Ancho (m)');
+    expect(spanish).toContain('Alto (m)');
+    expect(spanish).toContain('Pisos bajo rasante');
+    expect(spanish).toContain('Se informó a ocupantes');
+    expect(spanish).toContain('Imprimir en PDF');
+    expect(english).toContain('Print to PDF');
+    expect(spanish).toContain('window.print()');
     expect(spanish).toContain('&lt;Casa &amp; Hogar&gt;');
     expect(spanish).not.toContain('<Casa & Hogar>');
+    expect(spanish).not.toContain('Criterios ATC-20 en campo');
+    expect(spanish).toContain('Formulario Regional Homogenizado 2A');
+    expect(spanish).toContain('ADVERTENCIA IMPORTANTE.');
+    expect(spanish.indexOf('ADVERTENCIA IMPORTANTE.')).toBeLessThan(spanish.indexOf('Identificación catastral'));
+    expect(spanish).toContain('ANEXO. MARCO NORMATIVO Y REFERENCIAS TÉCNICAS APLICABLES');
+    expect(spanish).toContain('Ley 400 de 1997');
+    expect(spanish).toContain('ATC-20-2');
+    expect(spanish.indexOf('Registro fotográfico')).toBeLessThan(
+      spanish.indexOf('ANEXO. MARCO NORMATIVO Y REFERENCIAS TÉCNICAS APLICABLES'),
+    );
+    expect(english).toContain('IMPORTANT WARNING.');
+    expect(spanish).toContain('<thead>');
+    expect(spanish.indexOf('<thead>')).toBeLessThan(spanish.indexOf('ADVERTENCIA IMPORTANTE.'));
+    expect(spanish).toContain('display:table-header-group');
+    expect(spanish).toContain('border-collapse:separate');
   });
 
   it('embeds signatures, sketches, photographs, captions, and coordinates', () => {
@@ -43,5 +80,42 @@ describe('bilingual report renderer', () => {
     expect(html).toContain('data:image/jpeg;base64,PHOTO');
     expect(html).toContain('Crack on north wall');
     expect(html).toContain('4.650000, -74.050000');
+    const inspectorIdx = html.indexOf('Inspectors');
+    const signatureIdx = html.indexOf('Evaluator signature');
+    const sketchPageIdx = html.indexOf('class="sketch-page"');
+    const photosIdx = html.indexOf('Photographic record');
+    expect(inspectorIdx).toBeGreaterThan(-1);
+    expect(inspectorIdx).toBeLessThan(signatureIdx);
+    expect(signatureIdx).toBeLessThan(sketchPageIdx);
+    expect(sketchPageIdx).toBeLessThan(photosIdx);
+    expect(html).toContain('page-break-before:always');
+    expect(html).toContain('page-break-inside:avoid');
+    expect(html).toContain('170mm');
+    expect(html).toContain('class="print-doc"');
+    expect(html).toContain('<thead>');
+    expect(html).toContain('display:table-header-group');
+  });
+
+  it('includes the equipment section for complete inspections of essential buildings', () => {
+    const evaluation = createEvaluation('EQ-EQUIP');
+    evaluation.inspection.type = 'complete';
+    evaluation.building.nsrGroup = 'group_iii';
+    evaluation.equipmentReview.items[0]!.damage = 'severe';
+    const html = renderReportHtml(evaluation, 'es');
+    expect(html).toContain('Lista de revisión de equipos');
+    expect(html).toContain('Calefactores principales');
+  });
+
+  it('renders ATC-20 occupancy placards with print-to-PDF', () => {
+    const evaluation = createEvaluation('EQ-PLACARD');
+    evaluation.habitability = 'restricted';
+    evaluation.building.address = 'Calle 10 # 20-30';
+    evaluation.placard.restrictions = 'No usar la chimenea';
+    const html = renderPlacardHtml(evaluation, 'es');
+    expect(html).toContain('USO RESTRINGIDO');
+    expect(html).toContain('Calle 10 # 20-30');
+    expect(html).toContain('No usar la chimenea');
+    expect(html).toContain('Imprimir en PDF');
+    expect(html).toContain('@media print');
   });
 });

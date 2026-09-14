@@ -22,7 +22,335 @@ La versión visible en la cabecera de la app sale de `src/version.ts`.
 
 ## [Unreleased]
 
-Cambios posteriores a 0.2.1 se listan aquí hasta el siguiente corte.
+Cambios posteriores a 0.16.2 se listan aquí hasta el siguiente corte.
+
+## [0.16.2] — 2026-08-28
+
+### Fixed
+
+- Chips de filtro del panel de consulta (daño global, grupo de trabajo y evaluador) ya no se salen de la pantalla en móvil. El contenedor de cada grupo se medía con el ancho de su fila de chips sin envolver y no podía encogerse, así que crecía más allá del viewport: en una pantalla de 360 px medía 564 px y los chips quedaban cortados a la derecha.
+
+### Changed
+
+- El campo de búsqueda del panel de consulta ocupa una fila propia y los grupos de filtros empiezan en la fila siguiente.
+
+## [0.16.1] — 2026-08-28
+
+### Fixed
+
+- Encabezado del panel de coordinación en dos filas: la flecha de regreso y el título arriba, los botones de acción (grupos de trabajo y exportaciones) en la fila siguiente. Antes compartían una sola fila y el título «Panel de coordinación» se partía en tres líneas. En pantallas angostas los botones apilados ya no arrastran la sangría de la maquetación anterior.
+
+## [0.16.0] — 2026-08-28
+
+### Added
+
+- **Grupos de trabajo:** las cuentas con rol Coordinación pueden crear y administrar varios grupos desde `/(coordinator)/groups`, con nombre único en toda la base y selección de integrantes entre las cuentas ya autorizadas por el administrador. El panel de coordinación filtra automáticamente mapa, listado y contadores a las evaluaciones de sus grupos (más las propias), con chips para pivotar por grupo.
+- **Panel de consulta para rol Evaluación:** los evaluadores entran al panel en modo solo lectura y ven únicamente las evaluaciones de los grupos a los que un coordinador los asignó. Nueva colección `workGroups`, campo `groupIds` en `evaluations` y claim `groupIds` en el token.
+- **Notificaciones push (Fase 3):** registro de tokens Expo en `users/{uid}/devices`, envío desde Cloud Functions vía Expo Push API, deep link al tocar la notificación del sistema (iOS/Android; requiere build nativo EAS). Web sigue con email + bandeja in-app.
+- **Notificaciones in-app (Fase 2):** bandeja en `users/{uid}/notifications`, campana en la cabecera con contador de no leídas, marcar leído / marcar todo leído y deep links a admin, coordinación o inicio.
+- **Notificaciones email (Fase 1):** cola Firestore `mail/` + jobs idempotentes `notificationJobs/` al registrar un usuario pendiente, al enviar una evaluación y al autorizar una cuenta (hooks en `onAuthUserCreated` / `ensureUserProfile`, `finalizeEvaluation`, `setUserRole`). Requiere extensión Trigger Email o worker SMTP; ver `DEPLOY.md` §5.1.
+- Editor online de la guía de inspección (Administración): Markdown + etiquetas HTML permitidas, vista previa, guardado en Firestore y lectura en la guía pública, con la versión incluida en la app como respaldo.
+- Script `functions/scripts/optimize-storage-photos.mjs` para redimensionar y recomprimir fotos (y opcionalmente croquis) ya subidas a Firebase Storage con los mismos límites de la app (1280 px / JPEG ~65 %).
+
+### Changed
+
+- **Borrado moderado acotado al grupo:** un coordinador ya no puede eliminar evaluaciones de cuentas ajenas a sus grupos de trabajo. Las reglas de Firestore dejaron de permitir el borrado directo por rol `coordinator`; ahora siempre pasa por el callable `moderateDeleteEvaluation`, que valida la pertenencia al grupo antes de borrar y registrar en `actionLogs`.
+
+## [0.15.1] — 2026-08-23
+
+### Fixed
+
+- Firebase Hosting envía `Cache-Control: no-cache` en el arranque de la PWA (`/` y rutas SPA) para que la app instalada detecte builds nuevos; los bundles con hash en `/_expo/static/**` siguen con caché larga.
+
+## [0.15.0] — 2026-08-23
+
+### Added
+
+- Los usuarios con rol **coordinator** también pueden usar el flujo de evaluador: crear y completar inspecciones propias, además del panel de coordinación para ver el avance general.
+- Suscripción remota a las fichas propias/compartidas también para coordinación, para que el apoyo en campo se sincronice entre dispositivos.
+
+### Changed
+
+- Descripción del rol de coordinación (ES/EN) y README: deja explícito que también captura evaluaciones en campo.
+- Al cargar fotografías (cámara o galería) se redimensionan (lado mayor 1280 px) y se comprimen a JPEG (~65 %) antes de guardarlas, para reducir el uso de Firebase Storage y el peso de los PDF de informe. En web, si falla el compresor nativo, se usa un respaldo por canvas (antes el `base64` del selector se guardaba sin comprimir).
+
+## [0.14.1] — 2026-08-23
+
+### Added
+
+- Manifest PWA e iconos (192, 512, Apple Touch) para que al instalar el acceso directo en móvil o escritorio aparezca el ícono de EVALQUAKE.
+
+## [0.14.0] — 2026-08-23
+
+### Fixed
+
+- El evaluador ya no ve el almacén local compartido del navegador: solo sus fichas y las que le compartieron como inspector de apoyo.
+
+### Added
+
+- Coordinación puede eliminar borradores de cualquier evaluador (depuración). Administración también puede eliminar fichas ya firmadas o enviadas. Cada borrado pide confirmación y queda en un registro que solo ve Administración.
+
+## [0.13.0] — 2026-08-23
+
+### Changed
+
+- El evaluador solo ve sus fichas (y las que le compartan como inspector de apoyo). Coordinación y administración ven todas, con la cuenta del evaluador, filtros por daño global y por evaluador, y un reporte resumen de lo filtrado.
+
+### Fixed
+
+- Borrar un borrador ya no falla con `permission-denied` al intentar borrar en Firebase un documento inaccesible o ajeno.
+
+## [0.12.8] — 2026-08-23
+
+### Fixed
+
+- En web, reintentar sincronización fallaba con `enqueueUnsyncedEvaluations is not a function` porque esa rutina no existía en el almacén local de navegador.
+
+## [0.12.7] — 2026-08-23
+
+### Fixed
+
+- El resultado de la sincronización se muestra en la pantalla (en web `Alert` no aparece) y la subida solo se da por hecha cuando Firebase confirma el documento en el servidor.
+
+## [0.12.6] — 2026-08-23
+
+### Fixed
+
+- Las evaluaciones ya enviadas dejaban de subirse porque un `getDoc` previo chocaba con las reglas (documento nuevo o etiquetado `jurisdiction-demo`) y la lista las marcaba “pendiente de sincronización” solo por no tener consecutivo.
+
+## [0.12.5] — 2026-08-23
+
+### Fixed
+
+- Reintentar sincronización informa el error real (permiso, token o datos inválidos) y vuelve a subir inspecciones enviadas que Firestore rechazaba por campos `undefined` o por falta de jurisdicciones en el token.
+
+## [0.12.4] — 2026-08-23
+
+### Fixed
+
+- Las evaluaciones ya enviadas que quedaron pendientes se vuelven a poner en cola y se suben a Firebase, con un botón para reintentar la sincronización.
+- Se eliminó la página de bienvenida de Firebase Hosting en `public/index.html`, que tapaba la app al exportar y al desplegar.
+
+## [0.12.3] — 2026-08-23
+
+### Changed
+
+- El consecutivo oficial se asigna en el servidor por evento (todas las inspecciones cargadas a Firebase para ese sismo) y la ficha enviada muestra el número en cuanto llega.
+
+## [0.12.2] — 2026-08-23
+
+### Fixed
+
+- Las inspecciones usan las jurisdicciones reales de la cuenta (municipio, departamento o Nacional) en lugar del marcador interno `jurisdiction-demo`, para que el panel de coordinación vea el evento completo.
+
+## [0.12.1] — 2026-08-22
+
+### Fixed
+
+- El encabezado del informe (marca, título, consecutivo, fecha e identificador) se repite en cada página del PDF impreso.
+
+## [0.12.0] — 2026-08-22
+
+### Added
+
+- El informe final incluye la leyenda legal y la advertencia de inspección preliminar antes de la sección 1, y un anexo normativo al final.
+
+## [0.11.7] — 2026-08-22
+
+### Fixed
+
+- Al imprimir el informe en PDF, el croquis cabe en una sola página junto con su título y ya no se recorta.
+
+## [0.11.6] — 2026-08-22
+
+### Added
+
+- La página de inicio incluye un enlace al repositorio del proyecto en GitHub.
+
+## [0.11.5] — 2026-08-22
+
+### Changed
+
+- En el informe final, el croquis ocupa una página entera y la firma del evaluador queda justo después de los datos del inspector.
+
+## [0.11.4] — 2026-08-22
+
+### Fixed
+
+- Las fotos de la sección 17 se conservan al salir y volver a la evaluación, en lugar de perderse con URLs temporales del navegador.
+
+## [0.11.3] — 2026-08-22
+
+### Fixed
+
+- Los botones al final de cada sección del formulario se apilan a lo ancho en móvil y ya no se salen de la pantalla.
+
+## [0.11.2] — 2026-08-22
+
+### Fixed
+
+- Las fotos de la cámara o la galería se guardan en el registro fotográfico aunque el recorte automático falle en el navegador.
+
+## [0.11.1] — 2026-08-22
+
+### Fixed
+
+- Las fichas de cantidades vuelven a apilar campos sin huecos ni textos superpuestos.
+
+## [0.11.0] — 2026-08-22
+
+### Added
+
+- Cada elemento de cantidades tiene ubicación para identificarlo y relacionarlo con el plano de levantamiento de fallas.
+
+## [0.10.0] — 2026-08-22
+
+### Added
+
+- El periodo de construcción se asigna con el año escrito; si el año no se conoce, el periodo se elige a mano.
+
+## [0.9.2] — 2026-08-22
+
+### Fixed
+
+- Las listas de 4 o más opciones (tipo de inspección, riesgo, morfología, cantidades, etc.) usan desplegable para que no se corten.
+
+## [0.9.1] — 2026-08-22
+
+### Fixed
+
+- El sistema estructural predominante se elige en una lista desplegable para que las opciones no se solapen con las ayudas.
+
+## [0.9.0] — 2026-08-22
+
+### Added
+
+- La ficha de la edificación pide largo, ancho y alto en lugar de un solo campo de dimensiones.
+
+## [0.8.1] — 2026-08-22
+
+### Fixed
+
+- La ficha de identificación de la edificación carga la dirección definida en la identificación catastral.
+
+## [0.8.0] — 2026-08-22
+
+### Added
+
+- La ficha catastral captura GPS al inicio, usa Dirección en lugar de Sector y rellena departamento, municipio, comuna, barrio y dirección desde OpenStreetMap.
+
+## [0.7.0] — 2026-08-21
+
+### Added
+
+- La guía de inspección abre con todos los títulos y subtítulos contraídos; se expanden al tocarlos para navegar el documento.
+
+## [0.6.1] — 2026-08-20
+
+### Fixed
+
+- El texto de los botones vuelve a quedar centrado en pantallas estrechas.
+
+## [0.6.0] — 2026-08-20
+
+### Added
+
+- El mapa de coordinación muestra teselas OpenStreetMap o Tracestrack (si hay `EXPO_PUBLIC_TRACESTRACK_KEY`), con cambio a vista satelital y marcadores coloreados por habitabilidad.
+
+## [0.5.2] — 2026-08-20
+
+### Fixed
+
+- El texto de filas, interruptores y badges ya no se superpone en móvil; las opciones se envuelven en escritorio sin colapsar altura.
+- El panel de habitabilidad usa fondo claro y texto oscuro para mantener contraste.
+
+## [0.5.1] — 2026-08-20
+
+### Fixed
+
+- Las opciones y campos del formulario ya no se superponen en pantallas estrechas.
+
+## [0.5.0] — 2026-08-20
+
+### Added
+
+- Cuestionario opcional de cantidades de reparación (muros, cubiertas, vigas y columnas), con áreas/volúmenes calculados y exportación CSV de la tabla.
+
+## [0.4.7] — 2026-08-20
+
+### Added
+
+- Los evaluadores pueden eliminar borradores incompletos. Las evaluaciones firmadas o enviadas no se pueden borrar.
+
+## [0.4.6] — 2026-08-20
+
+### Added
+
+- En catastro se pueden escribir latitud y longitud a mano, además de capturarlas con GPS.
+
+## [0.4.5] — 2026-08-19
+
+### Changed
+
+- La sección de amenaza sísmica de la guía muestra solo el mapa y su pie de figura.
+- El logotipo de Gtek enlaza a https://gtek.com.co.
+
+## [0.4.4] — 2026-08-19
+
+### Fixed
+
+- Las figuras de la guía y los logotipos de apoyo se empaquetan con el bundle web para que Firebase Hosting los sirva.
+
+## [0.4.3] — 2026-08-19
+
+### Added
+
+- Logotipos de Grupo Terra y Gtek ingeniería, con la leyenda «Con apoyo de», en el pie de todas las pantallas.
+
+## [0.4.2] — 2026-08-19
+
+### Fixed
+
+- El título EVALQUAKE ya no se parte en pantallas estrechas.
+- Las figuras de la guía tienen altura explícita para que se vean en la web.
+
+## [0.4.1] — 2026-08-19
+
+### Added
+
+- Figuras de la guía gráfica de inspección, extraídas del DOCX y mostradas en cada sección correspondiente.
+
+## [0.4.0] — 2026-08-18
+
+### Added
+
+- Guía HTML de inspección postsismo, accesible desde el encabezado en todas las pantallas.
+- Puntos de inspección según el sistema estructural, irregularidades, servicios cortados, restricciones ATC-20 y acciones posteriores.
+
+### Changed
+
+- El cuestionario incorpora sótanos, aviso a ocupantes y amenaza de caída hacia predios vecinos, según el manual ATC-20-1.
+
+## [0.3.0] — 2026-08-18
+
+### Added
+
+- Sesión persistente en el dispositivo, con cierre automático a los 30 días.
+- Categoría NSR-10, sistema estructural, entrepiso, cubierta y periodo de construcción.
+- Listas ATC-20 de estabilidad global, daño estructural/no estructural y revisión de equipos.
+- Pancarta HTML ATC-20 (inspeccionado, uso restringido, inseguro / peligro de colapso).
+- Informe HTML completo con botón **Imprimir en PDF**.
+
+### Changed
+
+- El flujo final abre el informe HTML en lugar de generar un PDF automáticamente.
+- «Área de huella» pasa a «Área en planta».
+- La clasificación de habitabilidad se deriva de los cuatro niveles de riesgo y colorea el recuadro.
+- Los criterios ATC-20 de campo se integran en Estabilidad global.
+
+### Removed
+
+- La sección independiente «Criterios ATC-20 en campo».
 
 ## [0.2.1] — 2026-08-17
 

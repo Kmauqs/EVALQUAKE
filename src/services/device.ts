@@ -1,9 +1,11 @@
-import * as ImageManipulator from 'expo-image-manipulator';
 import * as ImagePicker from 'expo-image-picker';
 import * as Location from 'expo-location';
+import { Platform } from 'react-native';
 
 import type { Attachment, Coordinates } from '@/domain/evaluation';
 import { cryptoRandomId } from '@/domain/evaluation';
+import { hasPickerAssets } from '@/domain/imageUri';
+import { persistImage } from '@/services/imagePersistence';
 
 export async function captureCoordinates(): Promise<Coordinates> {
   const permission = await Location.requestForegroundPermissionsAsync();
@@ -39,28 +41,27 @@ export async function pickDamagePhotos(
 
   const result =
     source === 'camera'
-      ? await ImagePicker.launchCameraAsync({ mediaTypes: ['images'], quality: 0.9 })
+      ? await ImagePicker.launchCameraAsync({
+          mediaTypes: ['images'],
+          quality: 0.7,
+          base64: Platform.OS === 'web',
+        })
       : await ImagePicker.launchImageLibraryAsync({
           mediaTypes: ['images'],
-          quality: 0.9,
+          quality: 0.7,
           allowsMultipleSelection: allowMultiple,
-          selectionLimit: allowMultiple ? 0 : 1,
+          selectionLimit: allowMultiple ? 20 : 1,
+          base64: Platform.OS === 'web',
         });
-  if (result.canceled || !result.assets.length) return [];
+  if (!hasPickerAssets(result) || !result.assets) return [];
 
   const photos: Attachment[] = [];
   for (const asset of result.assets) {
-    const context = ImageManipulator.ImageManipulator.manipulate(asset.uri);
-    context.resize({ width: 1600, height: null });
-    const rendered = await context.renderAsync();
-    const compressed = await rendered.saveAsync({
-      compress: 0.72,
-      format: ImageManipulator.SaveFormat.JPEG,
-    });
-
+    const id = cryptoRandomId();
+    const localUri = await persistImage(id, asset);
     photos.push({
-      id: cryptoRandomId(),
-      localUri: compressed.uri,
+      id,
+      localUri,
       sectionRef: 'photos',
       coordinates,
       syncState: 'pending',

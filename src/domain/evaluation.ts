@@ -1,5 +1,25 @@
 import { z } from 'zod';
 
+import {
+  GENERAL_EQUIPMENT_ITEMS,
+  GLOBAL_CONDITIONS,
+  HOSPITAL_EQUIPMENT_ITEMS,
+  NON_STRUCTURAL_ELEMENTS,
+  STRUCTURAL_ELEMENTS,
+  STRUCTURAL_IRREGULARITIES,
+  deriveHabitability,
+  evaluationSectionKeys,
+  migrateInspectionType,
+  type ConstructionPeriod,
+  type EvaluationSectionKey,
+  type FloorType,
+  type InspectionType,
+  type NsrGroup,
+  type StructuralSystemCode,
+} from './catalog';
+import { DEMO_JURISDICTION_ID } from './jurisdiction';
+import { emptyRepairQuantities, normalizeRepairQuantities, type RepairQuantities } from './quantities';
+
 export type Language = 'es' | 'en';
 export type UserRole = 'evaluator' | 'coordinator' | 'admin';
 export type EvaluationStatus = 'draft' | 'submitted' | 'synced';
@@ -16,7 +36,31 @@ export interface Coordinates {
 export interface DamageElement {
   type: string;
   severity: RiskLevel;
+  affectedPercentage: string;
   notes?: string;
+}
+
+export interface ObservedCondition {
+  item: string;
+  checked: boolean;
+  notes: string;
+}
+
+export interface EquipmentRow {
+  type: string;
+  group: 'general' | 'hospital';
+  custom: boolean;
+  name: string;
+  damage: 'none' | 'moderate' | 'severe' | '';
+  comments: string;
+}
+
+export interface Inspector {
+  name: string;
+  profession: string;
+  license: string;
+  inspectorId: string;
+  entity: string;
 }
 
 export interface Attachment {
@@ -27,14 +71,6 @@ export interface Attachment {
   caption?: string;
   coordinates?: Coordinates;
   syncState: SyncState;
-}
-
-export interface Inspector {
-  name: string;
-  profession: string;
-  license: string;
-  inspectorId: string;
-  entity: string;
 }
 
 export interface Evaluation {
@@ -56,34 +92,47 @@ export interface Evaluation {
     coordinates?: Coordinates;
   };
   inspection: {
-    type: 'rapid' | 'detailed';
+    type: InspectionType | '';
     notInspectedReason: string;
     preliminaryClassification: Habitability | '';
+    occupantsNotified: boolean;
   };
   building: {
     address: string;
     name: string;
     floors: string;
+    storiesBelowGrade: string;
     predominantUse: string;
     dimensions: string;
+    length: string;
+    width: string;
+    height: string;
     footprintArea: string;
     estimatedOccupants: string;
     units: string;
+    nsrGroup: NsrGroup | '';
   };
   structure: {
-    structuralSystem: string;
+    structuralSystem: StructuralSystemCode | '';
+    floorType: FloorType | '';
+    floorSubtype: string;
     floorSystem: string;
+    roofGeometry: string;
+    roofStructure: string;
     constructionYear: string;
+    constructionPeriod: ConstructionPeriod | '';
+    irregularities: ObservedCondition[];
   };
   globalStability: {
+    conditions: ObservedCondition[];
     observedConditions: string[];
     risk: RiskLevel;
     notes: string;
   };
   geotechnicalDamage: {
     morphology: string;
-    settlement: boolean;
-    slopeFailure: boolean;
+    settlement: string;
+    slopeFailure: string;
     origin: string;
     risk: RiskLevel;
   };
@@ -97,9 +146,22 @@ export interface Evaluation {
     elements: DamageElement[];
     risk: RiskLevel;
   };
-  fieldCriteria: Array<{ category: string; item: string; checked: boolean }>;
+  equipmentReview: {
+    items: EquipmentRow[];
+    recommendations: string;
+  };
+  fieldCriteria: { category: string; item: string; checked: boolean }[];
   globalDamagePercentage: string;
   habitability: Habitability;
+  placard: {
+    comments: string;
+    restrictions: string;
+    furtherActions: string;
+    date: string;
+    time: string;
+    jurisdiction: string;
+    inspectorLine: string;
+  };
   preExistingConditions: {
     present: boolean;
     description: string;
@@ -110,6 +172,11 @@ export interface Evaluation {
     specialistVisits: string[];
     barriers: string;
     others: string;
+    typicalRestrictions: string[];
+    furtherActions: string[];
+    utilitiesIsolated: { gas: boolean; electric: boolean; water: boolean };
+    adjacentFallingHazard: boolean;
+    adjacentNotes: string;
   };
   occupantImpact: {
     injured: string;
@@ -130,6 +197,7 @@ export interface Evaluation {
   inspectors: Inspector[];
   inspectedAt: string;
   photos: Attachment[];
+  repairQuantities: RepairQuantities;
   sketchUri?: string;
   sketchStoragePath?: string;
   signatureUri?: string;
@@ -140,27 +208,14 @@ export interface Evaluation {
   canonicalPdfLeaseUntil?: string;
   reportLanguage: Language;
   createdByUserId: string;
+  createdByEmail: string;
+  sharedWithUserIds: string[];
+  /** Work groups the author belonged to; drives group-scoped dashboards and rules. */
+  groupIds: string[];
   deviceId: string;
   createdAt: string;
   updatedAt: string;
   syncedAt?: string;
-}
-
-export interface Event {
-  id: string;
-  name: string;
-  jurisdictionIds: string[];
-  startsAt: string;
-  active: boolean;
-}
-
-export interface AuditEntry {
-  id: string;
-  evaluationId: string;
-  changedBy: string;
-  reason: string;
-  patch: Partial<Evaluation>;
-  createdAt: string;
 }
 
 const requiredText = z.string().trim().min(1);
@@ -180,16 +235,67 @@ export const submissionSchema = z.object({
   signatureUri: requiredText,
 }).passthrough();
 
+function defaultDamage(types: readonly string[]): DamageElement[] {
+  return types.map((type) => ({ type, severity: 'none', affectedPercentage: '' }));
+}
+
+function defaultConditions(): ObservedCondition[] {
+  return GLOBAL_CONDITIONS.map((item) => ({ item, checked: false, notes: '' }));
+}
+
+function defaultIrregularities(): ObservedCondition[] {
+  return STRUCTURAL_IRREGULARITIES.map((item) => ({ item, checked: false, notes: '' }));
+}
+
+function defaultEquipment(): EquipmentRow[] {
+  return [
+    ...GENERAL_EQUIPMENT_ITEMS.map((type) => ({
+      type,
+      group: 'general' as const,
+      custom: false,
+      name: '',
+      damage: '' as const,
+      comments: '',
+    })),
+    ...[1, 2, 3].map((index) => ({
+      type: `other_general_${index}`,
+      group: 'general' as const,
+      custom: true,
+      name: '',
+      damage: '' as const,
+      comments: '',
+    })),
+    ...HOSPITAL_EQUIPMENT_ITEMS.map((type) => ({
+      type,
+      group: 'hospital' as const,
+      custom: false,
+      name: '',
+      damage: '' as const,
+      comments: '',
+    })),
+    ...[1, 2].map((index) => ({
+      type: `other_hospital_${index}`,
+      group: 'hospital' as const,
+      custom: true,
+      name: '',
+      damage: '' as const,
+      comments: '',
+    })),
+  ];
+}
+
 export function createEvaluation(
   id = cryptoRandomId(),
   createdByUserId = 'demo-evaluator',
   deviceId = 'demo-device',
+  jurisdictionId = 'jurisdiction-demo',
+  createdByEmail = '',
 ): Evaluation {
   const now = new Date().toISOString();
   return {
     id,
     eventId: 'event-2026',
-    jurisdictionId: 'jurisdiction-demo',
+    jurisdictionId,
     status: 'draft',
     syncState: 'local',
     officialNumber: null,
@@ -203,56 +309,76 @@ export function createEvaluation(
       cadastralCode: '',
       propertyRegistration: '',
     },
-    inspection: { type: 'rapid', notInspectedReason: '', preliminaryClassification: '' },
+    inspection: { type: '', notInspectedReason: '', preliminaryClassification: '', occupantsNotified: false },
     building: {
       address: '',
       name: '',
       floors: '',
+      storiesBelowGrade: '',
       predominantUse: '',
       dimensions: '',
+      length: '',
+      width: '',
+      height: '',
       footprintArea: '',
       estimatedOccupants: '',
       units: '',
+      nsrGroup: '',
     },
-    structure: { structuralSystem: '', floorSystem: '', constructionYear: '' },
-    globalStability: { observedConditions: [], risk: 'none', notes: '' },
+    structure: {
+      structuralSystem: '',
+      floorType: '',
+      floorSubtype: '',
+      floorSystem: '',
+      roofGeometry: '',
+      roofStructure: '',
+      constructionYear: '',
+      constructionPeriod: '',
+      irregularities: defaultIrregularities(),
+    },
+    globalStability: { conditions: defaultConditions(), observedConditions: [], risk: 'none', notes: '' },
     geotechnicalDamage: {
       morphology: '',
-      settlement: false,
-      slopeFailure: false,
+      settlement: '',
+      slopeFailure: '',
       origin: '',
       risk: 'none',
     },
     structuralDamage: {
-      elements: [
-        { type: 'columns', severity: 'none' },
-        { type: 'beams', severity: 'none' },
-        { type: 'walls', severity: 'none' },
-        { type: 'floors', severity: 'none' },
-      ],
+      elements: defaultDamage(STRUCTURAL_ELEMENTS),
       worstFloor: '',
       risk: 'none',
       suggestedMeasures: [],
     },
     nonStructuralDamage: {
-      elements: [
-        { type: 'facades', severity: 'none' },
-        { type: 'ceilings', severity: 'none' },
-        { type: 'stairs', severity: 'none' },
-        { type: 'utilities', severity: 'none' },
-      ],
+      elements: defaultDamage(NON_STRUCTURAL_ELEMENTS),
       risk: 'none',
     },
-    fieldCriteria: [
-      { category: 'collapse', item: 'partialCollapse', checked: false },
-      { category: 'leaning', item: 'buildingLeaning', checked: false },
-      { category: 'foundation', item: 'foundationMovement', checked: false },
-      { category: 'falling', item: 'fallingHazards', checked: false },
-    ],
-    globalDamagePercentage: '0',
+    equipmentReview: { items: defaultEquipment(), recommendations: '' },
+    fieldCriteria: [],
+    globalDamagePercentage: '',
     habitability: 'habitable',
+    placard: {
+      comments: '',
+      restrictions: '',
+      furtherActions: '',
+      date: '',
+      time: '',
+      jurisdiction: '',
+      inspectorLine: '',
+    },
     preExistingConditions: { present: false, description: '', priorInterventions: '' },
-    recommendations: { safetyMeasures: [], specialistVisits: [], barriers: '', others: '' },
+    recommendations: {
+      safetyMeasures: [],
+      specialistVisits: [],
+      barriers: '',
+      others: '',
+      typicalRestrictions: [],
+      furtherActions: [],
+      utilitiesIsolated: { gas: false, electric: false, water: false },
+      adjacentFallingHazard: false,
+      adjacentNotes: '',
+    },
     occupantImpact: { injured: '0', deceased: '0' },
     occupancy: { inhabited: true, existingUnits: '', uninhabitableUnits: '0' },
     contact: { name: '', identification: '', phone: '', address: '' },
@@ -260,12 +386,209 @@ export function createEvaluation(
     inspectors: [{ name: '', profession: '', license: '', inspectorId: '', entity: '' }],
     inspectedAt: now,
     photos: [],
+    repairQuantities: emptyRepairQuantities(),
     reportLanguage: 'es',
     createdByUserId,
+    createdByEmail,
+    sharedWithUserIds: [],
+    groupIds: [],
     deviceId,
     createdAt: now,
     updatedAt: now,
   };
+}
+
+function mergeDamage(defaults: DamageElement[], existing?: DamageElement[]) {
+  const mapped = (existing ?? []).map((item) =>
+    item.type === 'walls' ? { ...item, type: 'structural_walls' } : item,
+  );
+  const byType = new Map(mapped.map((item) => [item.type, item]));
+  const merged = defaults.map((item) => {
+    const previous = byType.get(item.type);
+    byType.delete(item.type);
+    return previous
+      ? {
+          ...item,
+          ...previous,
+          type: item.type,
+          affectedPercentage: previous.affectedPercentage ?? '',
+        }
+      : item;
+  });
+  return [...merged, ...byType.values()].map((item) => ({
+    type: item.type,
+    severity: item.severity ?? 'none',
+    affectedPercentage: item.affectedPercentage ?? '',
+    notes: item.notes,
+  }));
+}
+
+function mergeObserved(defaults: ObservedCondition[], existing?: ObservedCondition[]) {
+  return defaults.map((item) => {
+    const previous = existing?.find((entry) => entry.item === item.item);
+    return previous ? { ...item, checked: previous.checked, notes: previous.notes ?? '' } : item;
+  });
+}
+
+function migrateSettlement(value: unknown) {
+  if (value === true) return 'punctual';
+  if (value === false) return 'none';
+  return typeof value === 'string' ? value : '';
+}
+
+export function normalizeEvaluation(raw: Evaluation): Evaluation {
+  const base = createEvaluation(raw.id, raw.createdByUserId, raw.deviceId);
+  const inspectionType = migrateInspectionType(raw.inspection?.type);
+  const existingConditions = raw.globalStability?.conditions;
+  const fromCriteria = (raw.fieldCriteria ?? []).map((item) => ({
+    item:
+      item.item === 'partialCollapse'
+        ? 'total_or_partial_collapse'
+        : item.item === 'buildingLeaning'
+          ? 'building_or_story_lean'
+          : item.item === 'foundationMovement'
+            ? 'building_settlement'
+            : item.item === 'fallingHazards'
+              ? 'falling_hazards_height'
+              : item.item,
+    checked: item.checked,
+    notes: '',
+  }));
+  const conditions = GLOBAL_CONDITIONS.map((item) => {
+    const previous = existingConditions?.find((entry) => entry.item === item);
+    const fromLegacy = fromCriteria.find((entry) => entry.item === item);
+    return {
+      item,
+      checked: Boolean(previous?.checked || fromLegacy?.checked),
+      notes: previous?.notes || fromLegacy?.notes || '',
+    };
+  });
+
+  return {
+    ...base,
+    ...raw,
+    inspection: {
+      ...base.inspection,
+      ...raw.inspection,
+      type: inspectionType,
+      occupantsNotified: Boolean(raw.inspection?.occupantsNotified),
+    },
+    building: {
+      ...base.building,
+      ...raw.building,
+      nsrGroup: raw.building?.nsrGroup ?? '',
+      storiesBelowGrade: raw.building?.storiesBelowGrade ?? '',
+      length: raw.building?.length ?? '',
+      width: raw.building?.width ?? '',
+      height: raw.building?.height ?? '',
+      dimensions: composeBuildingDimensions({
+        ...base.building,
+        ...raw.building,
+        length: raw.building?.length ?? '',
+        width: raw.building?.width ?? '',
+        height: raw.building?.height ?? '',
+      }),
+    },
+    structure: {
+      ...base.structure,
+      ...raw.structure,
+      structuralSystem: raw.structure?.structuralSystem ?? '',
+      floorType: raw.structure?.floorType ?? '',
+      floorSubtype: raw.structure?.floorSubtype ?? '',
+      roofGeometry: raw.structure?.roofGeometry ?? '',
+      roofStructure: raw.structure?.roofStructure ?? '',
+      constructionPeriod: raw.structure?.constructionPeriod ?? '',
+      irregularities: mergeObserved(base.structure.irregularities, raw.structure?.irregularities),
+    },
+    globalStability: {
+      ...base.globalStability,
+      ...raw.globalStability,
+      conditions,
+      observedConditions: raw.globalStability?.observedConditions ?? [],
+    },
+    geotechnicalDamage: {
+      ...base.geotechnicalDamage,
+      ...raw.geotechnicalDamage,
+      settlement: migrateSettlement(raw.geotechnicalDamage?.settlement),
+      slopeFailure: migrateSettlement(raw.geotechnicalDamage?.slopeFailure),
+    },
+    structuralDamage: {
+      ...base.structuralDamage,
+      ...raw.structuralDamage,
+      elements: mergeDamage(base.structuralDamage.elements, raw.structuralDamage?.elements),
+    },
+    nonStructuralDamage: {
+      ...base.nonStructuralDamage,
+      ...raw.nonStructuralDamage,
+      elements: mergeDamage(base.nonStructuralDamage.elements, raw.nonStructuralDamage?.elements),
+    },
+    equipmentReview: {
+      items: raw.equipmentReview?.items?.length ? raw.equipmentReview.items : base.equipmentReview.items,
+      recommendations: raw.equipmentReview?.recommendations ?? '',
+    },
+    fieldCriteria: raw.fieldCriteria ?? [],
+    placard: {
+      ...base.placard,
+      ...raw.placard,
+    },
+    recommendations: {
+      ...base.recommendations,
+      ...raw.recommendations,
+      typicalRestrictions: raw.recommendations?.typicalRestrictions ?? [],
+      furtherActions: raw.recommendations?.furtherActions ?? [],
+      utilitiesIsolated: {
+        ...base.recommendations.utilitiesIsolated,
+        ...raw.recommendations?.utilitiesIsolated,
+      },
+      adjacentFallingHazard: Boolean(raw.recommendations?.adjacentFallingHazard),
+      adjacentNotes: raw.recommendations?.adjacentNotes ?? '',
+    },
+    inspectors: raw.inspectors?.length ? raw.inspectors : base.inspectors,
+    photos: raw.photos ?? [],
+    repairQuantities: normalizeRepairQuantities(raw.repairQuantities),
+    createdByEmail: typeof raw.createdByEmail === 'string' ? raw.createdByEmail : '',
+    sharedWithUserIds: Array.isArray(raw.sharedWithUserIds)
+      ? raw.sharedWithUserIds.filter((value): value is string => typeof value === 'string' && Boolean(value.trim()))
+      : [],
+    groupIds: Array.isArray(raw.groupIds)
+      ? raw.groupIds.filter((value): value is string => typeof value === 'string' && Boolean(value.trim()))
+      : [],
+  };
+}
+
+export function composeBuildingDimensions(building: {
+  length?: string;
+  width?: string;
+  height?: string;
+  dimensions?: string;
+}) {
+  const measures = [building.length, building.width, building.height]
+    .map((value) => value?.replace(/\s+/g, ' ').trim() ?? '')
+    .filter(Boolean);
+  if (measures.length) return `${measures.join(' × ')} m`;
+  return building.dimensions?.trim() ?? '';
+}
+
+export function applyDerivedHabitability(evaluation: Evaluation): Evaluation {
+  const derived = deriveHabitability([
+    evaluation.globalStability.risk,
+    evaluation.geotechnicalDamage.risk,
+    evaluation.structuralDamage.risk,
+    evaluation.nonStructuralDamage.risk,
+  ]);
+  return derived ? { ...evaluation, habitability: derived } : evaluation;
+}
+
+export function sectionKeysFor(evaluation: Evaluation): EvaluationSectionKey[] {
+  return evaluationSectionKeys(evaluation.inspection.type, evaluation.building.nsrGroup);
+}
+
+export function sectionCountFor(evaluation: Evaluation) {
+  return sectionKeysFor(evaluation).length;
+}
+
+export function lastSectionIndex(evaluation: Evaluation) {
+  return Math.max(0, sectionCountFor(evaluation) - 1);
 }
 
 export function validateForSubmission(evaluation: Evaluation) {
@@ -276,6 +599,48 @@ export function canSaveEvaluation(existing: Evaluation | null, next: Evaluation)
   if (!existing) return true;
   if (existing.id !== next.id) return false;
   return existing.status === 'draft';
+}
+
+export function isEvaluationOwner(evaluation: Evaluation, uid: string) {
+  return Boolean(uid) && evaluation.createdByUserId === uid;
+}
+
+export function isSupportingInspector(evaluation: Evaluation, uid: string) {
+  return Boolean(uid) && Array.isArray(evaluation.sharedWithUserIds) && evaluation.sharedWithUserIds.includes(uid);
+}
+
+export function isEvaluatorVisible(evaluation: Evaluation, uid: string) {
+  return isEvaluationOwner(evaluation, uid) || isSupportingInspector(evaluation, uid);
+}
+
+export function canViewEvaluation(evaluation: Evaluation, uid: string, role: UserRole | null) {
+  if (role === 'coordinator' || role === 'admin') return true;
+  return isEvaluatorVisible(evaluation, uid);
+}
+
+export function canModerateDelete(evaluation: Evaluation, role: UserRole | null) {
+  if (role === 'admin') return true;
+  if (role !== 'coordinator') return false;
+  return evaluation.status === 'draft' && evaluation.officialNumber == null && !evaluation.canonicalPdfStoragePath;
+}
+
+export function evaluatorAccountLabel(evaluation: Evaluation) {
+  return evaluation.createdByEmail.trim() || evaluation.inspectors[0]?.name.trim() || evaluation.createdByUserId;
+}
+
+export function canDeleteEvaluation(evaluation: Evaluation, uid?: string) {
+  if (evaluation.status !== 'draft') return false;
+  if (evaluation.officialNumber != null) return false;
+  if (evaluation.canonicalPdfStoragePath) return false;
+  if (evaluation.signatureUri?.trim()) return false;
+  if (uid && !isEvaluationOwner(evaluation, uid)) return false;
+  return true;
+}
+
+export function needsRemoteSync(evaluation: Evaluation) {
+  if (evaluation.officialNumber != null || evaluation.canonicalPdfStoragePath) return false;
+  if (evaluation.syncState !== 'synced') return true;
+  return evaluation.status !== 'draft' && evaluation.jurisdictionId === DEMO_JURISDICTION_ID;
 }
 
 export function classificationColor(value: Habitability) {

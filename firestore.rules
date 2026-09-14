@@ -14,14 +14,56 @@ service cloud.firestore {
       return request.auth.token.jurisdictionIds;
     }
 
+    function hasNationalScope() {
+      return signedIn() && (
+        role() == 'admin' ||
+        (jurisdictions() is list && 'Nacional' in jurisdictions())
+      );
+    }
+
     function canAccessJurisdiction(jurisdictionId) {
       return signedIn() &&
-        (role() == 'admin' || jurisdictionId in jurisdictions());
+        (hasNationalScope() || (jurisdictions() is list && jurisdictionId in jurisdictions()));
+    }
+
+    function myGroups() {
+      return request.auth.token.groupIds;
+    }
+
+    // Work groups are created and edited exclusively through the callable functions
+    // (createWorkGroup / updateWorkGroup / deleteWorkGroup), which enforce unique names,
+    // membership validation and the mirrored custom claims.
+    match /workGroups/{groupId} {
+      allow read: if signedIn();
+      allow write: if false;
     }
 
     match /users/{userId} {
-      allow read: if signedIn() && (request.auth.uid == userId || role() == 'admin');
+      allow read: if signedIn() && (
+        request.auth.uid == userId
+        || role() in ['admin', 'coordinator']
+        || (role() == 'evaluator' && resource.data.role == 'evaluator')
+      );
       allow write: if false;
+
+      match /notifications/{notifId} {
+        allow read: if signedIn() && request.auth.uid == userId;
+        allow update: if signedIn()
+          && request.auth.uid == userId
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['readAt'])
+          && request.resource.data.readAt is string;
+        allow create, delete: if false;
+      }
+
+      match /devices/{deviceId} {
+        allow read: if signedIn() && request.auth.uid == userId;
+        allow create, update: if signedIn()
+          && request.auth.uid == userId
+          && request.resource.data.token is string
+          && request.resource.data.token.size() > 10
+          && request.resource.data.platform in ['ios', 'android'];
+        allow delete: if signedIn() && request.auth.uid == userId;
+      }
     }
 
     match /jurisdictions/{jurisdictionId} {
@@ -35,26 +77,89 @@ service cloud.firestore {
     }
 
     match /evaluations/{evaluationId} {
-      allow read: if canAccessJurisdiction(resource.data.jurisdictionId)
-        && (
-          request.auth.uid == resource.data.createdByUserId
+      // Members of a work group may read the evaluations tagged with that group.
+      function inMyGroups() {
+        return resource.data.groupIds is list
+          && myGroups() is list
+          && resource.data.groupIds.hasAny(myGroups());
+      }
+
+      // An author may only tag an evaluation with groups they actually belong to.
+      function groupTagAllowed() {
+        return request.resource.data.groupIds is list
+          && (
+            request.resource.data.groupIds.size() == 0
+            || (myGroups() is list && request.resource.data.groupIds.hasOnly(myGroups()))
+          );
+      }
+
+      function groupTagUnchangedOrAllowed() {
+        return request.resource.data.groupIds == resource.data.groupIds || groupTagAllowed();
+      }
+
+      function evaluationReadable() {
+        return request.auth.uid == resource.data.createdByUserId
+          || (
+            resource.data.sharedWithUserIds is list
+            && request.auth.uid in resource.data.sharedWithUserIds
+          )
           || role() in ['coordinator', 'admin']
-        );
+          || inMyGroups();
+      }
+
+      allow get: if signedIn() && (resource == null || evaluationReadable());
+      allow list: if evaluationReadable();
       allow create: if canAccessJurisdiction(request.resource.data.jurisdictionId)
         && request.resource.data.createdByUserId == request.auth.uid
-        && request.resource.data.officialNumber == null;
-      allow update: if canAccessJurisdiction(resource.data.jurisdictionId)
-        && resource.data.status == 'draft'
-        && (
-          request.auth.uid == resource.data.createdByUserId
-          || role() in ['coordinator', 'admin']
-        )
+        && request.resource.data.officialNumber == null
+        && groupTagAllowed();
+      allow update: if signedIn()
         && request.resource.data.id == resource.data.id
         && request.resource.data.createdByUserId == resource.data.createdByUserId
-        && request.resource.data.jurisdictionId == resource.data.jurisdictionId
-        && request.resource.data.officialNumber == resource.data.officialNumber
-        && request.resource.data.status in ['draft', 'submitted'];
-      allow delete: if false;
+        && groupTagUnchangedOrAllowed()
+        && (
+          (
+            resource.data.status == 'draft'
+            && (
+              request.auth.uid == resource.data.createdByUserId
+              || role() in ['coordinator', 'admin']
+            )
+            && canAccessJurisdiction(resource.data.jurisdictionId)
+            && canAccessJurisdiction(request.resource.data.jurisdictionId)
+            && request.resource.data.officialNumber == resource.data.officialNumber
+            && request.resource.data.status in ['draft', 'submitted']
+          )
+          || (
+            resource.data.status == 'draft'
+            && resource.data.sharedWithUserIds is list
+            && request.auth.uid in resource.data.sharedWithUserIds
+            && request.resource.data.sharedWithUserIds == resource.data.sharedWithUserIds
+            && request.resource.data.jurisdictionId == resource.data.jurisdictionId
+            && request.resource.data.officialNumber == resource.data.officialNumber
+            && request.resource.data.status == 'draft'
+          )
+          || (
+            request.auth.uid == resource.data.createdByUserId
+            && resource.data.officialNumber == null
+            && (resource.data.canonicalPdfStoragePath == null || resource.data.canonicalPdfStoragePath == '')
+            && resource.data.status in ['submitted', 'synced']
+            && request.resource.data.status in ['submitted', 'synced']
+            && request.resource.data.officialNumber == null
+            && canAccessJurisdiction(request.resource.data.jurisdictionId)
+          )
+        );
+      allow delete: if (
+        (
+          request.auth.uid == resource.data.createdByUserId
+          && resource.data.status == 'draft'
+          && resource.data.officialNumber == null
+          && (resource.data.signatureUri == null || resource.data.signatureUri == '')
+          && (resource.data.canonicalPdfStoragePath == null || resource.data.canonicalPdfStoragePath == '')
+        )
+        // Coordinators no longer delete directly: moderateDeleteEvaluation checks that the
+        // author belongs to one of the work groups they coordinate before removing anything.
+        || role() == 'admin'
+      );
 
       match /auditLog/{entryId} {
         allow read: if canAccessJurisdiction(
@@ -71,7 +176,31 @@ service cloud.firestore {
       }
     }
 
+    match /actionLogs/{logId} {
+      allow read: if signedIn() && role() == 'admin';
+      allow create: if signedIn() && role() in ['coordinator', 'admin']
+        && request.resource.data.actorUid == request.auth.uid
+        && request.resource.data.action is string;
+      allow update, delete: if false;
+    }
+
+    match /content/{docId} {
+      allow read: if signedIn();
+      allow create, update: if signedIn() && role() == 'admin';
+      allow delete: if false;
+    }
+
     match /counters/{counterId} {
+      allow read, write: if false;
+    }
+
+    // Email queue for Trigger Email extension / Admin SDK only.
+    match /mail/{mailId} {
+      allow read, write: if false;
+    }
+
+    // Idempotent notification fan-out jobs (Admin SDK only).
+    match /notificationJobs/{jobId} {
       allow read, write: if false;
     }
   }

@@ -1,22 +1,36 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  canDeleteEvaluation,
+  canModerateDelete,
   canSaveEvaluation,
+  canViewEvaluation,
   classificationColor,
+  composeBuildingDimensions,
   createEvaluation,
+  lastSectionIndex,
+  needsRemoteSync,
+  normalizeEvaluation,
+  sectionCountFor,
   validateForSubmission,
 } from './evaluation';
+import { deriveHabitability, needsEquipmentReview } from './catalog';
 
 describe('evaluation domain', () => {
-  it('creates a deterministic complete draft shape', () => {
+  it('creates a complete draft with the expanded ATC-20 element lists', () => {
     const evaluation = createEvaluation('test-id', 'firebase-user-1', 'device-1');
     expect(evaluation.id).toBe('test-id');
     expect(evaluation.status).toBe('draft');
     expect(evaluation.currentSection).toBe(0);
-    expect(evaluation.fieldCriteria).toHaveLength(4);
-    expect(evaluation.structuralDamage.elements).toHaveLength(4);
+    expect(evaluation.structuralDamage.elements).toHaveLength(8);
+    expect(evaluation.nonStructuralDamage.elements).toHaveLength(11);
+    expect(evaluation.globalStability.conditions).toHaveLength(6);
+    expect(evaluation.structure.irregularities).toHaveLength(5);
     expect(evaluation.createdByUserId).toBe('firebase-user-1');
     expect(evaluation.deviceId).toBe('device-1');
+    expect(evaluation.jurisdictionId).toBe('jurisdiction-demo');
+    expect(evaluation.repairQuantities.walls).toEqual([]);
+    expect(sectionCountFor(evaluation)).toBe(17);
   });
 
   it('requires safety-critical fields before submission', () => {
@@ -37,11 +51,151 @@ describe('evaluation domain', () => {
     expect(classificationColor('collapsed')).toBe('black');
   });
 
+  it('derives occupancy class from the four risk ratings', () => {
+    expect(deriveHabitability(['low', 'low', 'low', 'low'])).toBe('habitable');
+    expect(deriveHabitability(['low', 'moderate', 'low', 'low'])).toBe('restricted');
+    expect(deriveHabitability(['high', 'low', 'low', 'low'])).toBe('unsafe');
+    expect(deriveHabitability(['high', 'high', 'low', 'low'])).toBe('collapsed');
+    expect(deriveHabitability(['severe', 'low', 'low', 'low'])).toBe('collapsed');
+    expect(deriveHabitability(['none', 'low', 'low', 'low'])).toBeNull();
+  });
+
+  it('adds the equipment checklist only for complete inspections of groups II-IV', () => {
+    expect(needsEquipmentReview('complete', 'group_iii')).toBe(true);
+    expect(needsEquipmentReview('complete', 'group_i')).toBe(false);
+    expect(needsEquipmentReview('exterior_only', 'group_iii')).toBe(false);
+    const evaluation = createEvaluation('eq-equip');
+    evaluation.inspection.type = 'complete';
+    evaluation.building.nsrGroup = 'group_ii';
+    expect(sectionCountFor(evaluation)).toBe(18);
+    expect(lastSectionIndex(evaluation)).toBe(17);
+  });
+
+  it('migrates legacy rapid inspections and wall damage into the new shape', () => {
+    const legacy = createEvaluation('legacy');
+    const migrated = normalizeEvaluation({
+      ...legacy,
+      inspection: { ...legacy.inspection, type: 'rapid' as never },
+      structuralDamage: {
+        ...legacy.structuralDamage,
+        elements: [{ type: 'walls', severity: 'high', affectedPercentage: '40' }],
+      },
+      geotechnicalDamage: {
+        ...legacy.geotechnicalDamage,
+        settlement: true as never,
+        slopeFailure: false as never,
+      },
+      fieldCriteria: [{ category: 'collapse', item: 'partialCollapse', checked: true }],
+    });
+    expect(migrated.inspection.type).toBe('exterior_only');
+    expect(migrated.structuralDamage.elements.find((item) => item.type === 'structural_walls')?.severity).toBe(
+      'high',
+    );
+    expect(migrated.geotechnicalDamage.settlement).toBe('punctual');
+    expect(migrated.geotechnicalDamage.slopeFailure).toBe('none');
+    expect(
+      migrated.globalStability.conditions.find((item) => item.item === 'total_or_partial_collapse')?.checked,
+    ).toBe(true);
+  });
+
+  it('fills ATC-20-1 fields missing from legacy drafts', () => {
+    const legacy = createEvaluation('legacy-atc');
+    const migrated = normalizeEvaluation({
+      ...legacy,
+      inspection: { type: 'complete', notInspectedReason: '', preliminaryClassification: '' },
+      building: { ...legacy.building, storiesBelowGrade: undefined, length: undefined, width: undefined, height: undefined },
+      structure: { ...legacy.structure, irregularities: undefined },
+      recommendations: {
+        safetyMeasures: [],
+        specialistVisits: [],
+        barriers: '',
+        others: '',
+      },
+    } as never);
+    expect(migrated.inspection.occupantsNotified).toBe(false);
+    expect(migrated.building.storiesBelowGrade).toBe('');
+    expect(migrated.building.length).toBe('');
+    expect(migrated.building.width).toBe('');
+    expect(migrated.building.height).toBe('');
+    expect(migrated.structure.irregularities).toHaveLength(5);
+    expect(migrated.recommendations.typicalRestrictions).toEqual([]);
+    expect(migrated.recommendations.furtherActions).toEqual([]);
+    expect(migrated.recommendations.utilitiesIsolated).toEqual({
+      gas: false,
+      electric: false,
+      water: false,
+    });
+    expect(migrated.recommendations.adjacentFallingHazard).toBe(false);
+  });
+
+  it('composes approximate dimensions from length, width, and height', () => {
+    expect(
+      composeBuildingDimensions({ length: '12', width: '8', height: '6', dimensions: 'old' }),
+    ).toBe('12 × 8 × 6 m');
+    expect(composeBuildingDimensions({ length: '10', width: '', height: '', dimensions: '' })).toBe(
+      '10 m',
+    );
+    expect(
+      composeBuildingDimensions({ length: '', width: '', height: '', dimensions: '12 x 8 x 3 m' }),
+    ).toBe('12 x 8 x 3 m');
+  });
+
   it('allows submission but rejects every subsequent overwrite', () => {
     const draft = createEvaluation('immutable-id');
     const submitted = { ...draft, status: 'submitted' as const };
     expect(canSaveEvaluation(draft, submitted)).toBe(true);
     expect(canSaveEvaluation(submitted, { ...submitted, comments: 'Changed' })).toBe(false);
     expect(canSaveEvaluation(submitted, { ...submitted, status: 'draft' })).toBe(false);
+  });
+
+  it('allows deleting unsigned drafts and blocks signed or submitted evaluations', () => {
+    const draft = createEvaluation('deletable-id');
+    expect(canDeleteEvaluation(draft)).toBe(true);
+    expect(canDeleteEvaluation({ ...draft, signatureUri: 'data:image/png,sig' })).toBe(false);
+    expect(canDeleteEvaluation({ ...draft, status: 'submitted' })).toBe(false);
+    expect(canDeleteEvaluation({ ...draft, status: 'synced' })).toBe(false);
+    expect(canDeleteEvaluation({ ...draft, officialNumber: 12 })).toBe(false);
+    expect(canDeleteEvaluation(draft, 'other-user')).toBe(false);
+    expect(canDeleteEvaluation(draft, 'demo-evaluator')).toBe(true);
+  });
+
+  it('lets coordinators purge drafts and admins purge submitted evaluations', () => {
+    const draft = createEvaluation('purge-draft', 'owner-1');
+    const submitted = { ...draft, status: 'submitted' as const };
+    expect(canModerateDelete(draft, 'coordinator')).toBe(true);
+    expect(canModerateDelete(submitted, 'coordinator')).toBe(false);
+    expect(canModerateDelete(submitted, 'admin')).toBe(true);
+    expect(canModerateDelete(draft, 'evaluator')).toBe(false);
+  });
+
+  it('lets supporting inspectors view a shared inspection without owning it', () => {
+    const owned = createEvaluation('share-id', 'owner-1');
+    const shared = { ...owned, sharedWithUserIds: ['helper-2'] };
+    expect(canViewEvaluation(owned, 'owner-1', 'evaluator')).toBe(true);
+    expect(canViewEvaluation(owned, 'helper-2', 'evaluator')).toBe(false);
+    expect(canViewEvaluation(owned, '', 'evaluator')).toBe(false);
+    expect(canViewEvaluation(owned, 'anyone', 'admin')).toBe(true);
+    expect(canViewEvaluation(shared, 'helper-2', 'evaluator')).toBe(true);
+    expect(canViewEvaluation(owned, 'anyone', 'coordinator')).toBe(true);
+  });
+
+  it('requeues until the inspection is stored in Firebase, not until the consecutive arrives', () => {
+    const draft = createEvaluation('sync-draft');
+    const submitted = { ...draft, status: 'submitted' as const, syncState: 'pending' as const };
+    expect(needsRemoteSync(draft)).toBe(true);
+    expect(needsRemoteSync(submitted)).toBe(true);
+    expect(needsRemoteSync({ ...submitted, syncState: 'synced', jurisdictionId: 'Armenia' })).toBe(
+      false,
+    );
+    expect(
+      needsRemoteSync({
+        ...submitted,
+        syncState: 'synced',
+        jurisdictionId: 'jurisdiction-demo',
+      }),
+    ).toBe(true);
+    expect(
+      needsRemoteSync({ ...submitted, syncState: 'synced', officialNumber: 7, status: 'synced' }),
+    ).toBe(false);
   });
 });

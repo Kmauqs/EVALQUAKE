@@ -6,11 +6,50 @@ import { logger } from 'firebase-functions';
 import { onDocumentWritten } from 'firebase-functions/v2/firestore';
 import type { Evaluation } from '../../src/domain/evaluation';
 import { renderReportHtml } from '../../src/report/renderReportHtml';
+import {
+  dispatchNotification,
+  evaluationSubmittedEmail,
+  listAdminsAndCoordinatorsFor,
+} from './notifications';
 
 if (!getApps().length) initializeApp();
 
 const db = getFirestore();
 const bucket = getStorage().bucket();
+
+function isSubmittedStatus(status: Evaluation['status'] | undefined) {
+  return status === 'submitted' || status === 'synced';
+}
+
+async function notifyEvaluationSubmitted(evaluationId: string, evaluation: Evaluation) {
+  try {
+    const recipients = await listAdminsAndCoordinatorsFor(evaluation.jurisdictionId);
+    if (!recipients.length) {
+      logger.warn('No recipients for evaluation submitted notification', { evaluationId });
+      return;
+    }
+    await dispatchNotification({
+      type: 'evaluation.submitted',
+      recipientUids: recipients,
+      title: 'Nueva evaluación enviada',
+      body: `#${evaluation.officialNumber ?? evaluationId} · ${evaluation.jurisdictionId}`,
+      href: `/(coordinator)/evaluation/${evaluationId}`,
+      email: evaluationSubmittedEmail({
+        evaluationId,
+        jurisdictionId: evaluation.jurisdictionId,
+        officialNumber: evaluation.officialNumber,
+        habitability: evaluation.habitability,
+      }),
+      dedupeKey: `evaluation.submitted:${evaluationId}`,
+      meta: {
+        evaluationId,
+        jurisdictionId: evaluation.jurisdictionId,
+      },
+    });
+  } catch (error) {
+    logger.error('Failed to notify evaluation submitted', { evaluationId, error });
+  }
+}
 
 async function prepareCanonicalGeneration(reference: DocumentReference) {
   return db.runTransaction(async (transaction) => {
@@ -25,7 +64,7 @@ async function prepareCanonicalGeneration(reference: DocumentReference) {
 
     let officialNumber = current.officialNumber;
     if (officialNumber == null) {
-      const counterRef = db.doc(`counters/${current.jurisdictionId}`);
+      const counterRef = db.doc(`counters/${current.eventId || 'event-2026'}`);
       const counter = await transaction.get(counterRef);
       officialNumber = (counter.data()?.lastNumber ?? 0) + 1;
       transaction.set(
@@ -153,6 +192,13 @@ export const finalizeEvaluation = onDocumentWritten(
       });
     }
 
+    const beforeStatus = before?.exists
+      ? (before.data() as Evaluation).status
+      : undefined;
+    if (isSubmittedStatus(evaluation.status) && !isSubmittedStatus(beforeStatus)) {
+      await notifyEvaluationSubmitted(after.id, evaluation);
+    }
+
     const beforeState = before?.exists
       ? (before.data() as Evaluation).canonicalPdfState
       : undefined;
@@ -167,6 +213,8 @@ export {
   setUserDisabled,
   setUserRole,
 } from './users';
+export { moderateDeleteEvaluation } from './moderation';
+export { createWorkGroup, deleteWorkGroup, updateWorkGroup } from './workGroups';
 
 export const exportEvaluations = onCall(
   { region: 'us-central1', memory: '512MiB', timeoutSeconds: 120 },
@@ -183,14 +231,19 @@ export const exportEvaluations = onCall(
       throw new HttpsError('invalid-argument', 'eventId and jurisdictionId are required.');
     }
     const allowed = (request.auth.token.jurisdictionIds as string[] | undefined) ?? [];
-    if (role !== 'admin' && !allowed.includes(jurisdictionId)) {
+    const nationalScope =
+      role === 'admin' || allowed.some((id) => id.trim().toLowerCase() === 'nacional');
+    if (role !== 'admin' && !allowed.includes(jurisdictionId) && !nationalScope) {
       throw new HttpsError('permission-denied', 'Jurisdiction access denied.');
     }
 
-    const snapshot = await db
-      .collection('evaluations')
-      .where('eventId', '==', eventId)
-      .where('jurisdictionId', '==', jurisdictionId)
+    const snapshot = await (nationalScope && jurisdictionId.trim().toLowerCase() === 'nacional'
+      ? db.collection('evaluations').where('eventId', '==', eventId)
+      : db
+          .collection('evaluations')
+          .where('eventId', '==', eventId)
+          .where('jurisdictionId', '==', jurisdictionId)
+    )
       .orderBy('updatedAt', 'desc')
       .limit(5000)
       .get();

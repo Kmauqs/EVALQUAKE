@@ -5,7 +5,8 @@ import { useAuth } from '@/auth/AuthProvider';
 
 export default function AdminLayout() {
   const { configured, loading, role, user } = useAuth();
-  if (!loading && configured && (!user || role !== 'admin')) {
+  if (loading) return null;
+  if (configured && (!user || role !== 'admin')) {
     return <Redirect href="/" />;
   }
   return <Stack screenOptions={{ headerShown: false }} />;

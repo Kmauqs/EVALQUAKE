@@ -37,4 +37,6 @@ export const layout = {
   contentWidth: 920,
   radius: 16,
   radiusSmall: 10,
+  compactWidth: 640,
+  choiceWrapMinWidth: 720,
 };
