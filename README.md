@@ -2,6 +2,8 @@
 
 **Evaluación de daños y habitabilidad post-sismo** — app offline-first (móvil y web) alineada con ATC-20 y NSR-10.
 
+![EVALQUAKE](https://github.com/Kmauqs/EVALQUAKE/blob/main/icon_512.png)
+
 [![Versión](https://img.shields.io/badge/versión-0.16.2-blue)](CHANGELOG.md)
 [![Sitio](https://img.shields.io/badge/demo-evalquake.web.app-success)](https://evalquake.web.app)
 [![ES / EN](https://img.shields.io/badge/idioma-ES%20%7C%20EN-informational)](#aspectos-técnicos-en-lenguaje-sencillo)
@@ -20,6 +22,8 @@ El contenido del formulario se apoya en el Formulario Regional Homogenizado 2A (
 
 ## Tabla de contenidos
 
+- [Interfaz de usuario](#interfaz-de-usuario)
+- [Panel de coordinación y administración](#panel-de-coordinación-y-administración)
 - [Por qué existe EVALQUAKE](#por-qué-existe-evalquake)
 - [¿Para qué sirve?](#para-qué-sirve)
 - [Características principales](#características-principales)
@@ -29,6 +33,17 @@ El contenido del formulario se apoya en el Formulario Regional Homogenizado 2A (
 - [Aspectos técnicos](#aspectos-técnicos-en-lenguaje-sencillo)
 - [Documentación relacionada](#documentación-relacionada)
 - [Autor](#autor)
+
+---
+
+## Interfaz de usuario
+
+<img src="https://github.com/Kmauqs/EVALQUAKE/blob/main/assets/readme/Screenshot_20260823_110020_Chrome.jpg" width="25%"> <img src="https://github.com/Kmauqs/EVALQUAKE/blob/main/assets/readme/Screenshot_20260823_110104_Chrome.jpg" width="25%"> <img src="https://github.com/Kmauqs/EVALQUAKE/blob/main/assets/readme/Screenshot_20260823_110113_Chrome.jpg" width="25%"> <img src="https://github.com/Kmauqs/EVALQUAKE/blob/main/assets/readme/Screenshot_20260823_110144_Chrome.jpg" width="25%"> <img src="https://github.com/Kmauqs/EVALQUAKE/blob/main/assets/readme/Screenshot_20260823_110153_Chrome.jpg" width="25%"> <img src="https://github.com/Kmauqs/EVALQUAKE/blob/main/assets/readme/Screenshot_20260823_110202_Chrome.jpg" width="25%"> <img src="https://github.com/Kmauqs/EVALQUAKE/blob/main/assets/readme/Screenshot_20260823_120550_Chrome.jpg" width="25%">
+
+## Panel de coordinación y administración
+
+![Panel de coordinación](https://github.com/Kmauqs/EVALQUAKE/blob/main/assets/readme/Coordination_2026-08-23%20120928.png)
+![Panel de administración](https://github.com/Kmauqs/EVALQUAKE/blob/main/assets/readme/Coordination_2026-08-23%20121009.png)
 
 ---
 
