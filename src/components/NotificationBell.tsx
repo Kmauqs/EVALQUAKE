@@ -41,14 +41,14 @@ export function NotificationBell() {
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
-    if (!configured || !user || !uid) {
-      setItems([]);
-      return;
-    }
+    if (!configured || !user || !uid) return;
     return subscribeNotifications(uid, setItems);
   }, [configured, uid, user]);
 
-  const unreadCount = useMemo(() => items.filter(isUnread).length, [items]);
+  const unreadCount = useMemo(
+    () => (configured && user ? items.filter(isUnread).length : 0),
+    [configured, items, user],
+  );
 
   if (!configured || !user) return null;
 

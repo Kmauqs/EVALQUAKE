@@ -97,7 +97,7 @@ export async function sendExpoPush(input: {
     }
 
     const payload = (await response.json()) as {
-      data?: Array<{ status?: string; message?: string; details?: { error?: string } }>;
+      data?: { status?: string; message?: string; details?: { error?: string } }[];
     };
     const tickets = payload.data ?? [];
     for (let i = 0; i < tickets.length; i += 1) {

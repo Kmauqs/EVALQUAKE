@@ -1,6 +1,6 @@
 import * as Notifications from 'expo-notifications';
 import { type Href, useRouter } from 'expo-router';
-import React, { useEffect } from 'react';
+import { useEffect } from 'react';
 import { Platform } from 'react-native';
 
 import { useAuth } from '@/auth/AuthProvider';

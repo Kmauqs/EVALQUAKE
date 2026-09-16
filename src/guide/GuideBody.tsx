@@ -135,10 +135,12 @@ export function GuideBody({
 }) {
   const signature = sections.map((section) => section.id).join('|');
   const [openIds, setOpenIds] = useState<Set<string>>(() => (defaultOpen ? collectOpenIds(sections) : new Set()));
-
-  React.useEffect(() => {
+  const [syncKey, setSyncKey] = useState(`${defaultOpen}:${signature}`);
+  const nextSyncKey = `${defaultOpen}:${signature}`;
+  if (syncKey !== nextSyncKey) {
+    setSyncKey(nextSyncKey);
     if (defaultOpen) setOpenIds(collectOpenIds(sections));
-  }, [defaultOpen, signature, sections]);
+  }
 
   const isOpen = useCallback((id: string) => openIds.has(id), [openIds]);
   const toggle = useCallback((id: string) => {
