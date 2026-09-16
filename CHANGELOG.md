@@ -20,7 +20,24 @@ Luego seguir [`DEPLOY.md`](DEPLOY.md).
 
 La versión visible en la cabecera de la app sale de `src/version.ts`.
 
+**Última versión publicada: [0.14.1](#0141--2026-08-23)** (23 de agosto de 2026).
+
 ## [Unreleased]
+
+Cambios posteriores a 0.14.1 se listan aquí hasta el siguiente corte.
+
+### Added
+
+- Capturas de la interfaz y materiales de documentación de apoyo en el README y en `assets/`.
+
+### Changed
+
+- `README.md` reescrito en lenguaje natural para personal no técnico: funcionalidad por rol, seguridad y aspectos técnicos resumidos.
+- Documentación técnica (`DEPLOY.md`, `ARCHITECTURE.md`): visibilidad por rol, compartir inspector de apoyo, moderación y registro de acciones, almacén local web por usuario, PWA e iconos de instalación.
+
+### Fixed
+
+- Errores de lint de React Hooks (actualización de refs en render, `setState` síncrono en effects y hooks llamados de forma condicional).
 
 Cambios posteriores a 0.16.2 se listan aquí hasta el siguiente corte.
 
@@ -78,7 +95,9 @@ Cambios posteriores a 0.16.2 se listan aquí hasta el siguiente corte.
 
 ### Added
 
-- Manifest PWA e iconos (192, 512, Apple Touch) para que al instalar el acceso directo en móvil o escritorio aparezca el ícono de EVALQUAKE.
+- Manifest PWA e iconos (192, 512, Apple Touch y favicon) para que, al instalar el acceso directo en móvil o escritorio, aparezca el ícono de EVALQUAKE.
+- Script `copy-pwa-icons.js` que genera los iconos desde `icon_960.png` al arrancar o exportar la web.
+- Metadatos de instalación en `app/+html.tsx` (manifest, theme-color, Apple Web App).
 
 ## [0.14.0] — 2026-08-23
 
@@ -90,11 +109,18 @@ Cambios posteriores a 0.16.2 se listan aquí hasta el siguiente corte.
 
 - Coordinación puede eliminar borradores de cualquier evaluador (depuración). Administración también puede eliminar fichas ya firmadas o enviadas. Cada borrado pide confirmación y queda en un registro que solo ve Administración.
 
+### Changed
+
+- Reglas de Firestore y cliente alineados con visibilidad por propietario, inspector de apoyo, coordinación y administración.
+
 ## [0.13.0] — 2026-08-23
 
 ### Changed
 
-- El evaluador solo ve sus fichas (y las que le compartan como inspector de apoyo). Coordinación y administración ven todas, con la cuenta del evaluador, filtros por daño global y por evaluador, y un reporte resumen de lo filtrado.
+- El evaluador solo ve sus fichas y las que le compartan como inspector de apoyo.
+- Coordinación y administración ven todas las de su ámbito, con la cuenta del evaluador en cada fila.
+- Panel de coordinación: filtros por daño global y por evaluador, y reporte resumen HTML de lo filtrado.
+- El evaluador puede compartir un borrador con otro evaluador (inspector de apoyo) mediante `sharedWithUserIds`.
 
 ### Fixed
 
@@ -104,13 +130,13 @@ Cambios posteriores a 0.16.2 se listan aquí hasta el siguiente corte.
 
 ### Fixed
 
-- En web, reintentar sincronización fallaba con `enqueueUnsyncedEvaluations is not a function` porque esa rutina no existía en el almacén local de navegador.
+- En web, reintentar sincronización fallaba con `enqueueUnsyncedEvaluations is not a function` porque esa rutina no existía en el almacén local del navegador.
 
 ## [0.12.7] — 2026-08-23
 
 ### Fixed
 
-- El resultado de la sincronización se muestra en la pantalla (en web `Alert` no aparece) y la subida solo se da por hecha cuando Firebase confirma el documento en el servidor.
+- El resultado de la sincronización se muestra en la pantalla (en web el `Alert` nativo no aparece) y la subida solo se da por hecha cuando Firebase confirma el documento en el servidor.
 
 ## [0.12.6] — 2026-08-23
 
@@ -189,7 +215,7 @@ Cambios posteriores a 0.16.2 se listan aquí hasta el siguiente corte.
 
 ### Fixed
 
-- Las fotos de la cámara o la galería se guardan en el registro fotográfico aunque el recorte automático falle en el navegador.
+- Las fotos de la cámara o la galería se guardan en el registro fotográfico aunque el recorte o la compresión automática fallen en el navegador.
 
 ## [0.11.1] — 2026-08-22
 
@@ -201,7 +227,7 @@ Cambios posteriores a 0.16.2 se listan aquí hasta el siguiente corte.
 
 ### Added
 
-- Cada elemento de cantidades tiene ubicación para identificarlo y relacionarlo con el plano de levantamiento de fallas.
+- Cada elemento de cantidades tiene un campo de ubicación para identificarlo y relacionarlo con el plano de levantamiento de fallas.
 
 ## [0.10.0] — 2026-08-22
 
@@ -237,13 +263,13 @@ Cambios posteriores a 0.16.2 se listan aquí hasta el siguiente corte.
 
 ### Added
 
-- La ficha catastral captura GPS al inicio, usa Dirección en lugar de Sector y rellena departamento, municipio, comuna, barrio y dirección desde OpenStreetMap.
+- La ficha catastral captura GPS al inicio, usa **Dirección** en lugar de Sector y rellena departamento, municipio, comuna, barrio y dirección desde OpenStreetMap cuando hay red.
 
 ## [0.7.0] — 2026-08-21
 
 ### Added
 
-- La guía de inspección abre con todos los títulos y subtítulos contraídos; se expanden al tocarlos para navegar el documento.
+- La guía de inspección abre con todos los títulos y subtítulos contraídos; se expanden al tocarlos para navegar el documento con más facilidad.
 
 ## [0.6.1] — 2026-08-20
 
@@ -280,7 +306,7 @@ Cambios posteriores a 0.16.2 se listan aquí hasta el siguiente corte.
 
 ### Added
 
-- Los evaluadores pueden eliminar borradores incompletos. Las evaluaciones firmadas o enviadas no se pueden borrar.
+- Los evaluadores pueden eliminar borradores incompletos. Las evaluaciones firmadas o enviadas no se pueden borrar desde la cuenta del evaluador.
 
 ## [0.4.6] — 2026-08-20
 
@@ -299,7 +325,7 @@ Cambios posteriores a 0.16.2 se listan aquí hasta el siguiente corte.
 
 ### Fixed
 
-- Las figuras de la guía y los logotipos de apoyo se empaquetan con el bundle web para que Firebase Hosting los sirva.
+- Las figuras de la guía y los logotipos de apoyo se empaquetan con el bundle web para que Firebase Hosting los sirva correctamente.
 
 ## [0.4.3] — 2026-08-19
 
@@ -307,6 +333,9 @@ Cambios posteriores a 0.16.2 se listan aquí hasta el siguiente corte.
 
 - Logotipos de Grupo Terra y Gtek ingeniería, con la leyenda «Con apoyo de», en el pie de todas las pantallas.
 
+### Fixed
+
+- Imágenes de la guía y encabezado ajustados para verse bien en móvil.
 ## [0.4.2] — 2026-08-19
 
 ### Fixed
@@ -393,4 +422,4 @@ Primera versión con seguimiento formal. Consolida el MVP desplegado en web y Fi
 
 ## [0.1.0] — 2026-08-17
 
-MVP inicial: 17 secciones, borradores sin conexión, panel de coordinación, i18n ES/EN y adaptadores Firebase.
+MVP inicial: 17 secciones del formulario, borradores sin conexión, panel de coordinación, i18n español/inglés y adaptadores Firebase.
