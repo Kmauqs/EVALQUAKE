@@ -2,7 +2,7 @@
   "expo": {
     "name": "EVALQUAKE",
     "slug": "evalquake",
-    "version": "0.2.1",
+    "version": "0.16.2",
     "orientation": "default",
     "scheme": "evalquake",
     "userInterfaceStyle": "light",
@@ -31,13 +31,20 @@
         "android.permission.ACCESS_FINE_LOCATION",
         "android.permission.CAMERA",
         "android.permission.ACCESS_COARSE_LOCATION",
-        "android.permission.RECORD_AUDIO"
+        "android.permission.RECORD_AUDIO",
+        "android.permission.POST_NOTIFICATIONS"
       ]
     },
     "web": {
       "bundler": "metro",
       "output": "static",
-      "favicon": "./icon_960.png"
+      "favicon": "./public/favicon.png",
+      "name": "EVALQUAKE",
+      "shortName": "EVALQUAKE",
+      "themeColor": "#176235",
+      "backgroundColor": "#F5F8F3",
+      "display": "standalone",
+      "startUrl": "/"
     },
     "plugins": [
       "expo-router",
@@ -53,6 +60,14 @@
         {
           "photosPermission": "Allow EVALQUAKE to attach damage photos.",
           "cameraPermission": "Allow EVALQUAKE to photograph earthquake damage."
+        }
+      ],
+      [
+        "expo-notifications",
+        {
+          "icon": "./icon_960.png",
+          "color": "#176235",
+          "defaultChannel": "default"
         }
       ],
       "expo-status-bar",

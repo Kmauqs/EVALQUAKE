@@ -1,4 +1,5 @@
-import { ArrowLeft, ShieldBan, ShieldCheck, UserRoundCheck } from 'lucide-react-native';
+import { type Href, useRouter } from 'expo-router';
+import { ArrowLeft, FilePenLine, ScrollText, ShieldBan, ShieldCheck, UserRoundCheck } from 'lucide-react-native';
 import React, { useEffect, useMemo, useState } from 'react';
 import { Alert, Pressable, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 
@@ -15,6 +16,7 @@ import { colors } from '@/theme';
 export default function AdminUsersScreen() {
   const { t } = useI18n();
   const { uid } = useAuth();
+  const router = useRouter();
   const goBack = useSafeBack('/');
   const { width } = useWindowDimensions();
   const narrow = width < 700;
@@ -51,6 +53,22 @@ export default function AdminUsersScreen() {
           <Text style={[styles.title, narrow && styles.titleNarrow]}>{t.userAdministration}</Text>
           <Text style={styles.subtitle}>{t.userAdministrationDescription}</Text>
         </View>
+        <Button
+          variant="secondary"
+          icon={<ScrollText size={17} color={colors.primary} />}
+          onPress={() => router.push('/(admin)/logs' as Href)}
+          style={narrow ? styles.logButtonNarrow : undefined}
+        >
+          {t.actionLog}
+        </Button>
+        <Button
+          variant="secondary"
+          icon={<FilePenLine size={17} color={colors.primary} />}
+          onPress={() => router.push('/(admin)/guide' as Href)}
+          style={narrow ? styles.logButtonNarrow : undefined}
+        >
+          {t.guideEditor}
+        </Button>
       </View>
 
       <View style={styles.stats}>
@@ -115,9 +133,7 @@ function UserCard({
 }) {
   const { t } = useI18n();
   const [role, setRole] = useState<UserRole>(user.role ?? 'evaluator');
-  const [jurisdictions, setJurisdictions] = useState(
-    user.jurisdictionIds.join(', ') || 'jurisdiction-demo',
-  );
+  const [jurisdictions, setJurisdictions] = useState(user.jurisdictionIds.join(', '));
 
   const save = async () => {
     onBusy(user.id);
@@ -167,7 +183,7 @@ function UserCard({
         label={t.jurisdictions}
         value={jurisdictions}
         onChangeText={setJurisdictions}
-        placeholder="jurisdiction-demo"
+        placeholder="Nacional, Armenia, Cali"
       />
       <View style={styles.userActions}>
         <Button loading={busy} onPress={() => void save()} style={styles.userButton}>
@@ -201,6 +217,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   heading: { flex: 1, minWidth: 0 },
+  logButtonNarrow: { width: '100%' },
   eyebrow: { color: colors.primary, fontWeight: '900', fontSize: 12, textTransform: 'uppercase' },
   title: { color: colors.text, fontSize: 30, fontWeight: '900', marginTop: 3 },
   titleNarrow: { fontSize: 27, lineHeight: 33 },

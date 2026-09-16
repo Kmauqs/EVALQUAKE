@@ -39,6 +39,58 @@ Cambios posteriores a 0.14.1 se listan aquí hasta el siguiente corte.
 
 - Errores de lint de React Hooks (actualización de refs en render, `setState` síncrono en effects y hooks llamados de forma condicional).
 
+Cambios posteriores a 0.16.2 se listan aquí hasta el siguiente corte.
+
+## [0.16.2] — 2026-08-28
+
+### Fixed
+
+- Chips de filtro del panel de consulta (daño global, grupo de trabajo y evaluador) ya no se salen de la pantalla en móvil. El contenedor de cada grupo se medía con el ancho de su fila de chips sin envolver y no podía encogerse, así que crecía más allá del viewport: en una pantalla de 360 px medía 564 px y los chips quedaban cortados a la derecha.
+
+### Changed
+
+- El campo de búsqueda del panel de consulta ocupa una fila propia y los grupos de filtros empiezan en la fila siguiente.
+
+## [0.16.1] — 2026-08-28
+
+### Fixed
+
+- Encabezado del panel de coordinación en dos filas: la flecha de regreso y el título arriba, los botones de acción (grupos de trabajo y exportaciones) en la fila siguiente. Antes compartían una sola fila y el título «Panel de coordinación» se partía en tres líneas. En pantallas angostas los botones apilados ya no arrastran la sangría de la maquetación anterior.
+
+## [0.16.0] — 2026-08-28
+
+### Added
+
+- **Grupos de trabajo:** las cuentas con rol Coordinación pueden crear y administrar varios grupos desde `/(coordinator)/groups`, con nombre único en toda la base y selección de integrantes entre las cuentas ya autorizadas por el administrador. El panel de coordinación filtra automáticamente mapa, listado y contadores a las evaluaciones de sus grupos (más las propias), con chips para pivotar por grupo.
+- **Panel de consulta para rol Evaluación:** los evaluadores entran al panel en modo solo lectura y ven únicamente las evaluaciones de los grupos a los que un coordinador los asignó. Nueva colección `workGroups`, campo `groupIds` en `evaluations` y claim `groupIds` en el token.
+- **Notificaciones push (Fase 3):** registro de tokens Expo en `users/{uid}/devices`, envío desde Cloud Functions vía Expo Push API, deep link al tocar la notificación del sistema (iOS/Android; requiere build nativo EAS). Web sigue con email + bandeja in-app.
+- **Notificaciones in-app (Fase 2):** bandeja en `users/{uid}/notifications`, campana en la cabecera con contador de no leídas, marcar leído / marcar todo leído y deep links a admin, coordinación o inicio.
+- **Notificaciones email (Fase 1):** cola Firestore `mail/` + jobs idempotentes `notificationJobs/` al registrar un usuario pendiente, al enviar una evaluación y al autorizar una cuenta (hooks en `onAuthUserCreated` / `ensureUserProfile`, `finalizeEvaluation`, `setUserRole`). Requiere extensión Trigger Email o worker SMTP; ver `DEPLOY.md` §5.1.
+- Editor online de la guía de inspección (Administración): Markdown + etiquetas HTML permitidas, vista previa, guardado en Firestore y lectura en la guía pública, con la versión incluida en la app como respaldo.
+- Script `functions/scripts/optimize-storage-photos.mjs` para redimensionar y recomprimir fotos (y opcionalmente croquis) ya subidas a Firebase Storage con los mismos límites de la app (1280 px / JPEG ~65 %).
+
+### Changed
+
+- **Borrado moderado acotado al grupo:** un coordinador ya no puede eliminar evaluaciones de cuentas ajenas a sus grupos de trabajo. Las reglas de Firestore dejaron de permitir el borrado directo por rol `coordinator`; ahora siempre pasa por el callable `moderateDeleteEvaluation`, que valida la pertenencia al grupo antes de borrar y registrar en `actionLogs`.
+
+## [0.15.1] — 2026-08-23
+
+### Fixed
+
+- Firebase Hosting envía `Cache-Control: no-cache` en el arranque de la PWA (`/` y rutas SPA) para que la app instalada detecte builds nuevos; los bundles con hash en `/_expo/static/**` siguen con caché larga.
+
+## [0.15.0] — 2026-08-23
+
+### Added
+
+- Los usuarios con rol **coordinator** también pueden usar el flujo de evaluador: crear y completar inspecciones propias, además del panel de coordinación para ver el avance general.
+- Suscripción remota a las fichas propias/compartidas también para coordinación, para que el apoyo en campo se sincronice entre dispositivos.
+
+### Changed
+
+- Descripción del rol de coordinación (ES/EN) y README: deja explícito que también captura evaluaciones en campo.
+- Al cargar fotografías (cámara o galería) se redimensionan (lado mayor 1280 px) y se comprimen a JPEG (~65 %) antes de guardarlas, para reducir el uso de Firebase Storage y el peso de los PDF de informe. En web, si falla el compresor nativo, se usa un respaldo por canvas (antes el `base64` del selector se guardaba sin comprimir).
+
 ## [0.14.1] — 2026-08-23
 
 ### Added
@@ -49,16 +101,13 @@ Cambios posteriores a 0.14.1 se listan aquí hasta el siguiente corte.
 
 ## [0.14.0] — 2026-08-23
 
-### Added
-
-- Coordinación puede eliminar borradores de cualquier evaluador (depuración), con confirmación previa.
-- Administración puede eliminar cualquier ficha, incluidas las ya firmadas o enviadas.
-- Registro de acciones de moderación (`actionLogs`) visible solo para administración (`/(admin)/logs`).
-- Callable de servidor `moderateDeleteEvaluation` para aplicar borrados con control de rol.
-
 ### Fixed
 
-- El evaluador ya no ve el almacén local compartido del navegador: cada cuenta usa su propio espacio (`evalquake.evaluations.{uid}`) y solo ve sus fichas y las compartidas como inspector de apoyo.
+- El evaluador ya no ve el almacén local compartido del navegador: solo sus fichas y las que le compartieron como inspector de apoyo.
+
+### Added
+
+- Coordinación puede eliminar borradores de cualquier evaluador (depuración). Administración también puede eliminar fichas ya firmadas o enviadas. Cada borrado pide confirmación y queda en un registro que solo ve Administración.
 
 ### Changed
 
@@ -287,7 +336,6 @@ Cambios posteriores a 0.14.1 se listan aquí hasta el siguiente corte.
 ### Fixed
 
 - Imágenes de la guía y encabezado ajustados para verse bien en móvil.
-
 ## [0.4.2] — 2026-08-19
 
 ### Fixed

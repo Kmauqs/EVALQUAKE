@@ -1,24 +1,34 @@
 import { useLocalSearchParams } from 'expo-router';
-import { ArrowLeft, Braces, FileText, MapPin } from 'lucide-react-native';
+import { ArrowLeft, Braces, FileText, MapPin, Tag, Trash2 } from 'lucide-react-native';
 import React, { useEffect, useState } from 'react';
 import { Pressable, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 
 import { useAuth } from '@/auth/AuthProvider';
 import { AppShell, Button, Card, ClassificationBadge } from '@/components/ui';
-import type { Evaluation } from '@/domain/evaluation';
+import { evaluatorAccountLabel, type Evaluation } from '@/domain/evaluation';
 import { demoEvaluations } from '@/domain/fixtures';
+import {
+  canModerateDeleteInScope,
+  workGroupLabelsFor,
+  type WorkGroup,
+} from '@/domain/workGroup';
 import { pullEvaluation } from '@/firebase/repository';
+import { subscribeUsers } from '@/firebase/users';
+import { subscribeWorkGroups } from '@/firebase/workGroups';
 import { useI18n } from '@/i18n/I18nProvider';
 import { useSafeBack } from '@/navigation/useSafeBack';
+import { renderPlacardHtml } from '@/report/renderPlacardHtml';
 import { renderReportHtml } from '@/report/renderReportHtml';
-import { createPdf, sharePdf } from '@/services/pdf';
+import { openHtmlDocument } from '@/services/htmlDocument';
+import { hydrateEvaluationImages } from '@/services/resolveImage';
+import { requestModerateDelete } from '@/services/moderateDelete';
 import { useEvaluations } from '@/state/EvaluationProvider';
 import { colors, layout } from '@/theme';
 
 export default function EvaluationDetail() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { t, language } = useI18n();
-  const { configured } = useAuth();
+  const { configured, role, uid } = useAuth();
   const { get } = useEvaluations();
   const goBack = useSafeBack('/(coordinator)');
   const { width } = useWindowDimensions();
@@ -27,11 +37,31 @@ export default function EvaluationDetail() {
     demoEvaluations.find((item) => item.id === id) ?? null,
   );
   const [raw, setRaw] = useState(false);
+  const [groups, setGroups] = useState<WorkGroup[]>([]);
+  const [resolvedAccount, setResolvedAccount] = useState('');
+  const emailFromEvaluation = evaluation?.createdByEmail.trim() || '';
+  const accountEmail = emailFromEvaluation || resolvedAccount;
 
   useEffect(() => {
     if (!id || evaluation) return;
     void (configured ? pullEvaluation(id) : get(id)).then(setEvaluation);
   }, [configured, id, evaluation, get]);
+
+  useEffect(() => {
+    // Listing users is denied to the evaluator role; the evaluation's own email covers it.
+    if (!configured || role === 'evaluator' || !evaluation?.createdByUserId || emailFromEvaluation) {
+      return;
+    }
+    return subscribeUsers((users) => {
+      const match = users.find((user) => user.id === evaluation.createdByUserId);
+      setResolvedAccount(match?.email || match?.displayName || '');
+    });
+  }, [configured, emailFromEvaluation, evaluation?.createdByUserId, role]);
+
+  useEffect(
+    () => (configured ? subscribeWorkGroups(setGroups) : () => undefined),
+    [configured],
+  );
 
   if (!evaluation) {
     return (
@@ -42,8 +72,16 @@ export default function EvaluationDetail() {
   }
 
   const openReport = async () => {
-    const uri = evaluation.localPdfUri ?? (await createPdf(renderReportHtml(evaluation, language)));
-    await sharePdf(uri);
+    const ready = await hydrateEvaluationImages(evaluation);
+    await openHtmlDocument(renderReportHtml(ready, language), `evalquake-${evaluation.id}.html`);
+  };
+
+  const openPlacard = async () => {
+    const ready = await hydrateEvaluationImages(evaluation);
+    await openHtmlDocument(
+      renderPlacardHtml(ready, language),
+      `evalquake-placard-${evaluation.id}.html`,
+    );
   };
 
   const rows = [
@@ -57,6 +95,8 @@ export default function EvaluationDetail() {
     [t.fields.structuralSystem, evaluation.structure.structuralSystem],
     [t.fields.globalDamage, `${evaluation.globalDamagePercentage}%`],
     [t.fields.inspectorName, evaluation.inspectors[0]?.name],
+    [t.evaluatorAccount, accountEmail || evaluatorAccountLabel(evaluation)],
+    [t.workGroup, workGroupLabelsFor(groups, evaluation).join(', ') || t.withoutWorkGroup],
     [t.fields.entity, evaluation.inspectors[0]?.entity],
     [t.fields.comments, evaluation.comments],
   ];
@@ -90,18 +130,41 @@ export default function EvaluationDetail() {
         <Button
           icon={<FileText size={18} color={colors.white} />}
           onPress={() => void openReport()}
-          style={narrow ? styles.actionButtonNarrow : undefined}
+          style={[styles.actionButton, narrow && styles.actionButtonNarrow]}
         >
-          {t.report}
+          {t.viewReport}
+        </Button>
+        <Button
+          variant="secondary"
+          icon={<Tag size={18} color={colors.primary} />}
+          onPress={() => void openPlacard()}
+          style={[styles.actionButton, narrow && styles.actionButtonNarrow]}
+        >
+          {t.generatePlacard}
         </Button>
         <Button
           variant="ghost"
           icon={<Braces size={18} color={colors.primary} />}
           onPress={() => setRaw(!raw)}
-          style={narrow ? styles.actionButtonNarrow : undefined}
+          style={[styles.actionButton, narrow && styles.actionButtonNarrow]}
         >
           {t.rawData}
         </Button>
+        {canModerateDeleteInScope(evaluation, role, uid, groups) ? (
+          <Button
+            variant="danger"
+            icon={<Trash2 size={18} color={colors.white} />}
+            onPress={() =>
+              requestModerateDelete(evaluation, role, t, () => {
+                setEvaluation(null);
+                goBack();
+              })
+            }
+            style={[styles.actionButton, narrow && styles.actionButtonNarrow]}
+          >
+            {t.deleteEvaluation}
+          </Button>
+        ) : null}
       </View>
 
       {raw ? (
@@ -133,18 +196,28 @@ const styles = StyleSheet.create({
   id: { color: colors.primary, fontSize: 12, fontWeight: '900' },
   title: { color: colors.text, fontSize: 27, fontWeight: '900', marginTop: 4 },
   titleNarrow: { fontSize: 23, lineHeight: 29 },
-  location: { flexDirection: 'row', gap: 5, alignItems: 'center', marginTop: 7 },
-  locationText: { color: colors.textMuted, fontSize: 13 },
+  location: { flexDirection: 'row', gap: 5, alignItems: 'flex-start', marginTop: 7 },
+  locationText: { color: colors.textMuted, fontSize: 13, flex: 1, minWidth: 0 },
   badgeNarrow: { width: '100%', paddingLeft: 58 },
-  actions: { width: '100%', maxWidth: layout.contentWidth, alignSelf: 'center', flexDirection: 'row', gap: 9, marginTop: 20 },
-  actionsNarrow: { flexDirection: 'column', paddingLeft: 58 },
+  actions: {
+    width: '100%',
+    maxWidth: layout.contentWidth,
+    alignSelf: 'center',
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 9,
+    marginTop: 20,
+    minWidth: 0,
+  },
+  actionsNarrow: { flexDirection: 'column', alignItems: 'stretch', paddingLeft: 58 },
+  actionButton: { maxWidth: '100%', flexShrink: 1, minWidth: 0 },
   actionButtonNarrow: { width: '100%' },
   detailCard: { width: '100%', maxWidth: layout.contentWidth, alignSelf: 'center', marginTop: 14, marginBottom: 24, padding: 0, overflow: 'hidden' },
   row: { flexDirection: 'row', gap: 16, padding: 15, borderBottomWidth: 1, borderBottomColor: colors.border },
   rowNarrow: { flexDirection: 'column', gap: 6 },
   label: { width: '38%', color: colors.textMuted, fontWeight: '700' },
   labelNarrow: { width: '100%' },
-  value: { flex: 1, color: colors.text, fontWeight: '700' },
+  value: { flex: 1, minWidth: 0, color: colors.text, fontWeight: '700' },
   rawCard: { width: '100%', maxWidth: layout.contentWidth, alignSelf: 'center', marginTop: 14, marginBottom: 24 },
   raw: { fontFamily: 'monospace', color: colors.text, fontSize: 12, lineHeight: 18 },
 });

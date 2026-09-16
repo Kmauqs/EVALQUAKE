@@ -5,6 +5,10 @@ import type { Evaluation } from '@/domain/evaluation';
 const implementation = () =>
   Platform.OS === 'web' ? import('./localStore.web') : import('./localStore.native');
 
+export async function setLocalStoreUser(uid: string) {
+  return (await implementation()).setLocalStoreUser(uid);
+}
+
 export async function listLocalEvaluations(): Promise<Evaluation[]> {
   return (await implementation()).listLocalEvaluations();
 }
@@ -15,6 +19,10 @@ export async function getLocalEvaluation(id: string): Promise<Evaluation | null>
 
 export async function saveLocalEvaluation(evaluation: Evaluation, queueSync = true) {
   return (await implementation()).saveLocalEvaluation(evaluation, queueSync);
+}
+
+export async function addToOutbox(id: string) {
+  return (await implementation()).addToOutbox(id);
 }
 
 export async function listOutboxIds(): Promise<string[]> {
@@ -31,4 +39,8 @@ export async function completeLocalSync(
   remote: Evaluation,
 ): Promise<boolean> {
   return (await implementation()).completeLocalSync(id, expectedUpdatedAt, remote);
+}
+
+export async function deleteLocalEvaluation(id: string, queueRemoteDelete = true) {
+  return (await implementation()).deleteLocalEvaluation(id, queueRemoteDelete);
 }

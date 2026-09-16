@@ -1,12 +1,34 @@
 import { type Href, useRouter } from 'expo-router';
-import { ClipboardCheck, ShieldCheck, Users } from 'lucide-react-native';
+import { ClipboardCheck, ExternalLink, Map, ShieldCheck, Users } from 'lucide-react-native';
 import React, { useState } from 'react';
-import { ActivityIndicator, Alert, Image, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
+import { ActivityIndicator, Alert, Image, Linking, Platform, Pressable, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 
 import { authErrorMessage, useAuth } from '@/auth/AuthProvider';
-import { AppShell, Button, Card, Field, OfflinePill } from '@/components/ui';
+import { AppShell, Button, Card, Field, OfflinePill, ToggleRow } from '@/components/ui';
+import { canAccessEvaluatorWorkspace } from '@/domain/user';
 import { useI18n } from '@/i18n/I18nProvider';
 import { colors } from '@/theme';
+
+const GITHUB_URL = 'https://github.com/Kmauqs/EVALQUAKE';
+
+function GitHubProjectLink() {
+  const { t } = useI18n();
+  return (
+    <Pressable
+      accessibilityRole="link"
+      accessibilityLabel={t.githubProject}
+      onPress={() => void Linking.openURL(GITHUB_URL)}
+      style={({ pressed }) => [
+        styles.githubLink,
+        Platform.OS === 'web' ? { cursor: 'pointer' as const } : undefined,
+        pressed && styles.githubLinkPressed,
+      ]}
+    >
+      <ExternalLink size={18} color={colors.primary} />
+      <Text style={styles.githubText}>{t.githubProject}</Text>
+    </Pressable>
+  );
+}
 
 export default function WelcomeScreen() {
   const { t } = useI18n();
@@ -19,6 +41,7 @@ export default function WelcomeScreen() {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [busy, setBusy] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
+  const [remember, setRemember] = useState(true);
 
   if (loading) {
     return (
@@ -35,7 +58,10 @@ export default function WelcomeScreen() {
         return;
       }
       setBusy(true);
-      const action = mode === 'register' ? register(email, password) : login(email, password);
+      const action =
+        mode === 'register'
+          ? register(email, password, remember)
+          : login(email, password, remember);
       void action
         .catch((error) =>
           Alert.alert(
@@ -75,6 +101,8 @@ export default function WelcomeScreen() {
               secureTextEntry
             />
           )}
+          <ToggleRow label={t.staySignedIn} value={remember} onChange={setRemember} />
+          <Text style={styles.authLead}>{t.staySignedInHint}</Text>
           <Button loading={busy} onPress={submit}>
             {mode === 'register' ? t.createAccount : t.signIn}
           </Button>
@@ -85,6 +113,7 @@ export default function WelcomeScreen() {
             {mode === 'register' ? t.haveAccount : t.needAccount}
           </Button>
         </Card>
+        <GitHubProjectLink />
       </AppShell>
     );
   }
@@ -116,6 +145,7 @@ export default function WelcomeScreen() {
             {t.signOut}
           </Button>
         </Card>
+        <GitHubProjectLink />
       </AppShell>
     );
   }
@@ -128,7 +158,7 @@ export default function WelcomeScreen() {
           <Text style={styles.kicker}>{configured ? user?.email : t.demoMode}</Text>
           <Text style={[styles.title, width < 780 && styles.titleNarrow]}>{t.tagline}</Text>
           <Text style={[styles.lead, width < 780 && styles.leadNarrow]}>
-            {t.demoDescription} {t.immutableNotice}
+            {t.homeLead}
           </Text>
         </View>
         <Image
@@ -138,7 +168,7 @@ export default function WelcomeScreen() {
       </View>
 
       <View style={[styles.roles, width < 780 && styles.rolesNarrow]}>
-        {(role === 'evaluator' || !configured) && (
+        {(canAccessEvaluatorWorkspace(role) || !configured) && (
           <Card style={styles.roleCard}>
             <View style={styles.icon}>
               <ClipboardCheck color={colors.primary} size={28} />
@@ -155,6 +185,18 @@ export default function WelcomeScreen() {
             </View>
             <Text style={styles.roleTitle}>{t.coordinator}</Text>
             <Text style={styles.roleDescription}>{t.coordinatorDescription}</Text>
+            <Button variant="secondary" onPress={() => router.push('/(coordinator)')}>
+              {t.enter}
+            </Button>
+          </Card>
+        )}
+        {role === 'evaluator' && (
+          <Card style={styles.roleCard}>
+            <View style={styles.icon}>
+              <Map color={colors.primary} size={28} />
+            </View>
+            <Text style={styles.roleTitle}>{t.viewerDashboard}</Text>
+            <Text style={styles.roleDescription}>{t.viewerDashboardHint}</Text>
             <Button variant="secondary" onPress={() => router.push('/(coordinator)')}>
               {t.enter}
             </Button>
@@ -178,6 +220,7 @@ export default function WelcomeScreen() {
           {t.signOut}
         </Button>
       )}
+      <GitHubProjectLink />
     </AppShell>
   );
 }
@@ -207,7 +250,20 @@ const styles = StyleSheet.create({
   loginCard: { width: '100%', maxWidth: 440, alignSelf: 'center', marginTop: 50, gap: 16 },
   loginLogo: { width: 92, height: 92, borderRadius: 46, alignSelf: 'center' },
   authLead: { color: colors.textMuted, lineHeight: 21, textAlign: 'center' },
-  signOut: { alignSelf: 'center', marginBottom: 24 },
+  signOut: { alignSelf: 'center', marginBottom: 8 },
+  githubLink: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    alignSelf: 'center',
+    gap: 8,
+    marginTop: 16,
+    marginBottom: 20,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+  },
+  githubLinkPressed: { opacity: 0.65 },
+  githubText: { color: colors.primary, fontWeight: '800', fontSize: 14 },
   roles: { flexDirection: 'row', gap: 18, marginTop: 20, paddingBottom: 20 },
   rolesNarrow: { flexDirection: 'column' },
   roleCard: { flex: 1, gap: 14 },

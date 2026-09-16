@@ -2,7 +2,15 @@ import { getApps, initializeApp } from 'firebase-admin/app';
 import { getAuth } from 'firebase-admin/auth';
 import { FieldValue, getFirestore } from 'firebase-admin/firestore';
 import { HttpsError, onCall } from 'firebase-functions/v2/https';
+import { logger } from 'firebase-functions';
 import { auth } from 'firebase-functions/v1';
+
+import {
+  dispatchNotification,
+  listAdminUids,
+  registrationPendingEmail,
+  userApprovedEmail,
+} from './notifications';
 
 if (!getApps().length) initializeApp();
 
@@ -52,11 +60,35 @@ function profileFromToken(
   });
 }
 
+async function notifyRegistrationPending(userId: string, email: string) {
+  try {
+    const admins = await listAdminUids();
+    if (!admins.length) {
+      logger.warn('No admins to notify for registration', { userId });
+      return;
+    }
+    await dispatchNotification({
+      type: 'user.registration_pending',
+      recipientUids: admins,
+      title: 'Nueva solicitud de usuario',
+      body: `${email || '(sin correo)'} espera autorización`,
+      href: '/(admin)',
+      email: registrationPendingEmail({ email, userId }),
+      dedupeKey: `user.registration_pending:${userId}`,
+      meta: { userId, email },
+    });
+  } catch (error) {
+    logger.error('Failed to notify admins of registration', { userId, error });
+  }
+}
+
 export const onAuthUserCreated = auth.user().onCreate(async (user) => {
   const reference = db.doc(`users/${user.uid}`);
   const existing = await reference.get();
   if (existing.exists) return;
-  await reference.set(asProfile(user.uid, user.email ?? ''));
+  const email = user.email ?? '';
+  await reference.set(asProfile(user.uid, email));
+  await notifyRegistrationPending(user.uid, email);
 });
 
 export const ensureUserProfile = onCall({ region: 'us-central1' }, async (request) => {
@@ -70,6 +102,9 @@ export const ensureUserProfile = onCall({ region: 'us-central1' }, async (reques
     request.auth.token as Record<string, unknown>,
   );
   await reference.set(profile);
+  if (!profile.role && profile.status === 'pending') {
+    await notifyRegistrationPending(request.auth.uid, profile.email);
+  }
   return profile;
 });
 
@@ -83,6 +118,7 @@ export const setUserRole = onCall({ region: 'us-central1' }, async (request) => 
   if (!userId || !VALID_ROLES.includes(role as ManagedRole)) {
     throw new HttpsError('invalid-argument', 'userId and a valid role are required.');
   }
+  const managedRole = role as ManagedRole;
   const jurisdictions = Array.isArray(jurisdictionIds)
     ? jurisdictionIds.map((value) => value.trim()).filter(Boolean)
     : [];
@@ -90,19 +126,24 @@ export const setUserRole = onCall({ region: 'us-central1' }, async (request) => 
     throw new HttpsError('invalid-argument', 'At least one jurisdiction is required.');
   }
 
+  const profileRef = db.doc(`users/${userId}`);
+  const previousSnap = await profileRef.get();
+  const previous = previousSnap.data();
+  const wasPending = !previous?.role || previous.status === 'pending';
+
   const auth = getAuth();
   const user = await auth.getUser(userId);
   await auth.setCustomUserClaims(userId, {
     ...user.customClaims,
-    role,
+    role: managedRole,
     jurisdictionIds: jurisdictions,
   });
   await auth.revokeRefreshTokens(userId);
-  await db.doc(`users/${userId}`).set(
+  await profileRef.set(
     {
       id: userId,
       email: user.email ?? '',
-      role,
+      role: managedRole,
       jurisdictionIds: jurisdictions,
       status: user.disabled ? 'disabled' : 'active',
       disabled: user.disabled === true,
@@ -112,6 +153,24 @@ export const setUserRole = onCall({ region: 'us-central1' }, async (request) => 
     },
     { merge: true },
   );
+
+  if (wasPending && !user.disabled) {
+    try {
+      await dispatchNotification({
+        type: 'user.approved',
+        recipientUids: [userId],
+        title: 'Cuenta autorizada',
+        body: `Tu rol es ${managedRole}. Ya puedes entrar a EVALQUAKE.`,
+        href: '/',
+        email: userApprovedEmail({ role: managedRole, jurisdictionIds: jurisdictions }),
+        dedupeKey: `user.approved:${userId}:${managedRole}`,
+        meta: { userId, role: managedRole },
+      });
+    } catch (error) {
+      logger.error('Failed to notify user of approval', { userId, error });
+    }
+  }
+
   return { ok: true };
 });
 

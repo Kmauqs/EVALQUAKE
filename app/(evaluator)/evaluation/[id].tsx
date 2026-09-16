@@ -1,30 +1,52 @@
 import { useLocalSearchParams } from 'expo-router';
-import { ArrowLeft, CheckCircle2, FileText, Save } from 'lucide-react-native';
-import React, { useEffect, useState } from 'react';
-import { Alert, Linking, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+import { ArrowLeft, CheckCircle2, FileText, Tag, Trash2 } from 'lucide-react-native';
+import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { Alert, Pressable, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 
 import { EvaluationSection } from '@/components/EvaluationSection';
 import { AppShell, Button, Card, ClassificationBadge, SectionProgress } from '@/components/ui';
 import type { Evaluation } from '@/domain/evaluation';
-import { validateForSubmission } from '@/domain/evaluation';
+import {
+  canDeleteEvaluation,
+  lastSectionIndex,
+  sectionCountFor,
+  sectionKeysFor,
+  validateForSubmission,
+} from '@/domain/evaluation';
+import { pullEvaluation, subscribeEvaluation } from '@/firebase/repository';
 import { useI18n } from '@/i18n/I18nProvider';
 import { useSafeBack } from '@/navigation/useSafeBack';
+import { renderPlacardHtml } from '@/report/renderPlacardHtml';
 import { renderReportHtml } from '@/report/renderReportHtml';
-import { resolveAttachmentUrl } from '@/firebase/repository';
+import { confirmDestructive } from '@/services/confirm';
 import { captureCoordinates, pickDamagePhoto, pickDamagePhotos } from '@/services/device';
-import { createPdf, sharePdf } from '@/services/pdf';
+import { exportQuantitiesCsv } from '@/services/exportData';
+import { openHtmlDocument } from '@/services/htmlDocument';
+import { hydrateEvaluationImages } from '@/services/resolveImage';
+import { saveLocalEvaluation } from '@/services/localStore';
 import { useEvaluations } from '@/state/EvaluationProvider';
+import { useAuth } from '@/auth/AuthProvider';
 import { colors, layout } from '@/theme';
 
 export default function EvaluationWizard() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const goBack = useSafeBack('/(evaluator)');
   const { t, language } = useI18n();
-  const { get, save } = useEvaluations();
+  const { width } = useWindowDimensions();
+  const narrow = width < layout.compactWidth;
+  const { get, save, remove, refresh } = useEvaluations();
+  const { uid } = useAuth();
   const [evaluation, setEvaluation] = useState<Evaluation | null>(null);
   const [section, setSection] = useState(0);
   const [busy, setBusy] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const deletingRef = useRef(false);
+  const evaluationRef = useRef<Evaluation | null>(null);
   const [message, setMessage] = useState('');
+
+  useLayoutEffect(() => {
+    evaluationRef.current = evaluation;
+  });
 
   useEffect(() => {
     if (!id) return;
@@ -36,12 +58,66 @@ export default function EvaluationWizard() {
   }, [id, get]);
 
   useEffect(() => {
-    if (!evaluation || evaluation.status !== 'draft') return;
+    if (!id || !evaluation || evaluation.status === 'draft') return;
+
+    const applyRemote = (remote: Evaluation) => {
+      if (remote.status === 'draft') return;
+      void saveLocalEvaluation(remote, false).then(() => {
+        setEvaluation((current) => {
+          if (!current || current.id !== remote.id) return current;
+          if (
+            current.officialNumber === remote.officialNumber &&
+            current.status === remote.status &&
+            current.syncState === remote.syncState &&
+            current.canonicalPdfStoragePath === remote.canonicalPdfStoragePath
+          ) {
+            return current;
+          }
+          return {
+            ...current,
+            officialNumber: remote.officialNumber ?? current.officialNumber,
+            status: remote.status,
+            syncState: remote.syncState,
+            canonicalPdfStoragePath:
+              remote.canonicalPdfStoragePath || current.canonicalPdfStoragePath,
+            canonicalPdfState: remote.canonicalPdfState ?? current.canonicalPdfState,
+          };
+        });
+        void refresh();
+      });
+    };
+
+    const unsub = subscribeEvaluation(
+      id,
+      applyRemote,
+      (error) => console.error('EVALQUAKE could not watch official number', error),
+    );
+    if (evaluation.officialNumber != null) return unsub;
+
+    let cancelled = false;
+    const poll = () => {
+      void pullEvaluation(id).then((remote) => {
+        if (!cancelled && remote) applyRemote(remote);
+      });
+    };
+    poll();
+    const interval = setInterval(poll, 2000);
+    return () => {
+      cancelled = true;
+      clearInterval(interval);
+      unsub();
+    };
+    // Only re-subscribe when status/official number change, not on every draft keystroke.
+  }, [evaluation?.officialNumber, evaluation?.status, id, refresh]); // eslint-disable-line react-hooks/exhaustive-deps -- evaluation identity changes while drafting
+
+  useEffect(() => {
+    if (deletingRef.current || deleting || !evaluation || evaluation.status !== 'draft') return;
     const timeout = setTimeout(() => {
+      if (deletingRef.current) return;
       void save({ ...evaluation, currentSection: section }).then(() => setMessage(t.save));
     }, 700);
     return () => clearTimeout(timeout);
-  }, [evaluation, section, save, t.save]);
+  }, [evaluation, section, save, t.save, deleting]);
 
   if (!evaluation) {
     return (
@@ -51,14 +127,23 @@ export default function EvaluationWizard() {
     );
   }
 
-  const openExistingReport = async () => {
-    let uri = Platform.OS === 'web' ? undefined : evaluation.localPdfUri;
-    if (!uri && evaluation.canonicalPdfStoragePath) {
-      uri = (await resolveAttachmentUrl(evaluation.canonicalPdfStoragePath)) ?? undefined;
-    }
-    uri ??= await createPdf(renderReportHtml(evaluation, evaluation.reportLanguage ?? language));
-    if (uri.startsWith('http')) await Linking.openURL(uri);
-    else await sharePdf(uri);
+  const keys = sectionKeysFor(evaluation);
+  const total = sectionCountFor(evaluation);
+  const last = lastSectionIndex(evaluation);
+  const current = Math.min(section, last);
+  const sectionKey = keys[current] ?? 'cadastral';
+
+  const openReport = async () => {
+    const ready = await hydrateEvaluationImages(evaluation);
+    await openHtmlDocument(renderReportHtml(ready, language), `evalquake-${evaluation.id}.html`);
+  };
+
+  const openPlacard = async () => {
+    const ready = await hydrateEvaluationImages(evaluation);
+    await openHtmlDocument(
+      renderPlacardHtml(ready, language),
+      `evalquake-placard-${evaluation.id}.html`,
+    );
   };
 
   if (evaluation.status !== 'draft') {
@@ -74,16 +159,37 @@ export default function EvaluationWizard() {
               ? `#${evaluation.officialNumber}`
               : t.officialPending}
           </Text>
+          {!evaluation.officialNumber ? (
+            <Text style={styles.officialHint}>{t.officialPendingHint}</Text>
+          ) : null}
           <Text style={styles.submittedDescription}>{t.immutableNotice}</Text>
           <View style={styles.submittedActions}>
-            <Button variant="ghost" onPress={goBack}>
+            <Button variant="ghost" onPress={goBack} style={styles.actionButton}>
               {t.back}
             </Button>
             <Button
-              icon={<FileText size={18} color={colors.white} />}
-              onPress={() => void openExistingReport()}
+              variant="secondary"
+              icon={<Tag size={18} color={colors.primary} />}
+              onPress={() => void openPlacard()}
+              style={styles.actionButton}
             >
-              {t.sharePdf}
+              {t.generatePlacard}
+            </Button>
+            <Button
+              variant="secondary"
+              icon={<FileText size={18} color={colors.primary} />}
+              onPress={() => void openReport()}
+              style={styles.actionButton}
+            >
+              {t.viewReport}
+            </Button>
+            <Button
+              variant="ghost"
+              icon={<FileText size={18} color={colors.primary} />}
+              onPress={() => void exportQuantitiesCsv([evaluation], language)}
+              style={styles.actionButton}
+            >
+              {t.exportQuantitiesCsv}
             </Button>
           </View>
         </Card>
@@ -92,7 +198,7 @@ export default function EvaluationWizard() {
   }
 
   const go = async (next: number) => {
-    const bounded = Math.max(0, Math.min(16, next));
+    const bounded = Math.max(0, Math.min(last, next));
     const updated = { ...evaluation, currentSection: bounded };
     setSection(bounded);
     setEvaluation(updated);
@@ -113,40 +219,35 @@ export default function EvaluationWizard() {
 
   const addPhoto = async (source: 'camera' | 'library') => {
     try {
-      const photos = await pickDamagePhotos(source, evaluation.identification.coordinates);
-      if (photos.length) {
-        setEvaluation({ ...evaluation, photos: [...evaluation.photos, ...photos] });
-      }
+      const current = evaluationRef.current;
+      if (!current) return;
+      const photos = await pickDamagePhotos(source, current.identification.coordinates);
+      const latest = evaluationRef.current ?? current;
+      if (!photos.length) return;
+      const next = { ...latest, photos: [...latest.photos, ...photos] };
+      setEvaluation(next);
+      await save(next);
     } catch {
-      Alert.alert(t.addPhoto, t.offline);
+      Alert.alert(t.addPhoto, t.photoFailed);
     }
   };
 
   const addSketch = async (source: 'camera' | 'library') => {
     try {
-      const image = await pickDamagePhoto(source, evaluation.identification.coordinates);
-      if (image) {
-        setEvaluation({
-          ...evaluation,
-          sketchUri: image.localUri,
-          sketchStoragePath: undefined,
-        });
-      }
+      const current = evaluationRef.current;
+      if (!current) return;
+      const image = await pickDamagePhoto(source, current.identification.coordinates);
+      const latest = evaluationRef.current ?? current;
+      if (!image) return;
+      const next = {
+        ...latest,
+        sketchUri: image.localUri,
+        sketchStoragePath: undefined,
+      };
+      setEvaluation(next);
+      await save(next);
     } catch {
-      Alert.alert(t.sketch, t.offline);
-    }
-  };
-
-  const generate = async () => {
-    setBusy(true);
-    try {
-      const uri = await createPdf(renderReportHtml(evaluation, language));
-      const updated = { ...evaluation, localPdfUri: uri, reportLanguage: language };
-      setEvaluation(updated);
-      await save(updated);
-      await sharePdf(uri);
-    } finally {
-      setBusy(false);
+      Alert.alert(t.sketch, t.photoFailed);
     }
   };
 
@@ -158,14 +259,12 @@ export default function EvaluationWizard() {
     }
     setBusy(true);
     try {
-      const uri = evaluation.localPdfUri ?? (await createPdf(renderReportHtml(evaluation, language)));
       const submitted: Evaluation = {
         ...evaluation,
-        localPdfUri: uri,
         status: 'submitted',
         syncState: 'pending',
         reportLanguage: language,
-        currentSection: 16,
+        currentSection: last,
         updatedAt: new Date().toISOString(),
       };
       await save(submitted);
@@ -176,9 +275,29 @@ export default function EvaluationWizard() {
     }
   };
 
+  const requestDelete = () => {
+    confirmDestructive(
+      t.deleteEvaluationTitle,
+      t.deleteEvaluationConfirm,
+      t.deleteEvaluation,
+      t.cancel,
+      () => {
+        deletingRef.current = true;
+        setDeleting(true);
+        void remove(evaluation.id)
+          .then(goBack)
+          .catch(() => {
+            deletingRef.current = false;
+            setDeleting(false);
+            Alert.alert(t.deleteEvaluationTitle, t.deleteFailed);
+          });
+      },
+    );
+  };
+
   return (
     <AppShell>
-      <View style={styles.titleRow}>
+      <View style={[styles.titleRow, narrow && styles.titleRowNarrow]}>
         <Pressable onPress={goBack} style={styles.back}>
           <ArrowLeft size={20} color={colors.primary} />
         </Pressable>
@@ -188,26 +307,27 @@ export default function EvaluationWizard() {
             {evaluation.building.address || t.newEvaluation}
           </Text>
         </View>
-        <View style={styles.saved}>
-          <Save size={14} color={colors.textMuted} />
+        <View style={[styles.saved, narrow && styles.savedNarrow]}>
           <Text style={styles.savedText}>{message || t.pendingSync}</Text>
         </View>
       </View>
 
       <Card style={styles.formCard}>
         <SectionProgress
-          current={section}
-          total={17}
-          title={t.sections[section]!}
-          onBack={section > 0 ? () => void go(section - 1) : undefined}
-          onNext={section < 16 ? () => void go(section + 1) : undefined}
+          current={current}
+          total={total}
+          title={t.sections[sectionKey]}
+          onBack={current > 0 ? () => void go(current - 1) : undefined}
+          onNext={current < last ? () => void go(current + 1) : undefined}
         />
         <View style={styles.divider} />
         <EvaluationSection
-          section={section}
+          sectionKey={sectionKey}
           evaluation={evaluation}
           onChange={(next) => {
             setMessage('');
+            const nextLast = lastSectionIndex(next);
+            if (section > nextLast) setSection(nextLast);
             setEvaluation(next);
           }}
           onLocation={() => void locate()}
@@ -216,29 +336,57 @@ export default function EvaluationWizard() {
         />
         <View style={styles.divider} />
         <View style={styles.actions}>
-          {section > 0 && (
-            <Button variant="ghost" onPress={() => void go(section - 1)}>
-              {t.back}
-            </Button>
-          )}
-          <View style={styles.actionsRight}>
-            {section === 16 && (
-              <Button
-                variant="secondary"
-                icon={<FileText size={18} color={colors.primary} />}
-                loading={busy}
-                onPress={() => void generate()}
-              >
-                {t.generatePdf}
+          <View style={styles.actionsGroup}>
+            {current > 0 && (
+              <Button variant="ghost" onPress={() => void go(current - 1)} style={styles.actionButton}>
+                {t.back}
               </Button>
             )}
-            {section < 16 ? (
-              <Button onPress={() => void go(section + 1)}>{t.next}</Button>
+            {canDeleteEvaluation(evaluation, uid) && (
+              <Button
+                variant="danger"
+                icon={<Trash2 size={18} color={colors.white} />}
+                loading={deleting}
+                onPress={requestDelete}
+                style={styles.actionButton}
+              >
+                {t.deleteEvaluation}
+              </Button>
+            )}
+          </View>
+          <View style={styles.actionsGroup}>
+            {current === last && (
+              <>
+                <Button
+                  variant="ghost"
+                  icon={<Tag size={18} color={colors.primary} />}
+                  loading={busy}
+                  onPress={() => void openPlacard()}
+                  style={styles.actionButton}
+                >
+                  {t.generatePlacard}
+                </Button>
+                <Button
+                  variant="secondary"
+                  icon={<FileText size={18} color={colors.primary} />}
+                  loading={busy}
+                  onPress={() => void openReport()}
+                  style={styles.actionButton}
+                >
+                  {t.viewReport}
+                </Button>
+              </>
+            )}
+            {current < last ? (
+              <Button onPress={() => void go(current + 1)} style={styles.actionButton}>
+                {t.next}
+              </Button>
             ) : (
               <Button
                 icon={<CheckCircle2 size={18} color={colors.white} />}
                 loading={busy}
                 onPress={() => void submit()}
+                style={styles.actionButton}
               >
                 {t.submit}
               </Button>
@@ -253,19 +401,46 @@ export default function EvaluationWizard() {
 const styles = StyleSheet.create({
   loading: { textAlign: 'center', color: colors.primary, marginTop: 60 },
   titleRow: { width: '100%', maxWidth: layout.contentWidth, alignSelf: 'center', flexDirection: 'row', alignItems: 'center', gap: 12, marginTop: 8 },
-  back: { width: 44, height: 44, borderRadius: 12, borderWidth: 1, borderColor: colors.border, alignItems: 'center', justifyContent: 'center' },
-  titleCopy: { flex: 1 },
+  titleRowNarrow: { flexWrap: 'wrap', alignItems: 'flex-start' },
+  back: { width: 44, height: 44, borderRadius: 12, borderWidth: 1, borderColor: colors.border, alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
+  titleCopy: { flex: 1, minWidth: 0 },
   id: { color: colors.primary, fontWeight: '900', fontSize: 11, textTransform: 'uppercase' },
-  address: { color: colors.text, fontWeight: '900', fontSize: 19, marginTop: 2 },
-  saved: { flexDirection: 'row', alignItems: 'center', gap: 5 },
-  savedText: { color: colors.textMuted, fontSize: 11 },
-  formCard: { width: '100%', maxWidth: layout.contentWidth, alignSelf: 'center', marginTop: 15, marginBottom: 24 },
+  address: { color: colors.text, fontWeight: '900', fontSize: 19, marginTop: 2, lineHeight: 24 },
+  saved: { flexDirection: 'row', alignItems: 'center', gap: 5, flexShrink: 0, maxWidth: 160 },
+  savedNarrow: { maxWidth: '100%', width: '100%', paddingLeft: 56 },
+  savedText: { color: colors.textMuted, fontSize: 11, flexShrink: 1 },
+  formCard: { width: '100%', maxWidth: layout.contentWidth, alignSelf: 'stretch', marginTop: 15, marginBottom: 24, minWidth: 0 },
   divider: { height: 1, backgroundColor: colors.border, marginVertical: 22 },
-  actions: { flexDirection: 'row', justifyContent: 'space-between', gap: 10 },
-  actionsRight: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'flex-end', gap: 10, flex: 1 },
-  submittedCard: { width: '100%', maxWidth: 620, alignSelf: 'center', marginTop: 40, gap: 14 },
+  actions: {
+    width: '100%',
+    maxWidth: '100%',
+    minWidth: 0,
+    alignSelf: 'stretch',
+    flexDirection: 'column',
+    alignItems: 'stretch',
+    gap: 10,
+  },
+  actionsGroup: {
+    width: '100%',
+    maxWidth: '100%',
+    minWidth: 0,
+    flexDirection: 'column',
+    alignItems: 'stretch',
+    gap: 10,
+  },
+  actionButton: { width: '100%', maxWidth: '100%', alignSelf: 'stretch', flexShrink: 1 },
+  submittedCard: { width: '100%', maxWidth: 620, alignSelf: 'center', marginTop: 40, gap: 14, minWidth: 0 },
   submittedTitle: { color: colors.text, fontSize: 25, fontWeight: '900' },
   officialNumber: { color: colors.primary, fontSize: 17, fontWeight: '900' },
+  officialHint: { color: colors.textMuted, fontSize: 13, lineHeight: 19, marginTop: -6 },
   submittedDescription: { color: colors.textMuted, lineHeight: 21 },
-  submittedActions: { flexDirection: 'row', justifyContent: 'flex-end', gap: 10, marginTop: 8 },
+  submittedActions: {
+    width: '100%',
+    maxWidth: '100%',
+    minWidth: 0,
+    flexDirection: 'column',
+    alignItems: 'stretch',
+    gap: 10,
+    marginTop: 8,
+  },
 });

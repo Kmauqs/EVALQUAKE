@@ -2,7 +2,7 @@ import { applicationDefault, initializeApp } from "firebase-admin/app";
 import { getAuth } from "firebase-admin/auth";
 import { getFirestore } from "firebase-admin/firestore";
 
-const [email, role, jurisdictions = "jurisdiction-demo"] = process.argv.slice(2);
+const [email, role, jurisdictions = "Nacional"] = process.argv.slice(2);
 
 const validRoles = ["evaluator", "coordinator", "admin"];
 
