@@ -10,23 +10,44 @@ import { useI18n } from '@/i18n/I18nProvider';
 import { colors } from '@/theme';
 
 const GITHUB_URL = 'https://github.com/Kmauqs/EVALQUAKE';
+const NSR10_URL = 'https://kmauqs.github.io/NSR-10/index.html';
 
-function GitHubProjectLink() {
+function ProjectLinks() {
   const { t } = useI18n();
   return (
-    <Pressable
-      accessibilityRole="link"
-      accessibilityLabel={t.githubProject}
-      onPress={() => void Linking.openURL(GITHUB_URL)}
-      style={({ pressed }) => [
-        styles.githubLink,
-        Platform.OS === 'web' ? { cursor: 'pointer' as const } : undefined,
-        pressed && styles.githubLinkPressed,
-      ]}
-    >
-      <ExternalLink size={18} color={colors.primary} />
-      <Text style={styles.githubText}>{t.githubProject}</Text>
-    </Pressable>
+    <View style={styles.projectLinks}>
+      <Pressable
+        accessibilityRole="link"
+        accessibilityLabel={t.githubProject}
+        onPress={() => void Linking.openURL(GITHUB_URL)}
+        style={({ pressed }) => [
+          styles.projectLink,
+          Platform.OS === 'web' ? { cursor: 'pointer' as const } : undefined,
+          pressed && styles.projectLinkPressed,
+        ]}
+      >
+        <ExternalLink size={18} color={colors.primary} />
+        <Text style={styles.projectLinkText}>{t.githubProject}</Text>
+      </Pressable>
+      <Pressable
+        accessibilityRole="link"
+        accessibilityLabel={t.nsr10Project}
+        onPress={() => void Linking.openURL(NSR10_URL)}
+        style={({ pressed }) => [
+          styles.projectLink,
+          Platform.OS === 'web' ? { cursor: 'pointer' as const } : undefined,
+          pressed && styles.projectLinkPressed,
+        ]}
+      >
+        <Image
+          source={require('../assets/partners/nsr10-espiral.jpg')}
+          style={styles.nsr10Logo}
+          resizeMode="contain"
+          accessibilityLabel={t.nsr10Project}
+        />
+        <Text style={styles.projectLinkText}>{t.nsr10Project}</Text>
+      </Pressable>
+    </View>
   );
 }
 
@@ -113,7 +134,7 @@ export default function WelcomeScreen() {
             {mode === 'register' ? t.haveAccount : t.needAccount}
           </Button>
         </Card>
-        <GitHubProjectLink />
+        <ProjectLinks />
       </AppShell>
     );
   }
@@ -145,7 +166,7 @@ export default function WelcomeScreen() {
             {t.signOut}
           </Button>
         </Card>
-        <GitHubProjectLink />
+        <ProjectLinks />
       </AppShell>
     );
   }
@@ -220,7 +241,7 @@ export default function WelcomeScreen() {
           {t.signOut}
         </Button>
       )}
-      <GitHubProjectLink />
+      <ProjectLinks />
     </AppShell>
   );
 }
@@ -251,19 +272,26 @@ const styles = StyleSheet.create({
   loginLogo: { width: 92, height: 92, borderRadius: 46, alignSelf: 'center' },
   authLead: { color: colors.textMuted, lineHeight: 21, textAlign: 'center' },
   signOut: { alignSelf: 'center', marginBottom: 8 },
-  githubLink: {
+  projectLinks: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     alignItems: 'center',
     justifyContent: 'center',
     alignSelf: 'center',
     gap: 8,
     marginTop: 16,
     marginBottom: 20,
+  },
+  projectLink: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
     paddingVertical: 8,
     paddingHorizontal: 12,
   },
-  githubLinkPressed: { opacity: 0.65 },
-  githubText: { color: colors.primary, fontWeight: '800', fontSize: 14 },
+  projectLinkPressed: { opacity: 0.65 },
+  projectLinkText: { color: colors.primary, fontWeight: '800', fontSize: 14 },
+  nsr10Logo: { width: 36, height: 24, borderRadius: 4 },
   roles: { flexDirection: 'row', gap: 18, marginTop: 20, paddingBottom: 20 },
   rolesNarrow: { flexDirection: 'column' },
   roleCard: { flex: 1, gap: 14 },
