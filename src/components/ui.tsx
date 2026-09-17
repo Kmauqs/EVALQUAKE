@@ -1,4 +1,4 @@
-import { BookOpen, Check, ChevronDown, ChevronLeft, ChevronRight, Globe2, WifiOff } from 'lucide-react-native';
+import { BookOpen, Check, ChevronDown, ChevronLeft, ChevronRight, Globe2, Linkedin, WifiOff } from 'lucide-react-native';
 import { type Href, usePathname, useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import {
@@ -98,6 +98,8 @@ export function AppHeader() {
   );
 }
 
+const AUTHOR_LINKEDIN_URL = 'https://www.linkedin.com/in/mauchitoq/';
+
 export function SupportStrip() {
   const { t } = useI18n();
   const { width } = useWindowDimensions();
@@ -128,6 +130,14 @@ export function SupportStrip() {
           />
         </Pressable>
       </View>
+      <Pressable
+        accessibilityRole="link"
+        accessibilityLabel={t.authorLinkedIn}
+        style={[styles.linkedinLink, Platform.OS === 'web' ? { cursor: 'pointer' as const } : undefined]}
+        onPress={() => void Linking.openURL(AUTHOR_LINKEDIN_URL)}
+      >
+        <Linkedin size={compact ? 20 : 22} color={colors.primary} />
+      </Pressable>
     </View>
   );
 }
@@ -583,6 +593,11 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
   },
   supportLogosWrap: { gap: 16 },
+  linkedinLink: {
+    marginTop: 4,
+    padding: 6,
+    borderRadius: 999,
+  },
   languageButton: {
     flexDirection: 'row',
     gap: 7,

@@ -130,6 +130,7 @@ export const es = {
   guideFigureCaption:
     'Puntos de revisión de ascensores / elevadores a tracción. La fosa y la sala de máquinas solo las inspecciona personal calificado.',
   supportedBy: 'Con apoyo de',
+  authorLinkedIn: 'Perfil del autor en LinkedIn',
   githubProject: 'Código en GitHub',
   nsr10Project: 'NSR-10',
   captureLocation: 'Capturar ubicación',
@@ -822,6 +823,7 @@ export const en = {
   guideFigureCaption:
     'Traction elevator inspection points. Pit and machine-room checks are only for qualified personnel.',
   supportedBy: 'With support from',
+  authorLinkedIn: 'Author LinkedIn profile',
   githubProject: 'Code on GitHub',
   nsr10Project: 'NSR-10',
   captureLocation: 'Capture location',
